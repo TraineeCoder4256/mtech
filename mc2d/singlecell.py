@@ -98,9 +98,10 @@ def _perimeter(x, y, W, H):
 
 
 @njit(cache=True, parallel=True)
-def _sample(n, W, H, mode, xin, yin, mu_in, seed, n_blocks):
+def _sample(n, W, H, mode, xin, yin, mu_in, ox_in, oy_in, seed, n_blocks):
     p = np.empty(n)
     dirs = np.empty((n, 3))
+    ent = np.empty((n, 4))          # entry state: x0, y0, Omega_x, Omega_y
     s = np.empty(n)
     k = np.empty(n, dtype=np.int64)
     per = (n + n_blocks - 1) // n_blocks
@@ -125,6 +126,15 @@ def _sample(n, W, H, mode, xin, yin, mu_in, seed, n_blocks):
                 x = xin * W if xin >= 0.0 else W * np.random.random()
                 y = yin * H if yin >= 0.0 else H * np.random.random()
                 ox, oy, oz = _isotropic_direction()
+            elif mode == 4:    # boundary, left face, fixed entry disk point
+                x = 0.0
+                y = yin * H if yin >= 0.0 else H * np.random.random()
+                ox = ox_in
+                oy = oy_in
+                rz = 1.0 - ox * ox - oy * oy
+                # Omega_z is a passenger: _walk advances x,y by ox,oy only,
+                # so the sign of oz cannot affect the trajectory.
+                oz = np.sqrt(rz) if rz > 0.0 else 0.0
             else:              # boundary, left face, isotropic incidence
                 x = 0.0
                 y = yin * H if yin >= 0.0 else H * np.random.random()
@@ -133,6 +143,10 @@ def _sample(n, W, H, mode, xin, yin, mu_in, seed, n_blocks):
                 phi = 2.0 * np.pi * np.random.random()
                 oy = r * np.cos(phi)
                 oz = r * np.sin(phi)
+            ent[i, 0] = x
+            ent[i, 1] = y
+            ent[i, 2] = ox
+            ent[i, 3] = oy
             xe, ye, oxe, oye, oze, st, ns = _walk(x, y, ox, oy, oz, W, H)
             p[i] = _perimeter(xe, ye, W, H)
             dirs[i, 0] = oxe
@@ -140,12 +154,12 @@ def _sample(n, W, H, mode, xin, yin, mu_in, seed, n_blocks):
             dirs[i, 2] = oze
             s[i] = st
             k[i] = ns
-    return p, dirs, s, k
+    return p, dirs, s, k, ent
 
 
 def sample_single_cell(n, W, H, mode="boundary", entry_pos=None,
-                       entry_mu=None, entry_law="cosine", seed=1,
-                       n_blocks=64):
+                       entry_mu=None, entry_dir=None, entry_law="cosine",
+                       seed=1, n_blocks=64):
     """Sample n single-cell transmissions through a W x H (mfp) rectangle.
 
     mode="boundary": particles enter the left face.  entry_pos (in [0,1],
@@ -153,15 +167,30 @@ def sample_single_cell(n, W, H, mode="boundary", entry_pos=None,
       entry_mu fixes the entry x-direction cosine (azimuth random); None
       samples it by entry_law: "cosine" (isotropic incident angular flux)
       or "isotropic" (uniform over the incoming solid angle).
+      entry_dir=(Omega_x, Omega_y) instead fixes the full entry point on the
+      unit disk of direction cosines, which is what actually determines the
+      trajectory (Omega_z never enters the walk).  Takes precedence over
+      entry_mu.  Required for conditional GMC training data.
     mode="internal": particles born inside the cell (entry_pos = (fx, fy)
       fractions, None = uniform), isotropic direction.
 
     Returns dict with perimeter coord p, exit directions (n,3), path
-    lengths s, and scattering counts k.
+    lengths s, scattering counts k, and the per-sample entry state
+    ent[:, (x0, y0, Omega_x, Omega_y)] needed to label conditional data.
     """
+    ox_in = oy_in = 0.0
     if mode == "boundary":
         yin = -1.0 if entry_pos is None else float(entry_pos)
-        if entry_mu is not None:
+        if entry_dir is not None:
+            ox_in, oy_in = float(entry_dir[0]), float(entry_dir[1])
+            if ox_in <= 0.0:
+                raise ValueError("entry_dir must have Omega_x > 0 to enter "
+                                 f"the left face, got {ox_in}")
+            if ox_in * ox_in + oy_in * oy_in > 1.0:
+                raise ValueError("entry_dir must lie inside the unit disk, "
+                                 f"got |Omega_xy|^2 = {ox_in**2 + oy_in**2}")
+            m, xin, mu = 4, -1.0, 0.0
+        elif entry_mu is not None:
             m, xin, mu = 1, -1.0, float(entry_mu)
         elif entry_law == "cosine":
             m, xin, mu = 0, -1.0, 0.0
@@ -175,9 +204,9 @@ def sample_single_cell(n, W, H, mode="boundary", entry_pos=None,
         m, mu = 2, 0.0
     else:
         raise ValueError(mode)
-    p, dirs, s, k = _sample(int(n), float(W), float(H), m, xin, yin, mu,
-                            int(seed), int(n_blocks))
-    return {"p": p, "dir": dirs, "s": s, "k": k, "W": W, "H": H}
+    p, dirs, s, k, ent = _sample(int(n), float(W), float(H), m, xin, yin, mu,
+                                 ox_in, oy_in, int(seed), int(n_blocks))
+    return {"p": p, "dir": dirs, "s": s, "k": k, "ent": ent, "W": W, "H": H}
 
 
 def time_single_cell(n, L, seed=1, n_blocks=8, repeats=1):
@@ -187,7 +216,8 @@ def time_single_cell(n, L, seed=1, n_blocks=8, repeats=1):
     best = np.inf
     for r in range(repeats):
         t0 = time.perf_counter()
-        _, _, _, k = _sample(int(n), float(L), float(L), 0, -1.0, -1.0, 0.0,
-                             int(seed + 1000 * r), int(n_blocks))
+        _, _, _, k, _ = _sample(int(n), float(L), float(L), 0, -1.0, -1.0,
+                                0.0, 0.0, 0.0, int(seed + 1000 * r),
+                                int(n_blocks))
         best = min(best, time.perf_counter() - t0)
     return best, float(k.mean())
