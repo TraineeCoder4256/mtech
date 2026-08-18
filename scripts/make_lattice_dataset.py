@@ -7,7 +7,13 @@ Each record is one transmission through a single lattice cell:
                  Omega_x_in, Omega_y_in  (entry point on the unit disk)
   target       : p_exit (perimeter coordinate), Omega_{x,y,z}_out,
                  s (path length, mfp), k (scattering events)
-  provenance   : sig_s, sig_a, pitch, K of the lattice cell it came from
+Records carry no per-row provenance.  Deduplicating on W makes it ambiguous:
+W = 0.5 is produced both by the paper absorber (sig_s=0.5, sig_a=9.5, pitch=1)
+and by background at half pitch (sig_s=1, sig_a=0, pitch=0.5), so no single
+(K, pitch, sig_s, sig_a) is "the" origin of a record.  W is the only
+physically meaningful key; join on it against the companion composition table
+to recover every lattice cell type that realises it -- including sig_a, which
+you need to attenuate the path length.
 
 Why the axes collapse
 ---------------------
@@ -149,14 +155,11 @@ def main():
 
     rng = np.random.default_rng(args.seed)
     cols = {n: [] for n in ("W", "y0", "oxi", "oyi", "p", "oxo", "oyo",
-                            "ozo", "s", "k", "sig_s", "sig_a", "pitch", "K")}
+                            "ozo", "s", "k")}
     t0 = time.time()
 
     for wi, w in enumerate(ws):
         y0s, oxs, oys = sample_entry_states(args.n_cond, rng)
-        # One representative (sig_s, sig_a, pitch, K) per W for provenance;
-        # the full mapping lives in the composition file.
-        rep = by_w[w][0]
         for c in range(args.n_cond):
             r = sample_single_cell(
                 args.per_cond, w, w, mode="boundary",
@@ -174,10 +177,6 @@ def main():
             cols["ozo"].append(r["dir"][:, 2])
             cols["s"].append(r["s"])
             cols["k"].append(r["k"])
-            cols["sig_s"].append(np.full(m, rep["sig_s"]))
-            cols["sig_a"].append(np.full(m, rep["sig_a"]))
-            cols["pitch"].append(np.full(m, rep["pitch"]))
-            cols["K"].append(np.full(m, rep["K"]))
         done = (wi + 1) * args.n_cond * args.per_cond
         print(f"  W={w:9.4g} mfp  {done:>9d} records  "
               f"{time.time()-t0:6.1f} s", flush=True)
@@ -185,7 +184,7 @@ def main():
     out = {}
     for name, chunks in cols.items():
         a = np.concatenate(chunks)
-        out[name] = a.astype(np.int32) if name in ("k", "K") \
+        out[name] = a.astype(np.int32) if name == "k" \
             else a.astype(np.float32)
 
     outp = ROOT / args.out
@@ -195,8 +194,14 @@ def main():
     print(f"wrote {outp}  ({n} records, {outp.stat().st_size/1e6:.1f} MB)")
 
     # Composition table: how many cells of each W a lattice of size K holds.
-    comp = np.array([[r["K"], r["pitch"], r["sig_s"], r["sig_a"], r["W"],
-                      r["count"]] for r in rows], dtype=np.float64)
+    # Deduplicate: material sets share a common background, so the same
+    # (K, pitch, sig_s, sig_a) cell type is emitted once per set and naive
+    # summing of `count` would multiply-count background cells.
+    seen = {}
+    for r in rows:
+        seen[(r["K"], r["pitch"], r["sig_s"], r["sig_a"], r["W"])] = r["count"]
+    comp = np.array([[k[0], k[1], k[2], k[3], k[4], c]
+                     for k, c in sorted(seen.items())], dtype=np.float64)
     compp = outp.with_name(outp.stem + "_composition.npz")
     np.savez_compressed(
         compp, table=comp,

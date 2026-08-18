@@ -132,9 +132,14 @@ def _sample(n, W, H, mode, xin, yin, mu_in, ox_in, oy_in, seed, n_blocks):
                 ox = ox_in
                 oy = oy_in
                 rz = 1.0 - ox * ox - oy * oy
-                # Omega_z is a passenger: _walk advances x,y by ox,oy only,
-                # so the sign of oz cannot affect the trajectory.
+                # Omega_z is a passenger for the *trajectory* (_walk advances
+                # x,y by ox,oy alone), but it is still part of the recorded
+                # exit state, and an uncollided particle carries its entry oz
+                # straight to the exit.  Both roots are equally likely, so the
+                # sign must be sampled or Omega_z comes out biased positive.
                 oz = np.sqrt(rz) if rz > 0.0 else 0.0
+                if np.random.random() < 0.5:
+                    oz = -oz
             else:              # boundary, left face, isotropic incidence
                 x = 0.0
                 y = yin * H if yin >= 0.0 else H * np.random.random()
