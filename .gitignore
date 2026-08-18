@@ -1,0 +1,14 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Numba on-disk JIT cache (written by @njit(cache=True))
+*.nbc
+*.nbi
+
+# Experiment outputs
+*.npy
+*.npz
+*.png
+*.pdf
+results/
