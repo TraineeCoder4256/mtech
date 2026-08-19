@@ -12,3 +12,4 @@ __pycache__/
 *.png
 *.pdf
 results/
+models/*/model.pt
