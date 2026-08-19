@@ -13,3 +13,4 @@ __pycache__/
 *.pdf
 results/
 models/*/model.pt
+docs/gmc_paper_src.html
