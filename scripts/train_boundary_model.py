@@ -45,7 +45,10 @@ def main():
     ap.add_argument("--val-frac", type=float, default=0.05)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", default="models/boundary_v1")
+    ap.add_argument("--device", default=None,
+                    help="cpu | cuda | mps; default: cuda if available")
     args = ap.parse_args()
+    dev = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
 
     torch.manual_seed(args.seed)
     torch.set_num_threads(max(1, torch.get_num_threads()))
@@ -60,15 +63,15 @@ def main():
     print(f"split:   {info['n_train']} train / {info['n_val']} val rows "
           f"({info['n_val_conditions']} val conditions, condition-wise)")
 
-    y_tr = torch.from_numpy(ds["y_train"])
-    c_tr = torch.from_numpy(ds["c_train"])
-    y_va = torch.from_numpy(ds["y_val"])
-    c_va = torch.from_numpy(ds["c_val"])
+    y_tr = torch.from_numpy(ds["y_train"]).to(dev)
+    c_tr = torch.from_numpy(ds["c_train"]).to(dev)
+    y_va = torch.from_numpy(ds["y_val"]).to(dev)
+    c_va = torch.from_numpy(ds["c_val"]).to(dev)
 
     model = VelocityField(x_dim=y_tr.shape[1], c_dim=c_tr.shape[1],
-                          width=args.width, depth=args.depth)
+                          width=args.width, depth=args.depth).to(dev)
     print(f"model:   width={args.width} depth={args.depth} "
-          f"({model.n_params():,} params)")
+          f"({model.n_params():,} params) on {dev}")
     ema = EMA(model, decay=args.ema)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr,
                             weight_decay=1e-5)
@@ -84,7 +87,7 @@ def main():
     run_loss = None
 
     for step in range(1, args.steps + 1):
-        idx = torch.randint(0, n, (args.batch,), generator=g)
+        idx = torch.randint(0, n, (args.batch,), generator=g).to(dev)
         loss = cfm_loss(model, y_tr[idx], c_tr[idx])
         opt.zero_grad(set_to_none=True)
         loss.backward()
@@ -97,7 +100,8 @@ def main():
 
         if step % args.val_every == 0 or step == args.steps:
             with torch.no_grad():
-                vidx = torch.randint(0, y_va.shape[0], (16384,), generator=g)
+                vidx = torch.randint(0, y_va.shape[0], (16384,),
+                                     generator=g).to(dev)
                 vloss = cfm_loss(ema.shadow, y_va[vidx], c_va[vidx]).item()
             rate = step * args.batch / (time.time() - t0)
             line = (f"step {step:6d}  train {run_loss:.4f}  "
@@ -112,8 +116,8 @@ def main():
               "x_dim": int(y_tr.shape[1]), "c_dim": int(c_tr.shape[1]),
               "steps": args.steps, "batch": args.batch, "lr": args.lr,
               "data": str(args.data), "seed": args.seed}
-    torch.save({"model": model.state_dict(),
-                "ema": ema.shadow.state_dict(),
+    torch.save({"model": {k: v.cpu() for k, v in model.state_dict().items()},
+                "ema": {k: v.cpu() for k, v in ema.shadow.state_dict().items()},
                 "config": config}, out / "model.pt")
     save_normalizers(out / "normalizers.json", ds["ynorm"], ds["cnorm"],
                      config)
