@@ -117,22 +117,33 @@ def main():
         rng = np.random.default_rng(args.seed)
         stats = {"exit angle": [], "log10 s": [], "p/4W": []}
         floor = {kk: [] for kk in stats}
+        # Both comparisons MUST use the same two sample sizes, or the
+        # "floor" is not a floor: W1 between finite samples shrinks like
+        # 1/sqrt(n), so comparing model(1024) vs ref(m) against
+        # ref(m/2) vs ref(m/2) flatters the model by ~sqrt(2).
+        # Split the reference into halves A and B, generate |A| model
+        # samples, and score model-vs-A against B-vs-A.
         for i in rng.choice(n_cond, min(48, n_cond), replace=False):
             y0i, oxii, oyii = conds[:, i]
             mi = mw & np.isclose(y0, y0i) & np.isclose(oxi, oxii)
             ref_u, ref_s, ref_p = oxo[mi], np.log10(s[mi]), p[mi] / (4 * wsel)
-            gi = sampler.sample(np.full(1024, wsel), np.full(1024, wsel),
-                                np.full(1024, y0i), np.full(1024, oxii),
-                                np.full(1024, oyii), seed=int(rng.integers(2**31)),
+            m_ref = len(ref_u)
+            half = m_ref // 2
+            if half < 32:                     # too few for a stable estimate
+                continue
+            perm = rng.permutation(m_ref)
+            A, B = perm[:half], perm[half:2 * half]
+            gi = sampler.sample(np.full(half, wsel), np.full(half, wsel),
+                                np.full(half, y0i), np.full(half, oxii),
+                                np.full(half, oyii),
+                                seed=int(rng.integers(2**31)),
                                 uncollided="off")
-            stats["exit angle"].append(w1(ref_u, gi["dir"][:, 0]))
-            stats["log10 s"].append(w1(ref_s, np.log10(gi["s"])))
-            stats["p/4W"].append(w1(ref_p, gi["p"] / (4 * wsel)))
-            h = rng.permutation(len(ref_u))
-            a, b = h[: len(h) // 2], h[len(h) // 2:]
-            floor["exit angle"].append(w1(ref_u[a], ref_u[b]))
-            floor["log10 s"].append(w1(ref_s[a], ref_s[b]))
-            floor["p/4W"].append(w1(ref_p[a], ref_p[b]))
+            stats["exit angle"].append(w1(ref_u[A], gi["dir"][:, 0]))
+            stats["log10 s"].append(w1(ref_s[A], np.log10(gi["s"])))
+            stats["p/4W"].append(w1(ref_p[A], gi["p"] / (4 * wsel)))
+            floor["exit angle"].append(w1(ref_u[A], ref_u[B]))
+            floor["log10 s"].append(w1(ref_s[A], ref_s[B]))
+            floor["p/4W"].append(w1(ref_p[A], ref_p[B]))
         for kk in stats:
             print(f"{wsel:6g} {kk:>10} {np.nanmedian(stats[kk]):12.4f} "
                   f"{np.nanmedian(floor[kk]):15.4f}")
