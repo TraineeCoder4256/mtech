@@ -80,6 +80,10 @@ def main():
         0.5 * (1.0 + np.cos(np.pi * min(1.0, s / args.steps))))
 
     n = y_tr.shape[0]
+    steps_per_epoch = max(1, n // args.batch)
+    print(f"epochs:  {args.steps / steps_per_epoch:.1f} equivalent "
+          f"({steps_per_epoch} steps/epoch at batch {args.batch}; batches are "
+          f"sampled with replacement, so epochs are nominal)")
     g = torch.Generator().manual_seed(args.seed)
     log_path = out / "train_log.txt"
     hist = []
@@ -104,8 +108,9 @@ def main():
                                      generator=g).to(dev)
                 vloss = cfm_loss(ema.shadow, y_va[vidx], c_va[vidx]).item()
             rate = step * args.batch / (time.time() - t0)
-            line = (f"step {step:6d}  train {run_loss:.4f}  "
-                    f"val(EMA) {vloss:.4f}  {rate:,.0f} samp/s")
+            line = (f"step {step:6d} (ep {step / steps_per_epoch:5.1f})  "
+                    f"train {run_loss:.4f}  val(EMA) {vloss:.4f}  "
+                    f"{rate:,.0f} samp/s")
             print(line, flush=True)
             with open(log_path, "a") as f:
                 f.write(line + "\n")
