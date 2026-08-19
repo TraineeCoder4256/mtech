@@ -55,27 +55,64 @@ def perimeter_decode(p, W, H):
 
 
 @torch.no_grad()
-def integrate_heun(model, z, c, steps=25):
-    """Deterministic Heun (2nd order) integration of the flow ODE."""
+def integrate(model, z, c, steps=25, solver="heun"):
+    """Fixed-step integration of the flow ODE.
+
+    Network evaluations per sample (NFE) = steps * cost, with cost 1 for
+    Euler, 2 for Heun, 4 for RK4.  NFE is the quantity that matters for
+    inference cost, not the step count: the reference work uses RK4 with 12
+    steps (48 NFE).
+
+    Under the optimal-transport interpolation the conditional path is a
+    straight line with constant velocity, so the learned field is close to
+    straight and high-order solvers buy little -- at matched NFE a cheap
+    solver with more steps is generally the better trade.
+    """
     x = z
     dt = 1.0 / steps
+    n = x.shape[0]
+
+    def tt(v):
+        return torch.full((n, 1), v, device=x.device)
+
     for i in range(steps):
-        t0 = torch.full((x.shape[0], 1), i * dt, device=x.device)
-        v0 = model(x, t0, c)
-        x_pred = x + dt * v0
-        v1 = model(x_pred, t0 + dt, c)
-        x = x + 0.5 * dt * (v0 + v1)
+        t0 = tt(i * dt)
+        if solver == "euler":
+            x = x + dt * model(x, t0, c)
+        elif solver == "heun":
+            v0 = model(x, t0, c)
+            v1 = model(x + dt * v0, tt((i + 1) * dt), c)
+            x = x + 0.5 * dt * (v0 + v1)
+        elif solver == "rk4":
+            k1 = model(x, t0, c)
+            k2 = model(x + 0.5 * dt * k1, tt((i + 0.5) * dt), c)
+            k3 = model(x + 0.5 * dt * k2, tt((i + 0.5) * dt), c)
+            k4 = model(x + dt * k3, tt((i + 1) * dt), c)
+            x = x + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
+        else:
+            raise ValueError(f"unknown solver {solver!r}")
     return x
+
+
+NFE_PER_STEP = {"euler": 1, "heun": 2, "rk4": 4}
+
+
+@torch.no_grad()
+def integrate_heun(model, z, c, steps=25):
+    """Backwards-compatible alias."""
+    return integrate(model, z, c, steps, "heun")
 
 
 class GMCBoundarySampler:
     """Trained boundary model + normalizers -> physical exit states."""
 
-    def __init__(self, model, ynorm, cnorm, device="cpu", ode_steps=25):
+    def __init__(self, model, ynorm, cnorm, device="cpu", ode_steps=25,
+                 solver="heun"):
         self.model = model.to(device).eval()
         self.ynorm, self.cnorm = ynorm, cnorm
         self.device = device
         self.ode_steps = ode_steps
+        self.solver = solver
 
     def sample(self, W, H, xi, oxi, oyi, seed=0, uncollided="analytic"):
         """Sample one exit state per entry state (arrays broadcast together).
@@ -128,8 +165,8 @@ class GMCBoundarySampler:
             c = torch.from_numpy(self.cnorm.transform(c_raw)).to(self.device)
             g = torch.Generator(device="cpu").manual_seed(int(rng.integers(2**31)))
             z = torch.randn(int(m.sum()), self.ynorm.mean.shape[0], generator=g)
-            x = integrate_heun(self.model, z.to(self.device), c,
-                               self.ode_steps)
+            x = integrate(self.model, z.to(self.device), c,
+                          self.ode_steps, self.solver)
             y = self.ynorm.inverse(x.cpu().numpy())
 
             theta = np.arctan2(y[:, 1], y[:, 0])            # (cos,sin) -> angle
