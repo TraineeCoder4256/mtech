@@ -176,7 +176,10 @@ def accuracy_and_joint(args, sampler):
         Rs, Gs = (R - mu) / sd, (G - mu) / sd
         h = rng.permutation(len(Rs))
         A, B = h[: len(h) // 2], h[len(h) // 2: 2 * (len(h) // 2)]
-        e_model = energy_distance(Rs[A], Gs[: len(A)], rng=rng)
+        # Gs is built row-for-row from the same conditions as Rs, so index
+        # it with the SAME rows as the reference half -- slicing Gs[:len(A)]
+        # instead would compare clouds drawn from different conditions.
+        e_model = energy_distance(Rs[A], Gs[A], rng=rng)
         e_floor = energy_distance(Rs[A], Rs[B], rng=rng)
         cR, cG = np.corrcoef(Rs.T), np.corrcoef(Gs.T)
         cerr = np.abs(cR - cG)[np.triu_indices(6, 1)].max()
