@@ -283,11 +283,13 @@ def main():
         ax.set_title("cost vs optical scale", fontsize=9); ax.legend(fontsize=8)
 
         ax = fig.add_subplot(gs[1, 1])
-        ax.semilogx(s[:, 0], s[:, 1] / s[:, 2], "o-", color="#A8630F")
+        ax.loglog(s[:, 3], s[:, 2] / s[:, 1], "o-", color="#A8630F")
         ax.axhline(1.0, color="k", ls="--", lw=1)
-        ax.set_xlabel("optical scale factor")
-        ax.set_ylabel("MC time / GMC time")
-        ax.set_title("speedup (>1 favours GMC)", fontsize=9)
+        ax.text(s[0, 3], 1.35, "break-even", fontsize=7.5)
+        ax.set_xlabel("mean scatters per crossing (= W)")
+        ax.set_ylabel("GMC time / MC time")
+        ax.set_title("GMC is slower by this factor\n(<1 would favour GMC)",
+                     fontsize=9)
 
         ax = fig.add_subplot(gs[1, 2])
         ax.loglog(s[:, 3], s[:, 1], "o-", color="k", label="MC")
@@ -321,10 +323,12 @@ def main():
         f2, ax2 = plt.subplots(1, 3, figsize=(11.5, 3.5))
         lbl = ["cos", "sin", "$\\Omega_x$", "$\\Omega_y$", "$\\Omega_z$",
                "log s"]
-        for a, M, t in [(ax2[0], cR, f"MC correlation, W={w:g}"),
-                        (ax2[1], cG, "GMC correlation"),
-                        (ax2[2], cG - cR, "difference")]:
-            v = 1 if M is not (cG - cR) else 0.3
+        dif = cG - cR
+        dmax = max(np.abs(dif).max(), 1e-3)
+        for a, M, t, v in [
+                (ax2[0], cR, f"MC correlation, W={w:g}", 1.0),
+                (ax2[1], cG, "GMC correlation", 1.0),
+                (ax2[2], dif, f"difference (max {dmax:.3f})", dmax)]:
             im = a.imshow(M, cmap="RdBu_r", vmin=-v, vmax=v)
             a.set_xticks(range(6)); a.set_xticklabels(lbl, fontsize=7.5,
                                                       rotation=45)
