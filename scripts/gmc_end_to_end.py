@@ -51,7 +51,7 @@ from gmc.transport import (run_gmc_transport, macro_problem,  # noqa: E402
 
 
 # ----------------------------------------------------------------- utils
-def load_sampler(ckpt_dir, ode_steps=25):
+def load_sampler(ckpt_dir, ode_steps=25, solver="heun"):
     st = torch.load(ckpt_dir / "model.pt", map_location="cpu",
                     weights_only=True)
     cfg = st["config"]
@@ -59,7 +59,10 @@ def load_sampler(ckpt_dir, ode_steps=25):
                       width=cfg["width"], depth=cfg["depth"])
     m.load_state_dict(st["ema"])
     yn, cn, _ = load_normalizers(ckpt_dir / "normalizers.json")
-    return GMCBoundarySampler(m, yn, cn, ode_steps=ode_steps)
+    # checkpoints written before the detour encoding existed have no
+    # s_param key and were all trained with log(s/W~)
+    return GMCBoundarySampler(m, yn, cn, ode_steps=ode_steps, solver=solver,
+                              s_param=cfg.get("s_param", "logW"))
 
 
 def birth_analog(n, W, seed):

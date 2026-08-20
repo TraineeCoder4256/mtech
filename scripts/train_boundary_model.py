@@ -3,8 +3,15 @@
 
 Reads a single-cell dataset produced by make_lattice_dataset.py, applies the
 preprocessing of docs/boundary_model_training.md (uncollided branch dropped,
-circular p encoding, log(s/W), condition-wise split), and trains the
+circular p encoding, log path length, condition-wise split), and trains the
 velocity field with the CFM objective.
+
+--s-param selects how the path length is encoded (see gmc/data.py):
+  detour  u = log(s / s_min(p))   default; the straight-line bound s >= s_min
+                                  is then structural and the sampler never
+                                  has to clamp
+  logW    u = log(s / W~)         the original v1 encoding, kept so the
+                                  earlier checkpoint stays reproducible
 
 Outputs (to --out, default models/boundary_v1/):
   model.pt           raw + EMA weights and config
@@ -43,6 +50,8 @@ def main():
     ap.add_argument("--ema", type=float, default=0.999)
     ap.add_argument("--val-every", type=int, default=500)
     ap.add_argument("--val-frac", type=float, default=0.05)
+    ap.add_argument("--s-param", default="detour", choices=["detour", "logW"],
+                    help="path-length encoding for the 6th target component")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", default="models/boundary_v1")
     ap.add_argument("--device", default=None,
@@ -56,12 +65,13 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
 
     ds = load_boundary_dataset(ROOT / args.data, val_frac=args.val_frac,
-                               seed=args.seed)
+                               seed=args.seed, s_param=args.s_param)
     info = ds["info"]
     print(f"dataset: {info['n_total']} rows -> {info['n_collided']} collided "
           f"(k>0), {info['n_conditions']} entry conditions")
     print(f"split:   {info['n_train']} train / {info['n_val']} val rows "
           f"({info['n_val_conditions']} val conditions, condition-wise)")
+    print(f"s_param: {args.s_param}")
 
     y_tr = torch.from_numpy(ds["y_train"]).to(dev)
     c_tr = torch.from_numpy(ds["c_train"]).to(dev)
@@ -120,7 +130,8 @@ def main():
     config = {"width": args.width, "depth": args.depth,
               "x_dim": int(y_tr.shape[1]), "c_dim": int(c_tr.shape[1]),
               "steps": args.steps, "batch": args.batch, "lr": args.lr,
-              "data": str(args.data), "seed": args.seed}
+              "data": str(args.data), "seed": args.seed,
+              "s_param": args.s_param}
     torch.save({"model": {k: v.cpu() for k, v in model.state_dict().items()},
                 "ema": {k: v.cpu() for k, v in ema.shadow.state_dict().items()},
                 "config": config}, out / "model.pt")

@@ -67,7 +67,9 @@ def main():
     model.load_state_dict(state["ema"])  # sample from the EMA weights
     ynorm, cnorm, _ = load_normalizers(ckpt_dir / "normalizers.json")
     sampler = GMCBoundarySampler(model, ynorm, cnorm,
-                                 ode_steps=args.ode_steps)
+                                 ode_steps=args.ode_steps,
+                                 s_param=cfg.get("s_param", "logW"))
+    print(f"checkpoint {args.ckpt}: s_param = {sampler.s_param}")
 
     d = np.load(ROOT / args.data)
     W, y0 = d["W"], d["y0"]

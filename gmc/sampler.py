@@ -12,46 +12,20 @@ Full sampling pipeline for one entry state (W, H, xi, Omega_in):
      fixed steps) starting from x ~ N(0, I), then decode:
        (cos, sin) -> perimeter coordinate p via atan2 (mod 4W),
        (Ox, Oy, Oz) -> renormalised to the unit sphere,
-       log(s/W)    -> s = W exp(.), clamped to the physical minimum
-                      distance from the entry point to the decoded exit.
+       u            -> s, by whichever path-length parameterisation the
+                       checkpoint was trained with (gmc.data).  Under the
+                       default "detour" encoding s = s_min(p) exp(u), so
+                       the straight-line bound holds by construction.
 """
 
 import numpy as np
 import torch
 
-from .data import encode_conditions
-
-
-def chord_length(W, H, xi, oxi, oyi):
-    """Straight-line distance (mfp) from entry (0, xi*H) along (oxi, oyi)
-    to the cell boundary.  oxi > 0 by construction (entering left face)."""
-    y = xi * H
-    tx = W / oxi
-    with np.errstate(divide="ignore"):
-        ty = np.where(oyi > 0, (H - y) / np.where(oyi > 0, oyi, 1.0),
-                      np.where(oyi < 0, -y / np.where(oyi < 0, oyi, 1.0),
-                               np.inf))
-    return np.minimum(tx, ty)
-
-
-def perimeter_decode(p, W, H):
-    """Perimeter coordinate -> (x, y) on the cell boundary + face index
-    (0 bottom, 1 right, 2 top, 3 left)."""
-    p, W, H = np.broadcast_arrays(p, W, H)
-    p = np.mod(p, 2.0 * (W + H))
-    x = np.empty_like(p)
-    y = np.empty_like(p)
-    face = np.empty(p.shape, dtype=np.int8)
-    b0, b1, b2 = W, W + H, 2 * W + H
-    m = p < b0
-    x[m], y[m], face[m] = p[m], 0.0, 0
-    m = (p >= b0) & (p < b1)
-    x[m], y[m], face[m] = W[m], p[m] - b0[m], 1
-    m = (p >= b1) & (p < b2)
-    x[m], y[m], face[m] = W[m] - (p[m] - b1[m]), H[m], 2
-    m = p >= b2
-    x[m], y[m], face[m] = 0.0, H[m] - (p[m] - b2[m]), 3
-    return x, y, face
+from .data import encode_conditions, path_length_decode
+# re-exported here because callers have always imported them from the
+# sampler; the definitions now live in gmc.geometry so gmc.data can use
+# them too without a circular import.
+from .geometry import chord_length, perimeter_decode, s_min_of  # noqa: F401
 
 
 @torch.no_grad()
@@ -107,12 +81,16 @@ class GMCBoundarySampler:
     """Trained boundary model + normalizers -> physical exit states."""
 
     def __init__(self, model, ynorm, cnorm, device="cpu", ode_steps=25,
-                 solver="heun"):
+                 solver="heun", s_param="detour"):
         self.model = model.to(device).eval()
         self.ynorm, self.cnorm = ynorm, cnorm
         self.device = device
         self.ode_steps = ode_steps
         self.solver = solver
+        self.s_param = s_param
+        # fraction of the last sample() call that had to be pushed up to the
+        # straight-line bound; 0 is what "detour" is meant to achieve
+        self.last_clamp_frac = 0.0
 
     def sample(self, W, H, xi, oxi, oyi, seed=0, uncollided="analytic"):
         """Sample one exit state per entry state (arrays broadcast together).
@@ -174,12 +152,12 @@ class GMCBoundarySampler:
             omega = y[:, 2:5]
             omega /= np.linalg.norm(omega, axis=1, keepdims=True) + 1e-12
             dirs[m] = omega
-            # s = W exp(target); the exit point implies a hard lower bound
-            # (straight line from entry to exit), enforce it
-            sv = W[m] * np.exp(y[:, 5])
-            ex_x, ex_y, _ = perimeter_decode(p[m], W[m], H[m])
-            smin = np.hypot(ex_x - 0.0, ex_y - xi[m] * H[m])
-            s[m] = np.maximum(sv, smin)
+            s[m], violated = path_length_decode(
+                y[:, 5].astype(np.float64), p[m], W[m], H[m], xi[m],
+                self.s_param)
+            self.last_clamp_frac = float(violated.mean())
+        else:
+            self.last_clamp_frac = 0.0
 
         _, _, face = perimeter_decode(p, W, H)
         return {"p": p, "dir": dirs, "s": s, "face": face, "uncollided": unc}
