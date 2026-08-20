@@ -29,3 +29,12 @@ step  14000 (ep  37.1)  train 1.0830  val(EMA) 1.0852  29,363 samp/s
 step  14500 (ep  38.5)  train 1.0851  val(EMA) 1.0795  29,477 samp/s
 step  15000 (ep  39.8)  train 1.0841  val(EMA) 1.0711  29,601 samp/s
 step  15500 (ep  41.1)  train 1.0851  val(EMA) 1.0753  29,723 samp/s
+step  16000 (ep  42.4)  train 1.0807  val(EMA) 1.0895  29,813 samp/s
+step  16500 (ep  43.8)  train 1.0835  val(EMA) 1.0700  29,896 samp/s
+step  17000 (ep  45.1)  train 1.0787  val(EMA) 1.0751  30,006 samp/s
+step  17500 (ep  46.4)  train 1.0807  val(EMA) 1.0855  30,108 samp/s
+step  18000 (ep  47.7)  train 1.0810  val(EMA) 1.0798  30,200 samp/s
+step  18500 (ep  49.1)  train 1.0795  val(EMA) 1.0739  30,274 samp/s
+step  19000 (ep  50.4)  train 1.0778  val(EMA) 1.0805  30,368 samp/s
+step  19500 (ep  51.7)  train 1.0789  val(EMA) 1.0903  30,457 samp/s
+step  20000 (ep  53.1)  train 1.0810  val(EMA) 1.0776  30,540 samp/s
