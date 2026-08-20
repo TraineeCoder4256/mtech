@@ -26,5 +26,6 @@ from .model import VelocityField
 from .cfm import cfm_loss, EMA
 from .sampler import GMCBoundarySampler, chord_length
 from .geometry import perimeter_decode, s_min_of
+from .device import pick_device, describe
 from .transport import (run_gmc_transport, macro_problem,
                         coarsen)

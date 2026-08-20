@@ -45,9 +45,17 @@ def integrate(model, z, c, steps=25, solver="heun"):
     x = z
     dt = 1.0 / steps
     n = x.shape[0]
+    # the solver only ever needs t on a fixed grid of half-steps, so build
+    # the tensors once instead of allocating (and, on a GPU, launching a
+    # fill kernel for) one per stage per step
+    grid = {}
 
     def tt(v):
-        return torch.full((n, 1), v, device=x.device)
+        k = round(v * 2 * steps)
+        if k not in grid:
+            grid[k] = torch.full((n, 1), k / (2.0 * steps), device=x.device,
+                                 dtype=x.dtype)
+        return grid[k]
 
     for i in range(steps):
         t0 = tt(i * dt)
@@ -140,7 +148,8 @@ class GMCBoundarySampler:
         m = ~unc
         if m.any():
             c_raw = encode_conditions(W[m], H[m], xi[m], oxi[m], oyi[m])
-            c = torch.from_numpy(self.cnorm.transform(c_raw)).to(self.device)
+            c = torch.from_numpy(self.cnorm.transform(c_raw)).to(self.device,
+                                                                  non_blocking=True)
             g = torch.Generator(device="cpu").manual_seed(int(rng.integers(2**31)))
             z = torch.randn(int(m.sum()), self.ynorm.mean.shape[0], generator=g)
             x = integrate(self.model, z.to(self.device), c,

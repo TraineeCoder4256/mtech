@@ -37,6 +37,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from gmc import VelocityField, GMCBoundarySampler  # noqa: E402
 from gmc.data import load_normalizers  # noqa: E402
+from gmc.device import pick_device, describe  # noqa: E402
 
 
 def w1(a, b):
@@ -56,7 +57,10 @@ def main():
     ap.add_argument("--w", type=float, nargs="+", default=[0.5, 2.5, 10.0])
     ap.add_argument("--ode-steps", type=int, default=25)
     ap.add_argument("--seed", type=int, default=123)
+    ap.add_argument("--device", default="auto", help="auto | cpu | cuda | mps")
     args = ap.parse_args()
+    dev = pick_device(args.device)
+    print(describe(dev))
 
     ckpt_dir = ROOT / args.ckpt
     state = torch.load(ckpt_dir / "model.pt", map_location="cpu",
@@ -66,7 +70,7 @@ def main():
                           width=cfg["width"], depth=cfg["depth"])
     model.load_state_dict(state["ema"])  # sample from the EMA weights
     ynorm, cnorm, _ = load_normalizers(ckpt_dir / "normalizers.json")
-    sampler = GMCBoundarySampler(model, ynorm, cnorm,
+    sampler = GMCBoundarySampler(model, ynorm, cnorm, device=dev,
                                  ode_steps=args.ode_steps,
                                  s_param=cfg.get("s_param", "logW"))
     print(f"checkpoint {args.ckpt}: s_param = {sampler.s_param}")

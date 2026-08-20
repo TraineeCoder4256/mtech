@@ -46,12 +46,15 @@ from mc2d import run_transport, sample_single_cell            # noqa: E402
 from mc2d.lattice import build_lattice                        # noqa: E402
 from gmc import VelocityField, GMCBoundarySampler             # noqa: E402
 from gmc.data import load_normalizers                         # noqa: E402
+from gmc.device import pick_device, describe                  # noqa: E402
 from gmc.transport import (run_gmc_transport, macro_problem,  # noqa: E402
                            coarsen)
 
 
 # ----------------------------------------------------------------- utils
-def load_sampler(ckpt_dir, ode_steps=25, solver="heun"):
+def load_sampler(ckpt_dir, ode_steps=25, solver="heun", device=None):
+    """Rebuild a trained sampler.  device=None/"auto" -> CUDA if present."""
+    dev = pick_device(device)
     st = torch.load(ckpt_dir / "model.pt", map_location="cpu",
                     weights_only=True)
     cfg = st["config"]
@@ -61,7 +64,8 @@ def load_sampler(ckpt_dir, ode_steps=25, solver="heun"):
     yn, cn, _ = load_normalizers(ckpt_dir / "normalizers.json")
     # checkpoints written before the detour encoding existed have no
     # s_param key and were all trained with log(s/W~)
-    return GMCBoundarySampler(m, yn, cn, ode_steps=ode_steps, solver=solver,
+    return GMCBoundarySampler(m, yn, cn, device=dev, ode_steps=ode_steps,
+                              solver=solver,
                               s_param=cfg.get("s_param", "logW"))
 
 
@@ -234,9 +238,16 @@ def main():
     ap.add_argument("--scales", type=float, nargs="+",
                     default=[1.0, 4.0, 10.0, 20.0])
     ap.add_argument("--skip-speed", action="store_true")
+    ap.add_argument("--ode-steps", type=int, default=25)
+    ap.add_argument("--device", default="auto",
+                    help="auto | cpu | cuda | mps")
     args = ap.parse_args()
 
-    sampler = load_sampler(ROOT / args.ckpt)
+    sampler = load_sampler(ROOT / args.ckpt, ode_steps=args.ode_steps,
+                           device=args.device)
+    print(describe(sampler.device))
+    print(f"checkpoint {args.ckpt}: s_param = {sampler.s_param}, "
+          f"{args.ode_steps} ODE steps ({sampler.solver})")
     prob, phi_mc, phi_mc2, phi_gmc, joint, t_mc, t_gmc, stats = \
         accuracy_and_joint(args, sampler)
     speed = None if args.skip_speed else speed_sweep(args, sampler)

@@ -66,9 +66,12 @@ def main():
     ap.add_argument("--data", default="data/lattice_singlecell.npz")
     ap.add_argument("--ode-steps", type=int, default=5)
     ap.add_argument("--seed", type=int, default=23)
+    ap.add_argument("--device", default="auto",
+                    help="auto | cpu | cuda | mps")
     args = ap.parse_args()
 
-    sampler = load_sampler(ROOT / args.ckpt, ode_steps=args.ode_steps)
+    sampler = load_sampler(ROOT / args.ckpt, ode_steps=args.ode_steps,
+                           device=args.device)
     d = np.load(ROOT / args.data)
     w = args.w
     mw = np.isclose(d["W"], w) & (d["k"] > 0)

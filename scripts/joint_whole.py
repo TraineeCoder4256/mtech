@@ -128,9 +128,12 @@ def main():
     ap.add_argument("--ode-steps", type=int, default=5)
     ap.add_argument("--n-dir", type=int, default=400)
     ap.add_argument("--seed", type=int, default=31)
+    ap.add_argument("--device", default="auto",
+                    help="auto | cpu | cuda | mps")
     args = ap.parse_args()
 
-    sampler = load_sampler(ROOT / args.ckpt, ode_steps=args.ode_steps)
+    sampler = load_sampler(ROOT / args.ckpt, ode_steps=args.ode_steps,
+                           device=args.device)
     R, G = build_clouds(sampler, ROOT / args.data, args.w, args.seed)
     mu, sd = R.mean(0), R.std(0) + 1e-9
     Rs, Gs = (R - mu) / sd, (G - mu) / sd
