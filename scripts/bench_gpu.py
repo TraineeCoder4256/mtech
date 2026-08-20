@@ -189,12 +189,17 @@ def transport_occupancy(ckpt, dev, n, ode_steps):
     from gmc.transport import macro_problem, run_gmc_transport  # noqa: E402
 
     sampler = load_sampler(ckpt, ode_steps=ode_steps, device=dev)
-    sizes = []
+    sizes, flow = [], []
     orig = sampler.sample
 
     def spy(W, *a, **k):
+        out = orig(W, *a, **k)
         sizes.append(np.size(W))
-        return orig(W, *a, **k)
+        # only the collided particles go through the ODE; the uncollided
+        # branch is analytic and costs no network evaluation, so counting
+        # the whole batch would overstate NFE (and hence NFE/s)
+        flow.append(int((~out["uncollided"]).sum()))
+        return out
 
     sampler.sample = spy
     prob = build_lattice(5, pitch=1.0, cells_per_pitch=16,
@@ -205,23 +210,33 @@ def transport_occupancy(ckpt, dev, n, ode_steps):
     _, st = run_gmc_transport(ss, sa, 1.0, n, sampler, (3, 3), seed=7,
                               birth_sampler=birth_analog, return_stats=True)
     wall = time.perf_counter() - t0
-    sizes = np.array(sizes)
-    nfe = sizes.sum() * ode_steps * NFE_PER_STEP[sampler.solver]
+    sizes, flow = np.array(sizes), np.array(flow)
+    nfe = flow.sum() * ode_steps * NFE_PER_STEP[sampler.solver]
     print(f"  {n:,} particles, {len(sizes)} batched sampler calls, "
           f"{st['crossings_per_particle']:.1f} crossings/particle")
+    print(f"  {sizes.sum():,} particle-crossings, of which "
+          f"{flow.sum():,} ({flow.sum()/sizes.sum()*100:.1f}%) reached the "
+          f"network;\n  the rest took the analytic uncollided branch and "
+          f"cost no evaluation")
     print(f"  wall {wall:.2f} s -> {fmt(nfe/wall)}NFE/s in situ "
           f"(compare with the peak in section 1)")
-    print(f"\n{'call':>5} {'live batch':>11} {'% of start':>11}")
+    print(f"\n{'call':>5} {'live batch':>11} {'to network':>11} "
+          f"{'% of start':>11}")
     for i, s in enumerate(sizes):
         if i < 6 or i % max(1, len(sizes) // 8) == 0 or i == len(sizes) - 1:
-            print(f"{i:>5} {s:>11,} {s/sizes[0]*100:>10.1f}%")
+            print(f"{i:>5} {s:>11,} {flow[i]:>11,} {s/sizes[0]*100:>10.1f}%")
     small = sizes[sizes < 2048].sum() / sizes.sum()
-    print(f"\n  {small*100:.1f}% of all sampled particles are drawn in calls")
-    print(f"  with fewer than 2048 live particles.")
-    if small > 0.2:
-        print("  -> a large minority of the work runs at launch-bound batch")
-        print("     size.  Raising --n raises the whole curve proportionally,")
-        print("     so on a GPU run the end-to-end test with a big --n.")
+    calls_small = float((sizes < 2048).mean())
+    print(f"\n  {small*100:.1f}% of all particle-crossings are drawn in calls "
+          f"with fewer\n  than 2048 live particles -- but those account for "
+          f"{calls_small*100:.1f}% of the CALLS.")
+    print("  Wall time at small batch is dominated by per-call overhead, not")
+    print("  by batch size, so the call share is the one that costs you.")
+    if calls_small > 0.3:
+        print("  -> a long thin tail of surviving particles is being tracked a")
+        print("     handful at a time.  Raising --n raises the whole occupancy")
+        print("     curve; lowering --max-crossings or raising the weight")
+        print("     cutoff truncates the tail instead.")
 
 
 def main():
