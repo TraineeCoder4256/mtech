@@ -1,7 +1,0 @@
-step    500 (ep   1.3)  train 1.1372  val(EMA) 1.7397  25,209 samp/s
-step   1000 (ep   2.7)  train 1.1113  val(EMA) 1.5046  24,257 samp/s
-step   1500 (ep   4.0)  train 1.1016  val(EMA) 1.3490  25,136 samp/s
-step   2000 (ep   5.3)  train 1.0961  val(EMA) 1.2299  25,255 samp/s
-step   2500 (ep   6.7)  train 1.0956  val(EMA) 1.1557  25,231 samp/s
-step   3000 (ep   8.0)  train 1.0922  val(EMA) 1.1182  24,847 samp/s
-step   3500 (ep   9.3)  train 1.0916  val(EMA) 1.0964  24,502 samp/s
