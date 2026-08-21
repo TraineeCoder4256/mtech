@@ -1,247 +1,161 @@
 # Generative Monte Carlo for 2-D particle transport
 
 A reproduction of **arXiv:2512.13965v1**, *Generative Monte Carlo Sampling for
-Constant-Cost Particle Transport* (Farmer, Murray, Krotz, McClarren), built on
-top of a 2-D monoenergetic Monte Carlo transport solver.
+Constant-Cost Particle Transport* (Farmer, Murray, Krotz, McClarren).
 
-The idea under test: inside an optically thick, materially uniform cell, replace
-the whole in-cell scattering random walk with **one draw from a conditional
-generative model**. Monte Carlo cost grows with optical thickness (more
-scatters per crossing); the generative sampler's cost is a fixed number of
-network evaluations, whatever the thickness. Above some crossover thickness the
-sampler wins.
+**The idea.** Inside an optically thick, materially uniform cell, replace the
+entire in-cell scattering random walk with one draw from a conditional
+generative model. Monte Carlo cost per cell grows with optical thickness —
+thicker cell, more scattering events to simulate. The generative sampler costs
+a fixed number of network evaluations no matter how thick the cell is. Above
+some crossover thickness, the sampler should win.
+
+**Whether it actually wins here is the question `scripts/evaluate.py` answers,
+in numbers, including when the answer is no.**
+
+---
+
+## The whole pipeline is three commands
+
+```bash
+python scripts/make_data.py      # ~11 s    -> data/singlecell.npz
+python scripts/train.py          # ~40 min  -> models/boundary/
+python scripts/evaluate.py       # ~10 min  -> figures/ + results/
+```
+
+Add `--device cuda` to the last two for a GPU. Timings are for 4 CPU cores.
+
+That is the entire main path. Everything else in the repo is either the Monte
+Carlo baseline those three depend on, or the paper's own baseline figures kept
+aside in `scripts/baseline/`.
+
+---
+
+## What each step does
+
+### 1. `scripts/make_data.py` — the training data
+
+One physical experiment, repeated: a particle enters a square purely-scattering
+cell of optical width `W` through the left face at height `xi` in direction
+`Omega_in`; Monte Carlo walks it until it leaves; record where it left (`p`),
+which way it was going (`Omega_out`) and how far it travelled (`s`).
+
+No larger geometry is involved. A cell is completely described by its optical
+width `W = pitch × sigma_s`, so `W` is sampled directly on a log grid from 0.025
+to 20 mfp rather than derived from any particular problem's materials.
+
+Conditions are sampled **uniformly**, not physically: the model must be accurate
+everywhere it will be asked, and at solve time it gets asked wherever the
+geometry happens to send particles.
+
+```bash
+python scripts/make_data.py                                   # 3.1 M rows
+python scripts/make_data.py --n-cond 512 --per-cond 32        # smaller
+```
+
+### 2. `scripts/train.py` — the model
+
+Conditional flow matching. Take a training exit state `y` and Gaussian noise
+`z`, pick a time `t`, place a point on the straight line between them
+(`x_t = (1-t)z + ty`), and ask the network what velocity carries a particle
+along that line. The answer is `y - z`. Regress on it. To sample, integrate the
+learned field from noise at `t=0` to `t=1`. `gmc/cfm.py` is nine lines.
+
+Two preprocessing rules carry real weight:
+
+- **Uncollided particles (`k == 0`) are dropped.** Their exit is an exact
+  function of their entry — a Dirac delta, which a smooth flow cannot
+  represent. They are sampled analytically at solve time instead.
+- **The train/validation split is by entry condition, never by row.** Each
+  condition has ~48 sampled exits; splitting by row would put siblings of a
+  training row into validation and report memorisation as generalisation.
+
+```bash
+python scripts/train.py --device cuda --batch 16384 --lr 3e-3
+```
+
+### 3. `scripts/evaluate.py` — does it work, and is it faster
+
+One geometry throughout: the 7×7 cm lattice from `mc2d.problems`, a checkerboard
+of absorbing blocks in a scattering background with an isotropic source in the
+middle cell.
+
+**Accuracy** — solve it twice with Monte Carlo (different seeds) and once with
+the sampler. The two MC runs differ only by seed, so the gap between them is
+pure statistical noise: that is the floor, and the only honest yardstick.
+Beating it is impossible; approaching it is the goal. Everything is compared on
+the 7×7 macro-cell grid, because the sampler returns total path length in a cell
+but not where inside it went — its flux is inherently cell-averaged, and
+comparing against the fine 112×112 mesh would compare two different quantities.
+
+**Speed** — the same geometry with every cross section multiplied by a scale
+factor, which makes cells optically thicker without changing the layout.
+
+```bash
+python scripts/evaluate.py --device cuda --n 50000 --scales 1 4 10 20
+```
+
+Three outputs:
+
+| file | what it holds |
+|---|---|
+| `figures/accuracy.pdf` | MC and GMC flux fields, the error map, and a lineout with the noise floor drawn in |
+| `figures/speed.pdf` | wall time vs optical thickness, the speedup curve, and where GMC's time actually goes |
+| `results/evaluation.txt` | every raw number behind both figures |
+
+**`results/evaluation.txt` is the one to read.** It has the numbers a plot
+cannot show: time per scattering event, time per network evaluation, time per
+cell crossing each way, how GMC's wall time splits between the network and the
+NumPy host loop, and the break-even arithmetic — how many scattering events one
+GMC cell crossing costs, versus how many the geometry actually has. That
+subtraction is what tells you *why* the speedup is what it is, and which of the
+two possible problems you have:
+
+- the **network** dominates GMC's time → the model is too expensive (fewer ODE
+  steps, a cheaper solver, distillation);
+- the **host loop** dominates → the model is not the bottleneck at all, and no
+  amount of model work will fix it.
+
+---
+
+## Layout
 
 ```
-mc2d/      the Monte Carlo baseline (numba, CPU) + the lattice geometry
-gmc/       the generative boundary model: data encoding, network, CFM, sampler,
-           and the transport driver that chains it across a real mesh
-scripts/   every runnable step: dataset -> train -> evaluate -> joint tests ->
-           end-to-end -> benchmarks
-docs/      the write-up (markdown, HTML report, PDF)
-data/      generated datasets (.npz)
-models/    trained checkpoints
-figures/   every figure produced by the scripts
+mc2d/            the Monte Carlo baseline (numba, multi-threaded)
+  transport.py     full-domain solver, track-length estimator
+  problems.py      the lattice and hohlraum benchmarks
+  singlecell.py    the in-cell walk that generates training data
+gmc/             the learned sampler
+  data.py          encodings, normalisation, leak-free split
+  model.py         the velocity field v(x, t, c)
+  cfm.py           the flow-matching loss + EMA
+  geometry.py      cell geometry, shared by encoder and decoder
+  sampler.py       ODE integration, decoding, uncollided branch
+  transport.py     chains the sampler across a mesh
+  device.py        cpu / cuda / mps
+scripts/
+  make_data.py     step 1
+  train.py         step 2
+  evaluate.py      step 3
+  baseline/        the paper's own MC figures (Fig 2b, 3, 4a, 4b)
 ```
 
 ---
 
-## 1. Setup
+## Honest notes
 
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install numpy numba matplotlib
-```
-
-Then install PyTorch **for your GPU**, which is the only dependency that differs
-between a CPU box and a GPU box. Pick the wheel matching your driver from
-<https://pytorch.org/get-started/locally/>; for a recent CUDA 12.x driver:
-
-```bash
-pip install torch --index-url https://download.pytorch.org/whl/cu124
-```
-
-Check the install before running anything else — this is the single most common
-reason a "GPU run" silently executes on the CPU:
-
-```bash
-python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
-# want:  2.x.y+cu124 True
-# a version string ending in '+cpu' is a CPU-only wheel; reinstall.
-```
-
-Every script that touches the network takes `--device auto|cpu|cuda|mps`, and
-`auto` (the default) picks CUDA if it is there. Each one prints the device and
-the hardware it resolved to as its first line of output, so you can always see
-what actually ran.
-
----
-
-## 2. Reproducing everything, in order
-
-Runtimes below are **measured on the 4-core CPU container this was developed
-in**. The GPU column is what the work *should* cost given where the time goes;
-`scripts/bench_gpu.py` (§3) measures it on your machine rather than guessing.
-Steps 1 and 2 are pure numba/numpy and get no benefit from a GPU at all.
-
-| # | Step | Command | CPU (4 cores) | GPU |
-|---|------|---------|---------------|-----|
-| 1 | Sanity-check the MC baseline and the lattice | `python scripts/lattice_explore.py` | ~2 min | same (no GPU work) |
-| 2 | Generate the training dataset | `python scripts/make_lattice_dataset.py --out data/lattice_singlecell_coverage.npz` | ~25 min | same (no GPU work) |
-| 3 | Inspect the dataset | `python scripts/inspect_lattice_dataset.py` | seconds | — |
-| 4 | Train the boundary model | `python scripts/train_boundary_model.py --s-param detour --out models/boundary_v2 --device auto` | ~40 min | minutes, see §3 |
-| 5 | Marginal evaluation | `python scripts/eval_boundary_model.py --ckpt models/boundary_v2 --device auto` | ~3 min | seconds |
-| 6 | Joint: corner plot | `python scripts/joint_corner.py --ckpt models/boundary_v2 --ode-steps 5 --device auto` | ~4 min | seconds |
-| 7 | Joint: conditional PDFs | `python scripts/joint_conditionals.py --ckpt models/boundary_v2 --ode-steps 5 --device auto` | ~4 min | seconds |
-| 8 | Joint: whole-5-D tests | `python scripts/joint_whole.py --ckpt models/boundary_v2 --ode-steps 5 --device auto` | ~6 min | ~1 min (the C2ST classifier dominates) |
-| 9 | Path-length encoding comparison | `python scripts/compare_sparam.py --device auto` | ~10 min | ~2 min |
-| 10 | End-to-end lattice solve + speed sweep | `python scripts/gmc_end_to_end.py --ckpt models/boundary_v2 --ode-steps 5 --device auto --n 20000` | ~30 min | see the caveat in §4 |
-| 11 | Hardware benchmark | `python scripts/bench_gpu.py --device auto --compile` | ~5 min | ~3 min |
-| 12 | Rebuild the report/PDF | `python scripts/build_paper.py` | ~1 min | — |
-
-Steps 4–11 all need step 2's dataset; steps 5–10 all need step 4's checkpoint.
-Nothing else is ordered, so 5–9 can run concurrently if you have the memory.
-
-### Reproducing the *paper's* baseline figures (no generative model involved)
-
-```bash
-python scripts/fig2b_singlecell.py     # single-cell exit distributions from MC
-python scripts/fig3_benchmarks.py      # lattice and hohlraum flux fields
-python scripts/fig4a_convergence.py    # MC convergence
-python scripts/fig4b_scaling.py        # cost vs optical thickness
-```
-
-`fig3_benchmarks.py` will overlay digitized reference curves if you drop them at
-`reference/paper_fig3_lineouts.npz`; without that file it plots our results
-alone. Those reference curves are not in the repo because we did not digitize
-them.
-
-### Two checkpoints
-
-`models/boundary_v1` and `models/boundary_v2` differ only in how the path length
-`s` is encoded as the sixth output:
-
-* **v1, `--s-param logW`** — `u = log(s / W̃)`. The physical constraint
-  `s ≥ s_min(p)` (the path cannot be shorter than the straight line from the
-  entry point to the exit point the model just generated) has to be *learned*,
-  and where it fails the sampler clamps. That clamp fired on 4.22% of samples
-  and put a spike in the joint distribution that the classifier test in step 8
-  detects even though every marginal looks correct.
-* **v2, `--s-param detour`** (default) — `u = log(s / s_min(p))`, so the decoder
-  reconstructs `s = s_min(p)·exp(u)` and the constraint holds by construction.
-
-Checkpoints written before v2 carry no `s_param` key and load as `logW`
-automatically, so v1 still reproduces exactly. Step 9 puts the two side by side.
-
----
-
-## 3. Does this code use a GPU efficiently?
-
-Read this section before quoting any speed number.
-
-### What was actually broken, and is now fixed
-
-`GMCBoundarySampler` defaulted to `device="cpu"` and **no caller ever overrode
-it**. On a GPU box, step 4 would have trained on the GPU while steps 5–10 —
-including the entire speed comparison — silently ran on the CPU. Every entry
-point now takes `--device` and prints what it resolved to. If you are picking
-this repo up from an older copy, this is the change that matters most.
-
-Two smaller things went with it: the ODE solver was allocating a fresh time
-tensor at every stage of every step (a kernel launch per stage on a GPU) and now
-builds them once; and the host→device copy of the conditioning vector is now
-non-blocking.
-
-### What I can and cannot tell you
-
-**I could not measure any of this.** The container this was developed in has
-`torch 2.13.0+cpu` and four CPU cores — there is no GPU here and I did not have
-one at any point. Everything below is either an audit of the code or a
-prediction from the arithmetic, and `scripts/bench_gpu.py` exists precisely so
-you replace it with measurement:
-
-```bash
-python scripts/bench_gpu.py --device cuda --compile
-```
-
-It reports four things, and the numbers you get are the real answer:
-
-1. **NFE/s versus batch size.** NFE — network function evaluations per second —
-   is the whole cost model; everything else is this number divided by the
-   evaluations one sample needs. The table shows where the curve flattens.
-2. **How much is launch overhead.** The same FLOPs run as one dense matmul
-   chain, as an achievable ceiling. A ratio near 1 means arithmetic-bound; well
-   above 1 means the small kernels dominate and `--compile` should help.
-3. **Solver cost at matched NFE** for Euler/Heun/RK4.
-4. **Transport occupancy** — how fast the live particle batch decays during the
-   end-to-end solve, which is where GPU utilisation is worst.
-
-### My prediction, and the reasoning, so you can check it against the tables
-
-The network is **1.68 M parameters**, so one evaluation is roughly
-`2 × 1.68 M ≈ 3.4 MFLOP` per sample. That is *small*. The consequences differ
-per workload:
-
-**Training (step 4) — will use the GPU, but will not saturate a big one.**
-At batch 4096 one forward is ~14 GFLOP; forward+backward ~41 GFLOP. A modern
-datacentre GPU does that in single-digit milliseconds, which is the same order
-as the ~50 kernel launches per forward pass. Expect to be launch-latency bound
-and to see something like 10–30× over four CPU cores rather than 100×. **If a
-run finishes suspiciously fast per step but the GPU sits at low utilisation,
-raise `--batch` to 16384 or 32768** (and scale `--lr` up modestly); the step
-count can stay the same because the dataset has 1.55 M training rows and 20 k
-steps at batch 4096 is only ~53 nominal epochs.
-
-**Bulk sampling (steps 5–9) — should use the GPU well.** These call the sampler
-with tens of thousands of conditions at once, which is squarely in the saturated
-part of the batch curve. Expect the largest speedups here, and expect them to be
-uninteresting, because these steps are not the bottleneck.
-
-**End-to-end transport (step 10) — this is where efficiency is genuinely poor,
-and it is structural.** Three reasons, all visible in section 4 of the
-benchmark:
-
-* The live particle set shrinks at every cell crossing as particles leak out or
-  fall below the weight cutoff. Early calls are large, late calls are tiny and
-  land back in the launch-bound regime.
-* There is a full host↔device synchronisation *per crossing*: the sampler
-  returns to NumPy so the driver can do the geometry, rotations and tallies on
-  the CPU.
-* That inter-crossing geometry work is single-threaded NumPy and does not move
-  to the GPU at all, so Amdahl's law caps the achievable gain.
-
-The practical mitigation is to run step 10 with a large `--n` (100 k or more);
-that raises the whole occupancy curve without changing anything else. The real
-fix — keeping particle state resident on the device and doing the geometry in
-Torch — is not implemented.
-
-### The caveat that matters more than any of the above
-
-**The Monte Carlo baseline is numba on the CPU and has no GPU path.** Moving GMC
-to a GPU and leaving MC on the CPU does not measure the algorithm; it measures
-the hardware gap between an A100 and four cores, and it will move the crossover
-thickness dramatically in GMC's favour for reasons that have nothing to do with
-generative modelling.
-
-So when you run step 10 on a GPU, report **both**:
-
-* **GMC-on-CPU vs MC-on-CPU** — the honest algorithmic comparison, and the one
-  that belongs in any claim about where the crossover is.
-* **GMC-on-GPU vs MC-on-CPU** — the deployment comparison. Legitimate to
-  report, but only with the hardware on both sides stated in the same sentence.
-
-The reference paper has the same asymmetry, which is part of why its wall-clock
-numbers and ours differ; see `docs/gmc_report.html` for that decomposition.
-
----
-
-## 4. Reading the outputs
-
-| Output | What good looks like |
-|--------|----------------------|
-| `models/*/loss_curve.png` | train and val curves overlapping; a val curve above train means the condition-wise split is catching real overfitting |
-| `figures/gmc_boundary_eval.png` | model marginals on top of MC marginals at several `W̃` |
-| `figures/joint_corner_W1.png` | lower triangle: MC filled, GMC contours on top. Upper triangle is GMC − MC and should be structureless noise |
-| `figures/joint_conditionals_W1.png` | every conditional slice overlays; TV distance ~0.02–0.05 is sampling noise at these counts |
-| `figures/joint_whole_W1.png` | sliced-Wasserstein ratio near 1, and a **C2ST accuracy near 50%** — a classifier trained specifically to separate the two 5-D clouds cannot |
-| `figures/sparam_comparison.png` | the clamp spike at `log10(s/s_min) = 0` present for v1 and gone for v2 |
-| `figures/gmc_end_to_end.png` | flux field agreement against the MC-vs-MC statistical floor, plus the speed sweep and its crossover |
-| `scripts/bench_gpu.py` stdout | §3 above |
-
-The C2ST is the strictest test here and the one to trust: marginals can all
-match while the joint is wrong, and a sliced test can miss a defect that a
-classifier finds. It is what exposed the v1 clamp spike.
-
----
-
-## 5. Known limitations
-
-* `W̃` takes 16 discrete values in the dataset and is **not held out** in
-  evaluation — held-out entry conditions are, but not unseen optical sizes.
-  Generalisation across `W̃` is therefore untested.
-* Cells are square (`H = W`) throughout. The conditioning vector has a separate
-  `H̃` slot and the code paths are there, but no rectangular data exists.
-* Only the **boundary** model is implemented. Internal births are handled by
-  falling back to analog MC in the birth cell.
-* The uncollided component is a Dirac delta that a smooth flow cannot represent;
-  it is sampled analytically and the network never sees it.
-* No distillation. The reference work's 1–2 NFE regime is not reproduced.
+- **The MC baseline is numba-compiled and multi-threaded; the GMC host loop is
+  single-threaded NumPy.** A GPU number for GMC compared against CPU MC measures
+  hardware, not algorithm. If you report one, name the hardware on both sides,
+  and report the CPU-vs-CPU comparison too.
+- **`W` is not held out.** The validation split holds out entry *conditions*, not
+  optical sizes, so generalisation to unseen `W` is untested.
+- **Cells are square** (`H = W`). The conditioning vector has a separate `H` slot
+  and the code paths exist, but no rectangular data does.
+- **Only the boundary model is implemented.** A particle born inside a cell
+  cannot be handled by a sampler conditioned on entry through a face, so the
+  source cell falls back to analog MC. It is one cell out of 49 and is timed
+  separately in the report.
+- **No distillation.** The paper's 1–2 NFE regime is not reproduced.
+- `docs/` and `scripts/build_paper.py` predate this simplification and describe
+  the earlier, more complicated pipeline. Treat them as history.

@@ -1,9 +1,6 @@
 """Cell geometry shared by the encoder and the sampler.
 
-These three functions are the only place the square/rectangular cell shape
-is written down.  They live in their own module because both gmc.data (which
-encodes training targets) and gmc.sampler (which decodes model output) need
-them, and importing one from the other would be circular.
+These two functions are the only place the cell shape is written down.
 
 Convention (the canonical reference frame of docs Sec 1.2): the particle
 always enters the LEFT face at (0, xi*H) travelling with Omega_x > 0; the
@@ -44,18 +41,3 @@ def perimeter_decode(p, W, H):
     m = p >= b2
     x[m], y[m], face[m] = 0.0, H[m] - (p[m] - b2[m]), 3
     return x, y, face
-
-
-def s_min_of(p, W, H, xi):
-    """Shortest path length that can connect the entry point to the exit.
-
-    A particle entering at (0, xi*H) and leaving at the perimeter coordinate
-    p cannot have travelled less than the straight line between the two, so
-    this is a hard lower bound on the path length s given the exit position.
-    It is the quantity the ``detour`` path-length parameterisation divides
-    out, which turns the bound from something the network has to learn into
-    something the decoder cannot violate.
-    """
-    ex, ey, _ = perimeter_decode(p, W, H)
-    _, H_, xi_ = np.broadcast_arrays(np.asarray(p, float), H, xi)
-    return np.hypot(ex, ey - xi_ * H_)

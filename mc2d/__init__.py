@@ -17,6 +17,4 @@ covering everything except the neural-network (CFM) sampler:
 
 from .transport import run_transport, make_uniform_grid
 from .problems import lattice_problem, hohlraum_problem
-from .lattice import (absorber_cells, lattice_spec, build_lattice,
-                      draw_lattice)
 from .singlecell import sample_single_cell, time_single_cell

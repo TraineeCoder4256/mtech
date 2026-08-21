@@ -1,53 +1,53 @@
-"""Sampling: noise -> exit state, plus the analytic uncollided branch.
+"""Noise -> exit state: ODE integration, decoding, and the uncollided branch.
 
-Full sampling pipeline for one entry state (W, H, xi, Omega_in):
+Sampling one exit state for one entry state (W, H, xi, Omega_in) has two
+branches.
 
-  1. Uncollided branch (docs Sec 3.1).  With probability exp(-d), where d is
-     the straight-line chord from the entry point to the boundary along
-     Omega_in (in mfp), the particle crosses without scattering:
-     the exit is analytic (Omega_exit = Omega_in, s = d) and a smooth flow
-     cannot represent this Dirac component, so it is sampled exactly here
-     and the network never sees it.
-  2. Otherwise integrate dx/dt = v_theta(x, t, c) from t=0 to t=1 (Heun,
-     fixed steps) starting from x ~ N(0, I), then decode:
-       (cos, sin) -> perimeter coordinate p via atan2 (mod 4W),
-       (Ox, Oy, Oz) -> renormalised to the unit sphere,
-       u            -> s, by whichever path-length parameterisation the
-                       checkpoint was trained with (gmc.data).  Under the
-                       default "detour" encoding s = s_min(p) exp(u), so
-                       the straight-line bound holds by construction.
+1. UNCOLLIDED.  With probability exp(-d), where d is the straight-line
+   chord from the entry point to the boundary along Omega_in (in mean free
+   paths), the particle crosses the cell without scattering at all.  Its
+   exit is then an exact function of its entry: same direction, path length
+   d.  That is a Dirac delta, which a smooth flow cannot represent, so it
+   is sampled analytically here and the network never sees it.
+
+2. COLLIDED.  Integrate dx/dt = v(x, t, c) from t = 0 to t = 1 starting at
+   x ~ N(0, I), then decode the six outputs back to physical quantities:
+
+     (cos, sin)   -> perimeter coordinate p, via atan2, modulo 4W
+     (Ox, Oy, Oz) -> renormalised onto the unit sphere
+     log(s/W)     -> s = W exp(.), then raised to the straight-line
+                     distance from the entry point to the decoded exit if
+                     it came out below it (a path cannot be shorter than
+                     that).  How often that clamp fires is recorded in
+                     last_clamp_frac -- it is a defect, not a feature.
 """
 
 import numpy as np
 import torch
 
-from .data import encode_conditions, path_length_decode
-# re-exported here because callers have always imported them from the
-# sampler; the definitions now live in gmc.geometry so gmc.data can use
-# them too without a circular import.
-from .geometry import chord_length, perimeter_decode, s_min_of  # noqa: F401
+from .data import encode_conditions
+from .geometry import chord_length, perimeter_decode  # noqa: F401  (re-export)
+
+# network evaluations per ODE step, per solver
+NFE_PER_STEP = {"euler": 1, "heun": 2, "rk4": 4}
 
 
 @torch.no_grad()
 def integrate(model, z, c, steps=25, solver="heun"):
     """Fixed-step integration of the flow ODE.
 
-    Network evaluations per sample (NFE) = steps * cost, with cost 1 for
-    Euler, 2 for Heun, 4 for RK4.  NFE is the quantity that matters for
-    inference cost, not the step count: the reference work uses RK4 with 12
-    steps (48 NFE).
-
-    Under the optimal-transport interpolation the conditional path is a
-    straight line with constant velocity, so the learned field is close to
-    straight and high-order solvers buy little -- at matched NFE a cheap
-    solver with more steps is generally the better trade.
+    Inference cost is NFE = steps * NFE_PER_STEP[solver], not the step
+    count.  Under the optimal-transport interpolation used in training the
+    conditional path is a straight line at constant velocity, so the learned
+    field is close to straight and a high-order solver buys little: at
+    matched NFE a cheap solver with more steps is usually the better trade.
     """
     x = z
     dt = 1.0 / steps
     n = x.shape[0]
-    # the solver only ever needs t on a fixed grid of half-steps, so build
-    # the tensors once instead of allocating (and, on a GPU, launching a
-    # fill kernel for) one per stage per step
+    # the solver only needs t on a fixed grid of half-steps; build them once
+    # rather than allocating (and, on a GPU, launching a fill kernel for)
+    # one tensor per stage per step
     grid = {}
 
     def tt(v):
@@ -76,38 +76,38 @@ def integrate(model, z, c, steps=25, solver="heun"):
     return x
 
 
-NFE_PER_STEP = {"euler": 1, "heun": 2, "rk4": 4}
-
-
-@torch.no_grad()
-def integrate_heun(model, z, c, steps=25):
-    """Backwards-compatible alias."""
-    return integrate(model, z, c, steps, "heun")
-
-
 class GMCBoundarySampler:
     """Trained boundary model + normalizers -> physical exit states."""
 
     def __init__(self, model, ynorm, cnorm, device="cpu", ode_steps=25,
-                 solver="heun", s_param="detour"):
+                 solver="heun"):
         self.model = model.to(device).eval()
         self.ynorm, self.cnorm = ynorm, cnorm
         self.device = device
         self.ode_steps = ode_steps
         self.solver = solver
-        self.s_param = s_param
-        # fraction of the last sample() call that had to be pushed up to the
-        # straight-line bound; 0 is what "detour" is meant to achieve
+        # diagnostics from the most recent sample() call
         self.last_clamp_frac = 0.0
+        # running cost counters, so a transport solve can report exactly how
+        # much of its wall time went into the network (see reset_counters)
+        self.reset_counters()
+
+    def reset_counters(self):
+        self.n_calls = 0
+        self.n_particles = 0        # entry states asked for
+        self.n_flow = 0             # of those, the ones that hit the network
+        self.nfe = 0                # network evaluations, the unit of cost
+
+    @property
+    def nfe_per_sample(self):
+        return self.ode_steps * NFE_PER_STEP[self.solver]
 
     def sample(self, W, H, xi, oxi, oyi, seed=0, uncollided="analytic"):
         """Sample one exit state per entry state (arrays broadcast together).
 
         Returns dict: p, dir (n,3), s, face, uncollided mask.
-        uncollided: "analytic" = full pipeline (default);
-                    "off"      = force every particle through the flow
-                                 (for evaluating the learned part alone
-                                 against k>0 MC data).
+        uncollided="off" forces every particle through the flow, which is
+        what you want when comparing against k>0 reference data.
         """
         W, H, xi = np.broadcast_arrays(np.atleast_1d(np.asarray(W, np.float64)),
                                        np.asarray(H, np.float64),
@@ -127,46 +127,55 @@ class GMCBoundarySampler:
         s = np.empty(n)
         dirs = np.empty((n, 3))
 
-        # ---- analytic uncollided exits ---------------------------------
+        # ---- branch 1: analytic uncollided exits ------------------------
         if unc.any():
             m = unc
             ex = 0.0 + oxi[m] * d[m]
             ey = xi[m] * H[m] + oyi[m] * d[m]
-            # snap to the exited face and encode perimeter coordinate
             hit_x = np.isclose(ex, W[m])
-            pm = np.where(hit_x, W[m] + ey,                       # right
-                          np.where(oyi[m] > 0,
-                                   W[m] + H[m] + (W[m] - ex),     # top
-                                   ex))                           # bottom
-            p[m] = pm
+            p[m] = np.where(hit_x, W[m] + ey,                     # right
+                            np.where(oyi[m] > 0,
+                                     W[m] + H[m] + (W[m] - ex),   # top
+                                     ex))                         # bottom
             s[m] = d[m]
+            # Omega_z is not used by the in-plane trajectory but is part of
+            # the exit state, and both signs are equally likely
             ozu = np.sqrt(np.maximum(0.0, 1.0 - oxi[m]**2 - oyi[m]**2))
             ozu *= np.where(rng.random(m.sum()) < 0.5, 1.0, -1.0)
             dirs[m, 0], dirs[m, 1], dirs[m, 2] = oxi[m], oyi[m], ozu
 
-        # ---- flow-matched collided exits -------------------------------
+        # ---- branch 2: flow-matched collided exits ----------------------
         m = ~unc
-        if m.any():
+        n_flow = int(m.sum())
+        if n_flow:
             c_raw = encode_conditions(W[m], H[m], xi[m], oxi[m], oyi[m])
-            c = torch.from_numpy(self.cnorm.transform(c_raw)).to(self.device,
-                                                                  non_blocking=True)
-            g = torch.Generator(device="cpu").manual_seed(int(rng.integers(2**31)))
-            z = torch.randn(int(m.sum()), self.ynorm.mean.shape[0], generator=g)
+            c = torch.from_numpy(self.cnorm.transform(c_raw)).to(
+                self.device, non_blocking=True)
+            g = torch.Generator(device="cpu").manual_seed(
+                int(rng.integers(2**31)))
+            z = torch.randn(n_flow, self.ynorm.mean.shape[0], generator=g)
             x = integrate(self.model, z.to(self.device), c,
                           self.ode_steps, self.solver)
             y = self.ynorm.inverse(x.cpu().numpy())
 
-            theta = np.arctan2(y[:, 1], y[:, 0])            # (cos,sin) -> angle
+            theta = np.arctan2(y[:, 1], y[:, 0])
             p[m] = np.mod(theta / (2.0 * np.pi), 1.0) * 4.0 * W[m]
             omega = y[:, 2:5]
             omega /= np.linalg.norm(omega, axis=1, keepdims=True) + 1e-12
             dirs[m] = omega
-            s[m], violated = path_length_decode(
-                y[:, 5].astype(np.float64), p[m], W[m], H[m], xi[m],
-                self.s_param)
-            self.last_clamp_frac = float(violated.mean())
+
+            sv = W[m] * np.exp(y[:, 5].astype(np.float64))
+            ex_x, ex_y, _ = perimeter_decode(p[m], W[m], H[m])
+            smin = np.hypot(ex_x, ex_y - xi[m] * H[m])
+            s[m] = np.maximum(sv, smin)
+            self.last_clamp_frac = float((sv < smin).mean())
         else:
             self.last_clamp_frac = 0.0
+
+        self.n_calls += 1
+        self.n_particles += n
+        self.n_flow += n_flow
+        self.nfe += n_flow * self.nfe_per_sample
 
         _, _, face = perimeter_decode(p, W, H)
         return {"p": p, "dir": dirs, "s": s, "face": face, "uncollided": unc}

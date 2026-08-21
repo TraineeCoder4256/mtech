@@ -53,11 +53,15 @@ def _cosine_hemisphere_px():
 
 
 @njit(cache=True)
-def _history(x, y, ox, oy, sig_s, sig_a, dx, dy, nx, ny, tally, wcut):
+def _history(x, y, ox, oy, sig_s, sig_a, dx, dy, nx, ny, tally, wcut,
+             stats):
     """Follow one history to termination, accumulating track-length tallies.
 
     `tally` accumulates  sum of estimator contributions * V  (divided out by
     the caller), i.e. we add Delta_w/sigma_a (or w*ds for sigma_a=0).
+
+    `stats` is a length-2 diagnostic accumulator, [scatters, mesh crossings].
+    It counts work done; it takes no part in the physics.
     """
     w = 1.0
     ix = int(x / dx)
@@ -98,10 +102,12 @@ def _history(x, y, ox, oy, sig_s, sig_a, dx, dy, nx, ny, tally, wcut):
             tally[iy, ix] += w * step
 
         if scatter:
+            stats[0] += 1.0
             x += ox * step
             y += oy * step
             ox, oy, _ = _isotropic_direction()
         else:
+            stats[1] += 1.0
             # advance exactly onto the crossed grid line and step the index
             x += ox * step
             y += oy * step
@@ -130,6 +136,7 @@ def _run(n_particles, sig_s, sig_a, dx, dy, nx, ny,
                    hemisphere (uniform in solid angle with Omega_x > 0).
     """
     tallies = np.zeros((n_blocks, ny, nx))
+    stats = np.zeros((n_blocks, 2))
     per = (n_particles + n_blocks - 1) // n_blocks
     for b in prange(n_blocks):
         np.random.seed(seed + b)
@@ -152,19 +159,26 @@ def _run(n_particles, sig_s, sig_a, dx, dy, nx, ny,
                     if ox > 0.0:
                         break
             _history(x, y, ox, oy, sig_s, sig_a, dx, dy, nx, ny,
-                     tallies[b], wcut)
+                     tallies[b], wcut, stats[b])
     out = np.zeros((ny, nx))
+    tot = np.zeros(2)
     for b in range(n_blocks):
         out += tallies[b]
-    return out
+        tot += stats[b]
+    return out, tot
 
 
 def run_transport(problem, n_particles, seed=1, n_blocks=64,
-                  weight_cutoff=WEIGHT_CUTOFF):
+                  weight_cutoff=WEIGHT_CUTOFF, return_stats=False):
     """Run the standard MC solver on a problem dict (see problems.py).
 
     Returns the scalar flux phi[ny, nx], track-length estimator,
     normalized per source particle (Fig. 3 caption).
+
+    With return_stats=True also returns a dict counting the work done --
+    scattering events and mesh-cell crossings, total and per particle.  A
+    scattering event is the MC unit of cost, so this is what the generative
+    sampler has to beat; see scripts/evaluate.py.
     """
     nx, ny = problem["nx"], problem["ny"]
     dx = problem["Lx"] / nx
@@ -177,8 +191,14 @@ def run_transport(problem, n_particles, seed=1, n_blocks=64,
     else:
         kind = 2
     lo_x, lo_y, hi_x, hi_y = src["box"]
-    tally = _run(n_particles, problem["sig_s"], problem["sig_a"],
-                 dx, dy, nx, ny, kind, lo_x, lo_y, hi_x, hi_y,
-                 int(seed), int(n_blocks), weight_cutoff)
+    tally, st = _run(n_particles, problem["sig_s"], problem["sig_a"],
+                     dx, dy, nx, ny, kind, lo_x, lo_y, hi_x, hi_y,
+                     int(seed), int(n_blocks), weight_cutoff)
     volume = dx * dy
-    return tally / (volume * n_particles)
+    phi = tally / (volume * n_particles)
+    if not return_stats:
+        return phi
+    return phi, {"scatters": float(st[0]),
+                 "mesh_crossings": float(st[1]),
+                 "scatters_per_particle": float(st[0]) / n_particles,
+                 "particles": int(n_particles)}

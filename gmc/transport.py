@@ -35,9 +35,25 @@ Clockwise about the cell centre maps (x,y) -> (y, L-x) and a direction
 (-oy,ox).  Omega_z is untouched by an in-plane rotation.
 """
 
+import time
+
 import numpy as np
 
 from .sampler import perimeter_decode
+
+
+def analog_birth(n, W, seed):
+    """Birth cell fallback: analog MC for an internal isotropic source.
+
+    The boundary model is conditioned on a particle *entering* through a
+    face, so it cannot start a history inside a cell.  The source cell is
+    therefore walked by ordinary Monte Carlo.  It is one cell out of many,
+    so this does not dominate the cost -- but it is counted separately in
+    the timing so you can see that for yourself.
+    """
+    from mc2d import sample_single_cell
+    return sample_single_cell(n, W, W, mode="internal", seed=seed,
+                              n_blocks=8)
 
 # face indices as produced by perimeter_decode
 BOTTOM, RIGHT, TOP, LEFT = 0, 1, 2, 3
@@ -102,6 +118,14 @@ def run_gmc_transport(sig_s, sig_a, pitch, n_particles, sampler,
 
     Returns flux[ncy, ncx] normalised per source particle.
     """
+    if birth_sampler is None:
+        birth_sampler = analog_birth
+    t_start = time.perf_counter()
+    t_sampler = 0.0          # wall time inside the learned sampler
+    t_birth = 0.0            # wall time in the analog birth cell
+    batch_sizes = []
+    sampler.reset_counters()
+
     rng = np.random.default_rng(seed)
     ncy, ncx = sig_s.shape
     tally = np.zeros((ncy, ncx))
@@ -113,7 +137,9 @@ def run_gmc_transport(sig_s, sig_a, pitch, n_particles, sampler,
 
     # ---- birth cell: analog MC (one call, vectorised) -------------------
     W0 = pitch * ss0
+    _t = time.perf_counter()
     b = birth_sampler(n, W0, int(rng.integers(1, 2**31 - 1)))
+    t_birth += time.perf_counter() - _t
     s_phys = b["s"] / ss0                                  # mfp -> cm
     w = np.ones(n)
     if sa0 > 0.0:
@@ -190,8 +216,11 @@ def run_gmc_transport(sig_s, sig_a, pitch, n_particles, sampler,
             oyc[over] /= nrm[over] / (1.0 - 1e-6)
 
         # ---- one batched sampler call for every live particle -----------
+        _t = time.perf_counter()
         out = sampler.sample(Wk, Wk, xi, oxc, oyc,
                              seed=int(rng.integers(1, 2**31 - 1)))
+        t_sampler += time.perf_counter() - _t
+        batch_sizes.append(keep.size)
         n_calls += 1
         n_crossings += keep.size
 
@@ -232,7 +261,27 @@ def run_gmc_transport(sig_s, sig_a, pitch, n_particles, sampler,
 
     volume = pitch * pitch
     flux = tally / (volume * n)
-    if return_stats:
-        return flux, {"crossings": n_crossings, "batched_calls": n_calls,
-                      "crossings_per_particle": n_crossings / n}
-    return flux
+    if not return_stats:
+        return flux
+
+    wall = time.perf_counter() - t_start
+    bs = np.array(batch_sizes) if batch_sizes else np.zeros(1)
+    return flux, {
+        "particles": n,
+        "crossings": n_crossings,
+        "crossings_per_particle": n_crossings / n,
+        "batched_calls": n_calls,
+        "mean_batch": float(bs.mean()),
+        "median_batch": float(np.median(bs)),
+        # of the particle-crossings handed to the sampler, the ones that
+        # actually reached the network (the rest took the uncollided branch)
+        "to_network": sampler.n_flow,
+        "nfe": sampler.nfe,
+        "nfe_per_sample": sampler.nfe_per_sample,
+        "wall": wall,
+        "wall_sampler": t_sampler,
+        "wall_birth": t_birth,
+        # everything not in the sampler or the birth cell: the geometry,
+        # rotations, tallies and bookkeeping, all single-threaded NumPy
+        "wall_overhead": wall - t_sampler - t_birth,
+    }
