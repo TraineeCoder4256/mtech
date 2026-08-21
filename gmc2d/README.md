@@ -15,7 +15,7 @@ answer is no.**
 ## Run it
 
 ```bash
-python make_data.py      # ~4 min   -> data/cells.npz
+python make_data.py      # ~2 s     -> data/cells.npz (65 MiB, 2.88M rows)
 python train.py          # ~40 min  -> models/
 python evaluate.py       # ~10 min  -> figures/ + results/
 ```
