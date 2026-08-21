@@ -1,57 +1,33 @@
 """Single-cell transmission: walk one particle through one cell, record how
-it came out.
+it comes out.  This is the physics the generative model learns to skip.
 
-This is the physics the generative model is trying to learn to skip, and it
-is the only Monte Carlo the training data ever sees.
+A particle enters a rectangular cell, scatters isotropically some number of
+times, and eventually a flight carries it out.  We record:
 
-THE EXPERIMENT
---------------
-A particle enters a rectangular cell.  Inside, it scatters off the material
-some number of times, each scatter throwing it in a completely new random
-direction, until eventually a flight carries it across the boundary and out.
-We record three things about the exit:
+    p      where it left, as one coordinate around the perimeter
+    Omega  which way it was going, as direction cosines
+    s      total path length inside the cell
+    k      number of scatters -- the cost MC pays and GMC avoids
 
-    p        WHERE it left      -- a single coordinate running around the
-                                   perimeter (see PERIMETER COORDINATE below)
-    Omega    WHICH WAY it was   -- direction cosines (Omega_x, Omega_y, Omega_z)
-             going
-    s        HOW FAR it went    -- total path length inside the cell,
-                                   summed over every flight
+Lengths are in mean free paths (sigma_s = 1), so the distance to the next
+scatter is just -ln(uniform).  This is why one trained model covers every
+cell size: a cell is described by its optical size alone, not by its
+physical size and cross section separately.
 
-and, as a diagnostic, k, the number of scatters it took.  k is the cost
-standard Monte Carlo pays and the generative sampler avoids, so it is the
-number the whole speed argument turns on.
+The cell is pure scattering.  Absorption is applied afterwards by
+attenuating the returned path length, which is what keeps the walk
+dependent on optical size only.
 
-UNITS
------
-Lengths are in mean free paths, which is the same as setting sigma_s = 1.
-The distance to the next scatter is then just -ln(xi) for a uniform random
-xi.  To convert back to centimetres, divide by the physical sigma_s.  This
-is why one trained model covers every cell size and material: a cell is
-fully described by its optical size W x H, not by its physical size and
-cross section separately.
+Perimeter coordinate, anticlockwise from the bottom-left corner:
 
-Absorption is deliberately NOT simulated here.  The cell is pure scattering,
-and absorption is applied afterwards by attenuating the returned path length
-with exp(-sigma_a * s).  Keeping absorption out of the walk is what makes
-the walk depend on optical size alone.
+        p=2W+H ......... p=2W+2H      bottom  [0,      W)     x: 0 -> W
+             +-----------------+      right   [W,      W+H)   y: 0 -> H
+      p=W+H  |                 | p=W  top     [W+H,    2W+H)  x: W -> 0
+             +-----------------+      left    [2W+H, 2W+2H)   y: H -> 0
+        p=0 ............... p=W
 
-PERIMETER COORDINATE
---------------------
-The exit point is somewhere on the boundary, which is a 1-D curve, so it
-needs only one number rather than two.  We unwrap the perimeter
-anticlockwise from the bottom-left corner:
-
-        p = 2W+H .... p = 2W+2H          going anticlockwise:
-             +-----------------+           bottom  [0,      W)      x: 0 -> W
-             |                 |           right   [W,      W+H)    y: 0 -> H
-    p = W+H  |                 | p = W     top     [W+H,    2W+H)   x: W -> 0
-             |                 |           left    [2W+H, 2W+2H)    y: H -> 0
-             +-----------------+
-        p = 0 ............ p = W
-
-One coordinate instead of two, and it wraps cleanly at p = 2(W+H), which is
-what lets the model encode it as a point on a circle.
+One number instead of two, and it wraps cleanly -- which is what lets the
+model encode it as a point on a circle.
 """
 
 import time
@@ -73,12 +49,7 @@ FAR_AWAY = 1.0e300   # stand-in for "never hits this face"
 
 @njit(cache=True, inline="always")
 def _isotropic_direction():
-    """A direction drawn uniformly over the full 3-D unit sphere.
-
-    Sample the z-cosine uniformly in [-1, 1] and the azimuth uniformly in
-    [0, 2pi); that combination is uniform on the sphere (Archimedes), where
-    sampling two angles uniformly would not be.
-    """
+    """Uniform on the 3-D unit sphere: uniform z-cosine, uniform azimuth."""
     oz = 2.0 * np.random.random() - 1.0
     phi = 2.0 * np.pi * np.random.random()
     r = np.sqrt(max(0.0, 1.0 - oz * oz))            # radius of the z-slice
@@ -87,13 +58,8 @@ def _isotropic_direction():
 
 @njit(cache=True, inline="always")
 def _cosine_hemisphere_px():
-    """A direction into +x with density proportional to Omega_x.
-
-    This is what an isotropic *flux* looks like crossing a surface: a
-    particle at a grazing angle is less likely to cross than a
-    perpendicular one, by exactly the cosine factor.  sqrt(xi) is the
-    inverse-CDF of that cosine law.
-    """
+    """Into +x with density proportional to Omega_x: what an isotropic flux
+    looks like crossing a surface.  sqrt(xi) inverts that cosine law."""
     ox = np.sqrt(np.random.random())
     phi = 2.0 * np.pi * np.random.random()
     r = np.sqrt(max(0.0, 1.0 - ox * ox))
@@ -102,26 +68,20 @@ def _cosine_hemisphere_px():
 
 @njit(cache=True, inline="always")
 def _walk(x, y, ox, oy, oz, W, H):
-    """Follow one particle from entry to exit.  This is the whole simulation.
+    """Follow one particle to its exit.  This is the whole simulation.
 
-    Each iteration is one flight.  We work out two competing distances --
-    how far to the next scatter, and how far to the wall -- and whichever is
-    shorter is what actually happens.
-
-    Returns the exit state: (x, y, ox, oy, oz, path_length, n_scatters).
+    Each iteration is one flight: work out how far to the next scatter and
+    how far to the wall, and whichever is shorter is what happens.
     """
     path_length = 0.0
     n_scatters = 0
 
     while True:
-        # 1. How far until the next scattering event?  In a medium with
-        #    sigma_s = 1 the free path is exponentially distributed, and
-        #    -ln(uniform) is exactly an exponential draw.
+        # free path is exponential with sigma_s = 1
         dist_to_scatter = -np.log(np.random.random())
 
-        # 2. How far until the particle would hit a wall?  Check the two
-        #    vertical faces and the two horizontal ones separately; a
-        #    direction component of zero never reaches that pair of faces.
+        # distance to each pair of walls; a zero direction component never
+        # reaches that pair
         if ox > 0.0:
             dist_to_x_wall = (W - x) / ox          # heading right
         elif ox < 0.0:
@@ -138,25 +98,20 @@ def _walk(x, y, ox, oy, oz, W, H):
         hits_x_wall_first = dist_to_x_wall < dist_to_y_wall
         dist_to_wall = dist_to_x_wall if hits_x_wall_first else dist_to_y_wall
 
-        # 3. Whichever comes first is what happens.
         if dist_to_scatter < dist_to_wall:
-            # --- scatter: move to the collision point and pick a brand new
-            #     direction.  Scattering is isotropic, so the particle
-            #     completely forgets where it was heading.
+            # scatter: move there and forget the old direction entirely
             x += ox * dist_to_scatter
             y += oy * dist_to_scatter
             path_length += dist_to_scatter
             ox, oy, oz = _isotropic_direction()
             n_scatters += 1
         else:
-            # --- escape: move to the wall and stop.  The direction is
-            #     unchanged, so the exit direction is whatever the last
-            #     flight was travelling in.
+            # escape: move to the wall, keeping the current direction
             x += ox * dist_to_wall
             y += oy * dist_to_wall
             path_length += dist_to_wall
-            # Snap exactly onto the face that was crossed, so that floating
-            # point never leaves the exit point a hair inside or outside.
+            # snap onto the face so floating point cannot leave the exit
+            # point a hair inside or outside
             if hits_x_wall_first:
                 x = W if ox > 0.0 else 0.0
             else:
@@ -166,11 +121,8 @@ def _walk(x, y, ox, oy, oz, W, H):
 
 @njit(cache=True, inline="always")
 def _perimeter(x, y, W, H):
-    """Exit point (x, y) -> perimeter coordinate p (see module docstring).
-
-    Order matters: the corners belong to whichever face is tested first,
-    which keeps p single-valued.
-    """
+    """Exit point -> perimeter coordinate.  Order matters: a corner belongs
+    to whichever face is tested first, which keeps p single-valued."""
     if y <= 0.0:
         return x                          # bottom, left to right
     if x >= W:
@@ -184,13 +136,9 @@ def _perimeter(x, y, W, H):
 def _sample(n, W, H, mode, xin, yin, mu_in, ox_in, oy_in, seed, n_blocks):
     """Walk n particles and collect their exit states.
 
-    Work is split into n_blocks independent chunks running in parallel, each
-    with its own RNG seed, because numba's random state is per-thread.  The
-    seeding is deterministic, so a given (seed, n_blocks) always reproduces
-    the same numbers.
-
-    xin / yin are entry positions as a FRACTION of the cell (0 to 1), with a
-    negative value meaning "sample it uniformly instead".
+    Split into n_blocks parallel chunks, each with its own seed (numba's RNG
+    is per-thread).  xin/yin are entry positions as a fraction of the cell;
+    negative means "sample uniformly".
     """
     p = np.empty(n)
     dirs = np.empty((n, 3))
@@ -227,20 +175,16 @@ def _sample(n, W, H, mode, xin, yin, mu_in, ox_in, oy_in, seed, n_blocks):
                 ox, oy, oz = _isotropic_direction()
 
             elif mode == ENTRY_FIXED_DIR:
-                # The mode the generative training data uses: the caller
-                # pins the full in-plane direction, because (Omega_x,
-                # Omega_y) is exactly what the model is conditioned on.
+                # what training data uses: the caller pins the full in-plane
+                # direction, which is what the model conditions on
                 x = 0.0
                 y = yin * H if yin >= 0.0 else H * np.random.random()
                 ox = ox_in
                 oy = oy_in
-                # Omega_z is fixed in magnitude by |Omega| = 1, and it is a
-                # passenger for the trajectory -- _walk only ever advances
-                # x and y.  But it IS part of the recorded exit state, and
-                # an uncollided particle carries its entry Omega_z straight
-                # through to the exit.  Both signs are equally likely, so
-                # the sign has to be sampled; fixing it positive biases the
-                # Omega_z distribution the model then learns.
+                # Omega_z never affects the trajectory, but it IS part of
+                # the recorded exit state, and an uncollided particle
+                # carries its entry value straight through.  Both signs are
+                # equally likely -- fixing it positive biases the data.
                 rz = 1.0 - ox * ox - oy * oy
                 oz = np.sqrt(rz) if rz > 0.0 else 0.0
                 if np.random.random() < 0.5:
@@ -255,14 +199,12 @@ def _sample(n, W, H, mode, xin, yin, mu_in, ox_in, oy_in, seed, n_blocks):
                 oy = r * np.cos(phi)
                 oz = r * np.sin(phi)
 
-            # remember the entry state: it is the label the exit state is
-            # conditioned on when this becomes training data
+            # the entry state is the label the exit is conditioned on
             ent[i, 0] = x
             ent[i, 1] = y
             ent[i, 2] = ox
             ent[i, 3] = oy
 
-            # ---- run the walk and record the exit --------------------
             xe, ye, oxe, oye, oze, path_length, n_scatters = \
                 _walk(x, y, ox, oy, oz, W, H)
             p[i] = _perimeter(xe, ye, W, H)
@@ -341,13 +283,8 @@ def sample_single_cell(n, W, H, mode="boundary", entry_pos=None,
 
 
 def time_single_cell(n, L, seed=1, n_blocks=8, repeats=1):
-    """Wall time (s) to push n particles through an L x L cell, and the mean
-    scatter count.
-
-    This is the MC side of the cost comparison: the time grows with L
-    because a thicker cell means more scatters per crossing, which is
-    exactly the growth the generative sampler is meant to flatten.
-    """
+    """Wall time to push n particles through an L x L cell, and the mean
+    scatter count.  Time grows with L -- that growth is what GMC flattens."""
     best = np.inf
     for r in range(repeats):
         t0 = time.perf_counter()

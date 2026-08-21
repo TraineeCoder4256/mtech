@@ -23,7 +23,9 @@ python scripts/train.py          # ~40 min  -> models/boundary/
 python scripts/evaluate.py       # ~10 min  -> figures/ + results/
 ```
 
-Add `--device cuda` to the last two for a GPU. Timings are for 4 CPU cores.
+No flags. Every script has its settings as named constants in a `settings`
+block at the top of the file — change them there. A GPU is picked up
+automatically if `torch.cuda.is_available()`. Timings are for 4 CPU cores.
 
 That is the entire main path. Everything else in the repo is either the Monte
 Carlo baseline those three depend on, or the paper's own baseline figures kept
@@ -48,11 +50,6 @@ Conditions are sampled **uniformly**, not physically: the model must be accurate
 everywhere it will be asked, and at solve time it gets asked wherever the
 geometry happens to send particles.
 
-```bash
-python scripts/make_data.py                                   # 3.1 M rows
-python scripts/make_data.py --n-cond 512 --per-cond 32        # smaller
-```
-
 ### 2. `scripts/train.py` — the model
 
 Conditional flow matching. Take a training exit state `y` and Gaussian noise
@@ -69,10 +66,6 @@ Two preprocessing rules carry real weight:
 - **The train/validation split is by entry condition, never by row.** Each
   condition has ~48 sampled exits; splitting by row would put siblings of a
   training row into validation and report memorisation as generalisation.
-
-```bash
-python scripts/train.py --device cuda --batch 16384 --lr 3e-3
-```
 
 ### 3. `scripts/evaluate.py` — does it work, and is it faster
 
@@ -91,10 +84,6 @@ comparing against the fine 112×112 mesh would compare two different quantities.
 **Speed** — the same geometry with every cross section multiplied by a scale
 factor, which makes cells optically thicker without changing the layout.
 
-```bash
-python scripts/evaluate.py --device cuda --n 50000 --scales 1 4 10 20
-```
-
 Three outputs:
 
 | file | what it holds |
@@ -108,7 +97,8 @@ Three outputs:
 cell, and that one number decides whether the method can possibly pay off. In
 this lattice at its published scale the cells are 0.5–1.0 mfp: a particle
 crosses most of them without scattering even once. There is nothing there for a
-generative sampler to save. That is why `--scales` exists.
+generative sampler to save. That is why the script also sweeps `SCALES`, which multiplies
+every cross section and thickens the cells without changing the layout.
 
 **`results/evaluation.txt` is the one to read.** It has the numbers a plot
 cannot show: time per scattering event, time per network evaluation, time per
@@ -127,25 +117,28 @@ two possible problems you have:
 
 ## Layout
 
+Nine files carry the whole project. Each does one thing.
+
 ```
-mc2d/            the Monte Carlo baseline (numba, multi-threaded)
-  transport.py     full-domain solver, track-length estimator
-  problems.py      the lattice and hohlraum benchmarks
-  singlecell.py    the in-cell walk that generates training data
-gmc/             the learned sampler
-  data.py          encodings, normalisation, leak-free split
-  model.py         the velocity field v(x, t, c)
-  cfm.py           the flow-matching loss + EMA
-  geometry.py      cell geometry, shared by encoder and decoder
-  sampler.py       ODE integration, decoding, uncollided branch
-  transport.py     chains the sampler across a mesh
-  device.py        cpu / cuda / mps
+mc2d/              the Monte Carlo baseline (numba, multi-threaded)
+  transport.py       full-domain solver, track-length estimator
+  problems.py        the lattice and hohlraum benchmarks
+  singlecell.py      the in-cell walk that makes training data
+gmc/               the learned sampler
+  data.py            dataset -> encoded, normalised tensors
+  model.py           the velocity field, the CFM loss, weight averaging
+  sampler.py         cell geometry, ODE solve, exit-state decoding
+  transport.py       chain the sampler across a mesh
 scripts/
-  make_data.py     step 1
-  train.py         step 2
-  evaluate.py      step 3
-  baseline/        the paper's own MC figures (Fig 2b, 3, 4a, 4b)
+  make_data.py       step 1
+  train.py           step 2
+  evaluate.py        step 3
+  baseline/          the paper's own MC figures (Fig 2b, 3, 4a, 4b)
 ```
+
+The dependency graph is a line, not a web: `make_data` needs `mc2d`;
+`train` needs `gmc.data` and `gmc.model`; `evaluate` needs everything.
+Nothing in `mc2d/` imports anything from `gmc/`.
 
 ---
 

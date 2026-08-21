@@ -1,75 +1,77 @@
-"""Noise -> exit state: ODE integration, decoding, and the uncollided branch.
+"""Cell geometry, ODE integration, and sampling an exit state.
 
-Sampling one exit state for one entry state (W, H, xi, Omega_in) has two
-branches.
+Two branches per particle:
 
-1. UNCOLLIDED.  With probability exp(-d), where d is the straight-line
-   chord from the entry point to the boundary along Omega_in (in mean free
-   paths), the particle crosses the cell without scattering at all.  Its
-   exit is then an exact function of its entry: same direction, path length
-   d.  That is a Dirac delta, which a smooth flow cannot represent, so it
-   is sampled analytically here and the network never sees it.
+  UNCOLLIDED, with probability exp(-chord).  The particle crosses without
+  scattering, so its exit is an exact function of its entry.  That is a
+  Dirac delta a smooth flow cannot represent, so it is done analytically
+  and the network never sees it.
 
-2. COLLIDED.  Integrate dx/dt = v(x, t, c) from t = 0 to t = 1 starting at
-   x ~ N(0, I), then decode the six outputs back to physical quantities:
+  COLLIDED.  Integrate dx/dt = v(x, t, c) from noise at t=0 to t=1, then
+  decode the six outputs back to physical quantities.
 
-     (cos, sin)   -> perimeter coordinate p, via atan2, modulo 4W
-     (Ox, Oy, Oz) -> renormalised onto the unit sphere
-     log(s/W)     -> s = W exp(.), then raised to the straight-line
-                     distance from the entry point to the decoded exit if
-                     it came out below it (a path cannot be shorter than
-                     that).  How often that clamp fires is recorded in
-                     last_clamp_frac -- it is a defect, not a feature.
+Perimeter coordinate p runs anticlockwise from the bottom-left corner:
+bottom [0, W), right [W, W+H), top [W+H, 2W+H), left [2W+H, 2W+2H).
 """
 
 import numpy as np
 import torch
 
 from .data import encode_conditions
-from .geometry import chord_length, perimeter_decode  # noqa: F401  (re-export)
 
-# network evaluations per ODE step, per solver
 NFE_PER_STEP = {"euler": 1, "heun": 2, "rk4": 4}
 
 
+def chord_length(W, H, xi, oxi, oyi):
+    """Straight-line distance from entry (0, xi*H) to the wall along Omega."""
+    y = xi * H
+    with np.errstate(divide="ignore"):
+        ty = np.where(oyi > 0, (H - y) / np.where(oyi > 0, oyi, 1.0),
+                      np.where(oyi < 0, -y / np.where(oyi < 0, oyi, 1.0),
+                               np.inf))
+    return np.minimum(W / oxi, ty)
+
+
+def perimeter_decode(p, W, H):
+    """p -> (x, y) on the boundary and a face index (0 bot, 1 rt, 2 top, 3 lf)."""
+    p, W, H = np.broadcast_arrays(p, W, H)
+    p = np.mod(p, 2.0 * (W + H))
+    x, y = np.empty_like(p), np.empty_like(p)
+    face = np.empty(p.shape, np.int8)
+    for i, m in enumerate((p < W, (p >= W) & (p < W + H),
+                           (p >= W + H) & (p < 2 * W + H), p >= 2 * W + H)):
+        if i == 0:
+            x[m], y[m] = p[m], 0.0
+        elif i == 1:
+            x[m], y[m] = W[m], p[m] - W[m]
+        elif i == 2:
+            x[m], y[m] = 2 * W[m] + H[m] - p[m], H[m]
+        else:
+            x[m], y[m] = 0.0, 2 * (W[m] + H[m]) - p[m]
+        face[m] = i
+    return x, y, face
+
+
 @torch.no_grad()
-def integrate(model, z, c, steps=25, solver="heun"):
-    """Fixed-step integration of the flow ODE.
-
-    Inference cost is NFE = steps * NFE_PER_STEP[solver], not the step
-    count.  Under the optimal-transport interpolation used in training the
-    conditional path is a straight line at constant velocity, so the learned
-    field is close to straight and a high-order solver buys little: at
-    matched NFE a cheap solver with more steps is usually the better trade.
-    """
-    x = z
-    dt = 1.0 / steps
-    n = x.shape[0]
-    # the solver only needs t on a fixed grid of half-steps; build them once
-    # rather than allocating (and, on a GPU, launching a fill kernel for)
-    # one tensor per stage per step
-    grid = {}
-
-    def tt(v):
-        k = round(v * 2 * steps)
-        if k not in grid:
-            grid[k] = torch.full((n, 1), k / (2.0 * steps), device=x.device,
-                                 dtype=x.dtype)
-        return grid[k]
+def integrate(model, z, c, steps, solver):
+    """Fixed-step flow ODE solve.  Cost is steps * NFE_PER_STEP[solver]."""
+    x, dt = z, 1.0 / steps
+    # t only ever takes values on a half-step grid, so build them once
+    ts = [torch.full((x.shape[0], 1), i / (2.0 * steps), device=x.device)
+          for i in range(2 * steps + 1)]
 
     for i in range(steps):
-        t0 = tt(i * dt)
         if solver == "euler":
-            x = x + dt * model(x, t0, c)
+            x = x + dt * model(x, ts[2 * i], c)
         elif solver == "heun":
-            v0 = model(x, t0, c)
-            v1 = model(x + dt * v0, tt((i + 1) * dt), c)
+            v0 = model(x, ts[2 * i], c)
+            v1 = model(x + dt * v0, ts[2 * i + 2], c)
             x = x + 0.5 * dt * (v0 + v1)
         elif solver == "rk4":
-            k1 = model(x, t0, c)
-            k2 = model(x + 0.5 * dt * k1, tt((i + 0.5) * dt), c)
-            k3 = model(x + 0.5 * dt * k2, tt((i + 0.5) * dt), c)
-            k4 = model(x + dt * k3, tt((i + 1) * dt), c)
+            k1 = model(x, ts[2 * i], c)
+            k2 = model(x + 0.5 * dt * k1, ts[2 * i + 1], c)
+            k3 = model(x + 0.5 * dt * k2, ts[2 * i + 1], c)
+            k4 = model(x + dt * k3, ts[2 * i + 2], c)
             x = x + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
         else:
             raise ValueError(f"unknown solver {solver!r}")
@@ -77,105 +79,74 @@ def integrate(model, z, c, steps=25, solver="heun"):
 
 
 class GMCBoundarySampler:
-    """Trained boundary model + normalizers -> physical exit states."""
+    """Trained model + normalizers -> physical exit states."""
 
-    def __init__(self, model, ynorm, cnorm, device="cpu", ode_steps=25,
+    def __init__(self, model, ynorm, cnorm, device="cpu", ode_steps=5,
                  solver="heun"):
         self.model = model.to(device).eval()
         self.ynorm, self.cnorm = ynorm, cnorm
-        self.device = device
-        self.ode_steps = ode_steps
-        self.solver = solver
-        # diagnostics from the most recent sample() call
-        self.last_clamp_frac = 0.0
-        # running cost counters, so a transport solve can report exactly how
-        # much of its wall time went into the network (see reset_counters)
-        self.reset_counters()
+        self.device, self.ode_steps, self.solver = device, ode_steps, solver
+        self.nfe_per_sample = ode_steps * NFE_PER_STEP[solver]
+        self.reset()
 
-    def reset_counters(self):
-        self.n_calls = 0
-        self.n_particles = 0        # entry states asked for
-        self.n_flow = 0             # of those, the ones that hit the network
-        self.nfe = 0                # network evaluations, the unit of cost
-
-    @property
-    def nfe_per_sample(self):
-        return self.ode_steps * NFE_PER_STEP[self.solver]
+    def reset(self):
+        """Zero the cost counters that evaluate.py reports."""
+        self.stats = {"calls": 0, "particles": 0, "to_network": 0, "nfe": 0,
+                      "clamped": 0}
 
     def sample(self, W, H, xi, oxi, oyi, seed=0, uncollided="analytic"):
-        """Sample one exit state per entry state (arrays broadcast together).
-
-        Returns dict: p, dir (n,3), s, face, uncollided mask.
-        uncollided="off" forces every particle through the flow, which is
-        what you want when comparing against k>0 reference data.
-        """
-        W, H, xi = np.broadcast_arrays(np.atleast_1d(np.asarray(W, np.float64)),
-                                       np.asarray(H, np.float64),
-                                       np.asarray(xi, np.float64))
-        oxi = np.broadcast_to(np.asarray(oxi, np.float64), W.shape)
-        oyi = np.broadcast_to(np.asarray(oyi, np.float64), W.shape)
+        """One exit state per entry state.  uncollided="off" forces the flow."""
+        W, H, xi = np.broadcast_arrays(np.atleast_1d(np.asarray(W, float)),
+                                       np.asarray(H, float),
+                                       np.asarray(xi, float))
+        oxi = np.broadcast_to(np.asarray(oxi, float), W.shape)
+        oyi = np.broadcast_to(np.asarray(oyi, float), W.shape)
         n = W.size
         rng = np.random.default_rng(seed)
 
-        d = chord_length(W, H, xi, oxi, oyi)
-        if uncollided == "analytic":
-            unc = rng.random(n) < np.exp(-d)
-        else:
-            unc = np.zeros(n, bool)
+        chord = chord_length(W, H, xi, oxi, oyi)
+        unc = (rng.random(n) < np.exp(-chord) if uncollided == "analytic"
+               else np.zeros(n, bool))
+        p, s, dirs = np.empty(n), np.empty(n), np.empty((n, 3))
 
-        p = np.empty(n)
-        s = np.empty(n)
-        dirs = np.empty((n, 3))
-
-        # ---- branch 1: analytic uncollided exits ------------------------
         if unc.any():
             m = unc
-            ex = 0.0 + oxi[m] * d[m]
-            ey = xi[m] * H[m] + oyi[m] * d[m]
-            hit_x = np.isclose(ex, W[m])
-            p[m] = np.where(hit_x, W[m] + ey,                     # right
-                            np.where(oyi[m] > 0,
-                                     W[m] + H[m] + (W[m] - ex),   # top
-                                     ex))                         # bottom
-            s[m] = d[m]
-            # Omega_z is not used by the in-plane trajectory but is part of
-            # the exit state, and both signs are equally likely
-            ozu = np.sqrt(np.maximum(0.0, 1.0 - oxi[m]**2 - oyi[m]**2))
-            ozu *= np.where(rng.random(m.sum()) < 0.5, 1.0, -1.0)
-            dirs[m, 0], dirs[m, 1], dirs[m, 2] = oxi[m], oyi[m], ozu
+            ex, ey = oxi[m] * chord[m], xi[m] * H[m] + oyi[m] * chord[m]
+            p[m] = np.where(np.isclose(ex, W[m]), W[m] + ey,
+                            np.where(oyi[m] > 0, 2 * W[m] + H[m] - ex, ex))
+            s[m] = chord[m]
+            # Omega_z is fixed in magnitude by |Omega|=1; both signs are equally likely
+            oz = np.sqrt(np.maximum(0.0, 1.0 - oxi[m]**2 - oyi[m]**2))
+            oz *= np.where(rng.random(m.sum()) < 0.5, 1.0, -1.0)
+            dirs[m, 0], dirs[m, 1], dirs[m, 2] = oxi[m], oyi[m], oz
 
-        # ---- branch 2: flow-matched collided exits ----------------------
         m = ~unc
         n_flow = int(m.sum())
         if n_flow:
-            c_raw = encode_conditions(W[m], H[m], xi[m], oxi[m], oyi[m])
-            c = torch.from_numpy(self.cnorm.transform(c_raw)).to(
-                self.device, non_blocking=True)
-            g = torch.Generator(device="cpu").manual_seed(
-                int(rng.integers(2**31)))
+            c = torch.from_numpy(self.cnorm.transform(
+                encode_conditions(W[m], H[m], xi[m], oxi[m], oyi[m])))
+            g = torch.Generator().manual_seed(int(rng.integers(2**31)))
             z = torch.randn(n_flow, self.ynorm.mean.shape[0], generator=g)
-            x = integrate(self.model, z.to(self.device), c,
-                          self.ode_steps, self.solver)
-            y = self.ynorm.inverse(x.cpu().numpy())
+            y = self.ynorm.inverse(integrate(
+                self.model, z.to(self.device), c.to(self.device),
+                self.ode_steps, self.solver).cpu().numpy())
 
-            theta = np.arctan2(y[:, 1], y[:, 0])
-            p[m] = np.mod(theta / (2.0 * np.pi), 1.0) * 4.0 * W[m]
+            p[m] = np.mod(np.arctan2(y[:, 1], y[:, 0]) / (2 * np.pi), 1.0) \
+                * 4.0 * W[m]
             omega = y[:, 2:5]
-            omega /= np.linalg.norm(omega, axis=1, keepdims=True) + 1e-12
-            dirs[m] = omega
+            dirs[m] = omega / (np.linalg.norm(omega, axis=1, keepdims=True)
+                               + 1e-12)
 
-            sv = W[m] * np.exp(y[:, 5].astype(np.float64))
-            ex_x, ex_y, _ = perimeter_decode(p[m], W[m], H[m])
-            smin = np.hypot(ex_x, ex_y - xi[m] * H[m])
-            s[m] = np.maximum(sv, smin)
-            self.last_clamp_frac = float((sv < smin).mean())
-        else:
-            self.last_clamp_frac = 0.0
+            s_raw = W[m] * np.exp(y[:, 5].astype(float))
+            ex, ey, _ = perimeter_decode(p[m], W[m], H[m])
+            s_min = np.hypot(ex, ey - xi[m] * H[m])   # cannot be shorter
+            s[m] = np.maximum(s_raw, s_min)
+            self.stats["clamped"] += int((s_raw < s_min).sum())
 
-        self.n_calls += 1
-        self.n_particles += n
-        self.n_flow += n_flow
-        self.nfe += n_flow * self.nfe_per_sample
+        self.stats["calls"] += 1
+        self.stats["particles"] += n
+        self.stats["to_network"] += n_flow
+        self.stats["nfe"] += n_flow * self.nfe_per_sample
 
         _, _, face = perimeter_decode(p, W, H)
         return {"p": p, "dir": dirs, "s": s, "face": face, "uncollided": unc}
