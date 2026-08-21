@@ -27,6 +27,8 @@ there is a crossover.  This finds it, and the numbers file explains why it
 sits where it does.
 
 Outputs:
+    figures/geometry.pdf     what the problem actually is: materials, source,
+                             optical thickness, and the resulting flux
     figures/accuracy.pdf     flux fields, error map, lineout
     figures/speed.pdf        wall time and speedup vs optical thickness
     results/evaluation.txt   every raw number behind both figures
@@ -105,6 +107,96 @@ def rel_l2(a, b):
     return float(np.linalg.norm(a - b) / np.linalg.norm(b))
 
 
+# ------------------------------------------------------------------ geometry
+def figure_geometry(phi_fine, phi_macro, path):
+    """Draw the problem itself, so the reader knows what is being solved.
+
+    Four panels, left to right: what the materials are, how optically thick
+    that makes each cell (which is the quantity the whole speed argument
+    turns on), the Monte Carlo flux on the fine mesh, and the same flux
+    averaged onto the macro cells -- which is the resolution the generative
+    sampler works at and therefore the only fair basis for comparison.
+    """
+    prob = scaled_lattice(1.0)
+    ss, sa = prob["sig_s"], prob["sig_a"]
+    L = prob["Lx"]
+    ss_m, sa_m, _ = macro_problem(prob, PITCH, CELLS_PER_PITCH)
+    ext = [0, L, 0, L]
+
+    fig, ax = plt.subplots(1, 4, figsize=(17.5, 4.3))
+
+    # ---- 1. materials ------------------------------------------------
+    a = ax[0]
+    a.imshow((sa > 0).astype(float), origin="lower", extent=ext,
+             cmap="Greys", vmin=0, vmax=1.6, interpolation="nearest")
+    src = prob["source"]["box"]
+    a.add_patch(plt.Rectangle((src[0], src[1]), src[2] - src[0],
+                              src[3] - src[1], facecolor="#D64545",
+                              edgecolor="k", lw=1.2, alpha=.9))
+    for g in np.arange(0, L + .01, PITCH):     # macro-cell grid
+        a.axhline(g, color="#3C6E9F", lw=.6, alpha=.65)
+        a.axvline(g, color="#3C6E9F", lw=.6, alpha=.65)
+    a.set_title("geometry: 7x7 cm lattice", fontsize=10)
+    a.set_xlabel("x (cm)"); a.set_ylabel("y (cm)")
+    handles = [
+        plt.Rectangle((0, 0), 1, 1, facecolor="white", edgecolor="k",
+                      label=r"background  $\sigma_s$=1, $\sigma_a$=0"),
+        plt.Rectangle((0, 0), 1, 1, facecolor="0.35", edgecolor="k",
+                      label=r"absorber  $\sigma_s$=0.5, $\sigma_a$=9.5"),
+        plt.Rectangle((0, 0), 1, 1, facecolor="#D64545", edgecolor="k",
+                      label="isotropic source"),
+        plt.Line2D([0], [0], color="#3C6E9F", lw=1,
+                   label=f"macro cells ({PITCH:g} cm)"),
+    ]
+    a.legend(handles=handles, fontsize=7, loc="upper right",
+             framealpha=.92)
+
+    # ---- 2. optical thickness ----------------------------------------
+    a = ax[1]
+    W_cell = PITCH * ss_m
+    im = a.imshow(W_cell, origin="lower", extent=ext, cmap="magma",
+                  interpolation="nearest")
+    for j in range(W_cell.shape[0]):
+        for i in range(W_cell.shape[1]):
+            a.text(i + .5, j + .5, f"{W_cell[j, i]:.1f}", ha="center",
+                   va="center", fontsize=7.5,
+                   color="w" if W_cell[j, i] < W_cell.max() * .6 else "k")
+    a.set_title("optical width of each macro cell\n"
+                r"$\tilde W = \mathrm{pitch}\times\sigma_s$ (mfp)",
+                fontsize=10)
+    a.set_xlabel("x (cm)"); a.set_ylabel("y (cm)")
+    fig.colorbar(im, ax=a, fraction=.046, label="mfp")
+
+    # ---- 3. flux, fine mesh ------------------------------------------
+    a = ax[2]
+    lo = np.log10(max(phi_fine[phi_fine > 0].min(), 1e-10))
+    hi = np.log10(phi_fine.max())
+    im = a.imshow(np.log10(np.maximum(phi_fine, 1e-10)), origin="lower",
+                  extent=ext, cmap="viridis", vmin=lo, vmax=hi)
+    a.set_title(f"Monte Carlo flux\nfine mesh, "
+                f"{phi_fine.shape[0]}x{phi_fine.shape[1]}", fontsize=10)
+    a.set_xlabel("x (cm)"); a.set_ylabel("y (cm)")
+    fig.colorbar(im, ax=a, fraction=.046, label=r"$\log_{10}\phi$")
+
+    # ---- 4. flux, macro cells ----------------------------------------
+    a = ax[3]
+    im = a.imshow(np.log10(np.maximum(phi_macro, 1e-10)), origin="lower",
+                  extent=ext, cmap="viridis", vmin=lo, vmax=hi,
+                  interpolation="nearest")
+    a.set_title(f"the same flux on macro cells\n"
+                f"{phi_macro.shape[0]}x{phi_macro.shape[1]} -- what GMC "
+                f"is compared against", fontsize=10)
+    a.set_xlabel("x (cm)"); a.set_ylabel("y (cm)")
+    fig.colorbar(im, ax=a, fraction=.046, label=r"$\log_{10}\phi$")
+
+    fig.suptitle("The problem being solved: a checkerboard of absorbing "
+                 "blocks in a scattering background, source in the centre",
+                 fontsize=12)
+    fig.tight_layout(rect=[0, 0, 1, 0.91])
+    fig.savefig(path)
+    plt.close(fig)
+
+
 # ------------------------------------------------------------------ accuracy
 def accuracy(sampler, n, seed=1):
     prob = scaled_lattice(1.0)
@@ -120,7 +212,8 @@ def accuracy(sampler, n, seed=1):
 
     A, B, G = (coarsen(phi_a, CELLS_PER_PITCH),
                coarsen(phi_b, CELLS_PER_PITCH), phi_g)
-    return {"mc": A, "mc_repeat": B, "gmc": G, "t_mc": t_mc,
+    return {"mc": A, "mc_repeat": B, "gmc": G, "mc_fine": phi_a,
+            "t_mc": t_mc,
             "mc_reps": mc_reps, "mc_stats": mc_stats, "gmc_stats": g_stats,
             "err_model": rel_l2(G, A), "err_floor": rel_l2(B, A)}
 
@@ -437,6 +530,8 @@ def main():
           f"ratio {acc['err_model']/acc['err_floor']:.2f}x")
     figure_accuracy(acc, ROOT / "figures" / "accuracy.pdf")
     print("   wrote figures/accuracy.pdf")
+    figure_geometry(acc["mc_fine"], acc["mc"], ROOT / "figures" / "geometry.pdf")
+    print("   wrote figures/geometry.pdf")
 
     rows = []
     if not args.skip_speed:

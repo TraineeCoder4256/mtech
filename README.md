@@ -99,9 +99,16 @@ Three outputs:
 
 | file | what it holds |
 |---|---|
+| `figures/geometry.pdf` | the problem itself: materials, source, the optical width of every cell, and the flux on both the fine mesh and the macro cells |
 | `figures/accuracy.pdf` | MC and GMC flux fields, the error map, and a lineout with the noise floor drawn in |
 | `figures/speed.pdf` | wall time vs optical thickness, the speedup curve, and where GMC's time actually goes |
 | `results/evaluation.txt` | every raw number behind both figures |
+
+**Look at `figures/geometry.pdf` first** — it shows the optical width of every
+cell, and that one number decides whether the method can possibly pay off. In
+this lattice at its published scale the cells are 0.5–1.0 mfp: a particle
+crosses most of them without scattering even once. There is nothing there for a
+generative sampler to save. That is why `--scales` exists.
 
 **`results/evaluation.txt` is the one to read.** It has the numbers a plot
 cannot show: time per scattering event, time per network evaluation, time per
