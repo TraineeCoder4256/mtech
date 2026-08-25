@@ -241,9 +241,22 @@ from the same distribution the model was trained over.
 ----------------------------------------------------------------------
 2. FULL PROBLEM: the 7x7 lattice ({N:,} particles per solve)
 ----------------------------------------------------------------------
-GMC relative L2 error vs MC        {acc['err']*100:8.3f} %
-MC-vs-MC floor (same n, new seed)  {acc['floor']*100:8.3f} %
+GMC relative L2 error vs MC        {acc['err']*100:8.3f} %   (mean of 2 runs)
+MC-vs-MC noise floor               {acc['floor']*100:8.3f} %   \
+(3 pairs, range {acc['floor_lo']*100:.2f}-{acc['floor_hi']*100:.2f})
 ratio to the floor                 {acc['err']/acc['floor']:8.2f} x
+GMC-vs-GMC noise                   {acc['gmc_noise']*100:8.3f} %   \
+(compare with the MC floor: equal means the sampler is neither
+                                              over- nor under-dispersed)
+systematic bias, noise averaged out {acc['bias']*100:7.3f} %   \
+(mean of 2 GMC fields vs mean of 3 MC fields)
+total flux, GMC / MC               {acc['flux_ratio']:8.4f}     (1.0 = mass conserved)
+
+The floor is quoted as a range because it is itself a random quantity: two
+MC runs at this particle count can differ by anything in that band purely
+by seed.  A single-pair floor is not a yardstick, which is why three are
+used.  Read the BIAS line for how wrong the model actually is; the error
+line still contains the statistical scatter of both fields.
 
 per-cell relative error   median {np.median(relerr)*100:6.2f} %   \
 90th pct {np.percentile(relerr, 90)*100:6.2f} %   max {relerr.max()*100:6.2f} %
@@ -338,16 +351,34 @@ def main():
     print(f"\n2. full problem ({N:,} particles)")
     prob = mc.lattice()
     phi_a, mc_stats, t_mc = timed_mc(prob, N, SEED)
-    phi_b, _ = mc.solve(prob, N, seed=SEED + 1000)      # independent repeat
-    phi_g, g_stats = gmc_solve(prob, N, sampler, seed=SEED + 7)
-    A, B = coarsen(phi_a, prob["per_cm"]), coarsen(phi_b, prob["per_cm"])
-    acc = {"mc": A, "gmc": phi_g, "t_mc": t_mc,
+
+    # Several realisations of each, because the floor itself is noisy: two
+    # MC runs can differ by 0.8% or 1.9% purely by seed, so a floor taken
+    # from ONE pair is not a yardstick.  Averaging the fields also separates
+    # the model's systematic bias from its statistical scatter.
+    MCs = [coarsen(phi_a, prob["per_cm"])] + [
+        coarsen(mc.solve(prob, N, seed=SEED + 1000 * i)[0], prob["per_cm"])
+        for i in (1, 2)]
+    GMCs, g_stats = [], None
+    for i in (7, 77):
+        g, g_stats = gmc_solve(prob, N, sampler, seed=SEED + i)
+        GMCs.append(g)
+
+    rel = lambda a, b: float(np.linalg.norm(a - b) / np.linalg.norm(b))
+    floors = [rel(MCs[i], MCs[j]) for i, j in ((1, 0), (2, 0), (2, 1))]
+    errs = [rel(g, MCs[0]) for g in GMCs]
+    acc = {"mc": MCs[0], "gmc": GMCs[0], "t_mc": t_mc,
            "mc_stats": mc_stats, "gmc_stats": g_stats,
-           "err": float(np.linalg.norm(phi_g - A) / np.linalg.norm(A)),
-           "floor": float(np.linalg.norm(B - A) / np.linalg.norm(A))}
-    print(f"   GMC {acc['err']*100:.3f} %   floor {acc['floor']*100:.3f} %   "
-          f"ratio {acc['err']/acc['floor']:.2f}x")
-    figure_accuracy(prob, A, phi_g, acc["err"], acc["floor"],
+           "err": float(np.mean(errs)),
+           "floor": float(np.mean(floors)),
+           "floor_lo": min(floors), "floor_hi": max(floors),
+           "gmc_noise": rel(GMCs[1], GMCs[0]),
+           "bias": rel(np.mean(GMCs, 0), np.mean(MCs, 0)),
+           "flux_ratio": float(np.mean(GMCs, 0).sum() / np.mean(MCs, 0).sum())}
+    print(f"   GMC {acc['err']*100:.3f} %   floor {acc['floor']*100:.3f} % "
+          f"({acc['floor_lo']*100:.2f}-{acc['floor_hi']*100:.2f})   "
+          f"ratio {acc['err']/acc['floor']:.2f}x   bias {acc['bias']*100:.3f} %")
+    figure_accuracy(prob, MCs[0], GMCs[0], acc["err"], acc["floor"],
                     pathlib.Path("figures/accuracy.pdf"))
     print("   wrote figures/accuracy.pdf")
 
