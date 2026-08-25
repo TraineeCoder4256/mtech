@@ -64,7 +64,11 @@ def coarsen(phi, per_cm):
 
 
 def _tally(tally, iy, ix, w, s_cm, sig_a):
-    """Track-length estimator with implicit capture; returns surviving weight."""
+    """Track-length estimator with implicit capture; returns surviving weight.
+
+    iy and ix must be per-particle arrays: np.add.at accumulates elementwise,
+    and scalar indices with an array of contributions do not broadcast.
+    """
     absorbing = sig_a > 0.0
     safe = np.where(absorbing, sig_a, 1.0)
     np.add.at(tally, (iy, ix), np.where(absorbing,
@@ -102,7 +106,8 @@ def gmc_solve(problem, n, sampler, seed=1, max_crossings=400):
                        seed=int(rng.integers(1, 2**31 - 1)))
     t_birth += time.perf_counter() - _t
 
-    w = _tally(tally, cy0, cx0, np.ones(n), b["s"] / ss0, sa0)
+    w = _tally(tally, np.full(n, cy0), np.full(n, cx0), np.ones(n),
+               b["s"] / ss0, sa0)
     ex, ey, face = decode_p(b["p"] * (L / W0), np.full(n, L), np.full(n, L))
     ox, oy = b["dir"][:, 0].copy(), b["dir"][:, 1].copy()
     cx = np.full(n, cx0, np.int64)
