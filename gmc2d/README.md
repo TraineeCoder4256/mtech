@@ -15,6 +15,7 @@ answer is no.**
 ## Run it
 
 ```bash
+python validate.py       # ~3 min   -> checks the MC baseline against exact results
 python make_data.py      # ~2 s     -> data/cells.npz (65 MiB, 2.88M rows)
 python train.py          # ~40 min  -> models/
 python evaluate.py       # ~10 min  -> figures/ + results/
@@ -74,6 +75,7 @@ Eight files, flat, no packages.
 ```
 mc.py           Monte Carlo: the single-cell walk, the full-domain solver,
                 and the lattice test geometry
+validate.py     checks mc.py against three exact analytic identities
 data.py         encodings, normalisation, leak-free dataset split
 model.py        the velocity field, the CFM loss, weight averaging
 sampler.py      cell geometry, ODE solve, exit-state decoding
@@ -85,6 +87,34 @@ evaluate.py     step 3
 
 The dependency graph is a line: `make_data` → `mc`; `train` → `data`, `model`;
 `evaluate` → everything. Nothing in `mc.py` imports the model.
+
+## Validating the baseline
+
+Everything is measured against the Monte Carlo solver, so it is checked
+against results that are known **exactly** — not against another code. A
+cross-code comparison shows two codes agree; an analytic identity shows the
+code is right.
+
+| test | exact result | what it exercises |
+|---|---|---|
+| Dirac mean-chord invariance | mean total path = `2WH/(W+H)`, independent of scattering | free-path sampling, isotropic scattering, boundary detection, path accumulation |
+| uncollided fraction | `P(k=0) = exp(-chord)` | the exponential free-path law and chord geometry |
+| particle balance | absorbed / source = 1 in a thick pure absorber | mesh traversal, track-length estimator, implicit capture, tally normalisation |
+
+`python validate.py` reports each as `z = (measured - exact) / standard error`;
+`|z| < 3` passes. All twelve cases currently pass, with relative errors below
+0.5%, down to an uncollided probability of 8.6e-4 (about 7 mean free paths).
+
+One subtlety worth knowing: in test 1 the standard error is computed over
+independent **entry conditions**, not over particles. Particles sharing a
+condition are correlated, and treating them as independent understates the
+error by roughly 3x — enough to turn a passing case into a false failure.
+
+What these tests do **not** cover: they confirm the solver conserves
+particles and gets single-cell statistics exactly right, but conservation
+does not prove the flux is in the right *place*. Cross-validating the flux
+field against an independent solution — such as the ORNL reference — remains
+open.
 
 ## Honest notes
 
