@@ -364,6 +364,13 @@ def main():
         g, g_stats = gmc_solve(prob, N, sampler, seed=SEED + i)
         GMCs.append(g)
 
+    # Keep the macro-cell field on disk so openmc_lattice.py can difference
+    # the sampler against an independent code.  The mean of the runs is
+    # saved rather than one of them, so what is compared is the model's
+    # systematic error with its own sampling noise averaged down.
+    pathlib.Path("results").mkdir(exist_ok=True)
+    np.save("results/gmc_coarse.npy", np.mean(GMCs, axis=0))
+
     rel = lambda a, b: float(np.linalg.norm(a - b) / np.linalg.norm(b))
     floors = [rel(MCs[i], MCs[j]) for i, j in ((1, 0), (2, 0), (2, 1))]
     errs = [rel(g, MCs[0]) for g in GMCs]
