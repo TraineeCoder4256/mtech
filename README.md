@@ -1,161 +1,33 @@
-# Generative Monte Carlo for 2-D particle transport
+# Generative Monte Carlo for particle transport
 
-A reproduction of **arXiv:2512.13965v1**, *Generative Monte Carlo Sampling for
-Constant-Cost Particle Transport* (Farmer, Murray, Krotz, McClarren).
+M.Tech project: a comparative study of generative surrogate models for
+accelerating Monte Carlo particle transport, reproducing and extending
+**arXiv:2512.13965v1** (Farmer, Murray, Krotz & McClarren) on the Lattice
+benchmark of **arXiv:2505.17284** (Schotthöfer & Hauck, ORNL).
 
-**The idea.** Inside an optically thick, materially uniform cell, replace the
-entire in-cell scattering random walk with one draw from a conditional
-generative model. Monte Carlo cost per cell grows with optical thickness —
-thicker cell, more scattering events to simulate. The generative sampler costs
-a fixed number of network evaluations no matter how thick the cell is. Above
-some crossover thickness, the sampler should win.
-
-**Whether it actually wins here is the question `scripts/evaluate.py` answers,
-in numbers, including when the answer is no.**
-
----
-
-## The whole pipeline is three commands
+## Everything lives in [`gmc2d/`](gmc2d/)
 
 ```bash
-python scripts/make_data.py      # ~11 s    -> data/singlecell.npz
-python scripts/train.py          # ~40 min  -> models/boundary/
-python scripts/evaluate.py       # ~10 min  -> figures/ + results/
+cd gmc2d
+python make_data.py         # single-cell training set
+python train.py             # conditional flow-matching model
+python evaluate.py          # accuracy and cost against the Monte Carlo baseline
 ```
 
-No flags. Every script has its settings as named constants in a `settings`
-block at the top of the file — change them there. A GPU is picked up
-automatically if `torch.cuda.is_available()`. Timings are for 4 CPU cores.
+See [`gmc2d/README.md`](gmc2d/README.md) for what each file does and how the
+pieces fit together.
 
-That is the entire main path. Everything else in the repo is either the Monte
-Carlo baseline those three depend on, or the paper's own baseline figures kept
-aside in `scripts/baseline/`.
+Two checks sit outside that three-command pipeline:
 
----
-
-## What each step does
-
-### 1. `scripts/make_data.py` — the training data
-
-One physical experiment, repeated: a particle enters a square purely-scattering
-cell of optical width `W` through the left face at height `xi` in direction
-`Omega_in`; Monte Carlo walks it until it leaves; record where it left (`p`),
-which way it was going (`Omega_out`) and how far it travelled (`s`).
-
-No larger geometry is involved. A cell is completely described by its optical
-width `W = pitch × sigma_s`, so `W` is sampled directly on a log grid from 0.025
-to 20 mfp rather than derived from any particular problem's materials.
-
-Conditions are sampled **uniformly**, not physically: the model must be accurate
-everywhere it will be asked, and at solve time it gets asked wherever the
-geometry happens to send particles.
-
-### 2. `scripts/train.py` — the model
-
-Conditional flow matching. Take a training exit state `y` and Gaussian noise
-`z`, pick a time `t`, place a point on the straight line between them
-(`x_t = (1-t)z + ty`), and ask the network what velocity carries a particle
-along that line. The answer is `y - z`. Regress on it. To sample, integrate the
-learned field from noise at `t=0` to `t=1`. `gmc/cfm.py` is nine lines.
-
-Two preprocessing rules carry real weight:
-
-- **Uncollided particles (`k == 0`) are dropped.** Their exit is an exact
-  function of their entry — a Dirac delta, which a smooth flow cannot
-  represent. They are sampled analytically at solve time instead.
-- **The train/validation split is by entry condition, never by row.** Each
-  condition has ~48 sampled exits; splitting by row would put siblings of a
-  training row into validation and report memorisation as generalisation.
-
-### 3. `scripts/evaluate.py` — does it work, and is it faster
-
-One geometry throughout: the 7×7 cm lattice from `mc2d.problems`, a checkerboard
-of absorbing blocks in a scattering background with an isotropic source in the
-middle cell.
-
-**Accuracy** — solve it twice with Monte Carlo (different seeds) and once with
-the sampler. The two MC runs differ only by seed, so the gap between them is
-pure statistical noise: that is the floor, and the only honest yardstick.
-Beating it is impossible; approaching it is the goal. Everything is compared on
-the 7×7 macro-cell grid, because the sampler returns total path length in a cell
-but not where inside it went — its flux is inherently cell-averaged, and
-comparing against the fine 112×112 mesh would compare two different quantities.
-
-**Speed** — the same geometry with every cross section multiplied by a scale
-factor, which makes cells optically thicker without changing the layout.
-
-Three outputs:
-
-| file | what it holds |
-|---|---|
-| `figures/geometry.pdf` | the problem itself: materials, source, the optical width of every cell, and the flux on both the fine mesh and the macro cells |
-| `figures/accuracy.pdf` | MC and GMC flux fields, the error map, and a lineout with the noise floor drawn in |
-| `figures/speed.pdf` | wall time vs optical thickness, the speedup curve, and where GMC's time actually goes |
-| `results/evaluation.txt` | every raw number behind both figures |
-
-**Look at `figures/geometry.pdf` first** — it shows the optical width of every
-cell, and that one number decides whether the method can possibly pay off. In
-this lattice at its published scale the cells are 0.5–1.0 mfp: a particle
-crosses most of them without scattering even once. There is nothing there for a
-generative sampler to save. That is why the script also sweeps `SCALES`, which multiplies
-every cross section and thickens the cells without changing the layout.
-
-**`results/evaluation.txt` is the one to read.** It has the numbers a plot
-cannot show: time per scattering event, time per network evaluation, time per
-cell crossing each way, how GMC's wall time splits between the network and the
-NumPy host loop, and the break-even arithmetic — how many scattering events one
-GMC cell crossing costs, versus how many the geometry actually has. That
-subtraction is what tells you *why* the speedup is what it is, and which of the
-two possible problems you have:
-
-- the **network** dominates GMC's time → the model is too expensive (fewer ODE
-  steps, a cheaper solver, distillation);
-- the **host loop** dominates → the model is not the bottleneck at all, and no
-  amount of model work will fix it.
-
----
-
-## Layout
-
-Nine files carry the whole project. Each does one thing.
-
-```
-mc2d/              the Monte Carlo baseline (numba, multi-threaded)
-  transport.py       full-domain solver, track-length estimator
-  problems.py        the lattice and hohlraum benchmarks
-  singlecell.py      the in-cell walk that makes training data
-gmc/               the learned sampler
-  data.py            dataset -> encoded, normalised tensors
-  model.py           the velocity field, the CFM loss, weight averaging
-  sampler.py         cell geometry, ODE solve, exit-state decoding
-  transport.py       chain the sampler across a mesh
-scripts/
-  make_data.py       step 1
-  train.py           step 2
-  evaluate.py        step 3
-  baseline/          the paper's own MC figures (Fig 2b, 3, 4a, 4b)
+```bash
+python validate.py          # the MC baseline against three exact identities
+python openmc_lattice.py    # the same lattice solved by OpenMC, differenced
+                            # cell by cell (needs conda install -c conda-forge openmc)
 ```
 
-The dependency graph is a line, not a web: `make_data` needs `mc2d`;
-`train` needs `gmc.data` and `gmc.model`; `evaluate` needs everything.
-Nothing in `mc2d/` imports anything from `gmc/`.
+## History
 
----
-
-## Honest notes
-
-- **The MC baseline is numba-compiled and multi-threaded; the GMC host loop is
-  single-threaded NumPy.** A GPU number for GMC compared against CPU MC measures
-  hardware, not algorithm. If you report one, name the hardware on both sides,
-  and report the CPU-vs-CPU comparison too.
-- **`W` is not held out.** The validation split holds out entry *conditions*, not
-  optical sizes, so generalisation to unseen `W` is untested.
-- **Cells are square** (`H = W`). The conditioning vector has a separate `H` slot
-  and the code paths exist, but no rectangular data does.
-- **Only the boundary model is implemented.** A particle born inside a cell
-  cannot be handled by a sampler conditioned on entry through a face, so the
-  source cell falls back to analog MC. It is one cell out of 49 and is timed
-  separately in the report.
-- **No distillation.** The paper's 1–2 NFE regime is not reproduced.
-- `docs/` and `scripts/build_paper.py` predate this simplification and describe
-  the earlier, more complicated pipeline. Treat them as history.
+An earlier version of this work lived in `mc2d/`, `gmc/`, `scripts/` and
+`docs/` at the repository root. It was superseded by `gmc2d/`, which is a
+smaller, flat rewrite with the same physics, and has been removed. The old
+tree remains in the git history if it is ever needed.
