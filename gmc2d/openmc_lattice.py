@@ -281,11 +281,17 @@ def main():
     absorbing = absorber_map()
 
     # Internal consistency: the absorption rate implied by the flux field,
-    # sum(sig_a * phi * V) over the absorbing cells, must equal the
-    # independently scored absorption tally.  They come from different
-    # estimators, so agreement means the mesh, the volume normalisation and
-    # the material assignment are all consistent with one another.
-    implied = AB[1] * float(cell[absorbing].sum()) * PITCH ** 2
+    # sum(sig_a * phi * V) over EVERY cell, must equal the independently
+    # scored absorption tally.  They come from different estimators, so
+    # agreement means the mesh, the volume normalisation and the material
+    # assignment are all consistent with one another.
+    #
+    # Every cell, not just the absorbers: with the benchmark's sig_a = 0
+    # background the two are the same sum, but a real moderator absorbs
+    # weakly everywhere and omitting it leaves the check several per cent
+    # short.  It read as a failure the first time a real material was used.
+    sig_a_map = np.where(absorbing, AB[1], BG[1])
+    implied = float((sig_a_map * cell).sum()) * PITCH ** 2
     lines = [
         "=" * 66,
         "LATTICE BENCHMARK -- OpenMC multi-group, one energy group",
