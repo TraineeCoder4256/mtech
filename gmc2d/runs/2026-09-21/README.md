@@ -20,6 +20,7 @@ ceiling the arithmetic claims are measured against.
 | `speed.pdf` | `evaluate.py` | cost against optical thickness |
 | `speed_profile.{txt,json}` | `speed_profile.py` | where GMC's time goes, and the crossover projection |
 | `speed_prototype.{txt,json}` | `speed_prototype.py` | whether the candidate fixes recover it |
+| `crossings_vs_thickness.json` | ad hoc, see `SPEED.md` | macro-cell crossings per particle from 1 to 320 mfp, walked exactly |
 
 **The headline.** On the lattice at the published cross sections, 20,000
 particles: MC 0.029 s, GMC 9.8 s. The sampler is 337x slower and its flux is

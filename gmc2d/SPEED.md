@@ -133,10 +133,11 @@ particle in it.
 
 ### 4. The driver's own floor, which becomes the wall
 
-The free-model run costs 16.9 µs per particle: roughly 10 µs of torch dispatch
-for 4,000 module calls and 7 µs of NumPy geometry and tallies. That floor does
-not shrink when the model does. It is why the projection below stops improving
-at 24 mfp however cheap the network gets.
+The free-model run costs 16.9 µs per particle at the published scale — about
+2 µs per cell crossing, roughly 10 µs of torch dispatch for 4,000 module calls
+and 7 µs of NumPy geometry and tallies. That floor does not shrink when the
+model does. It is why the projection below stops improving at 55 mfp however
+cheap the network gets.
 
 ## What each change is worth
 
@@ -168,29 +169,58 @@ approximation.** Cells below a chosen optical width go back to the exact
 walk, which is the reference the whole project is scored against. It is the
 one change that makes the code both faster and more correct.
 
+## The cost is constant per crossing, not per particle
+
+The method's promise is a cost that does not grow with optical thickness.
+That is true of one cell crossing and **not** true of one particle history,
+and the difference decides where the crossover is.
+
+In an optically thick scattering cell a particle that enters through a face
+most often diffuses around near that face and comes back out of it. It
+re-enters the neighbour it came from, bounces back, and so on. Thicker cells
+mean more cell-to-cell crossings per history, and every crossing is another
+full network call. Measured with the walk done **exactly**, so this is
+physics and not model error:
+
+| cells (mfp) | 1 | 10 | 20 | 40 | 80 | 160 | 320 |
+|---|---|---|---|---|---|---|---|
+| crossings per particle | 8.1 | 8.0 | 12.0 | 20.0 | 35.9 | 67.6 | 124.7 |
+
+That is **W^0.80** over the thick end. Monte Carlo's cost per particle grows
+as W^1.69 over the same range. So the sampler's advantage grows as W^0.88 —
+real, and slower than the flat-cost framing suggests.
+
+Measured speedups confirm it, doubling with every doubling of thickness:
+
+| cells | 10 mfp | 20 mfp | 40 mfp | 80 mfp |
+|---|---|---|---|---|
+| MC time / GMC time | 0.0033 | 0.0058 | 0.0104 | 0.0200 |
+
 ## Where the crossover moves
 
-Monte Carlo wall time per particle grows as **W^1.41** over cells from 4 to
-160 mean free paths (fitted on measured wall time, not on a nominal cost per
-scattering event — the real cost per scatter falls from 254 ns to 23 ns across
-that range, so a single-value projection puts the crossover in the wrong
-place). GMC's cost is flat in W, which is the point of the method. Where the
-two lines cross:
+Fitting those two exponents, and splitting the per-crossing cost into 2 µs of
+driver that no model work touches plus 122 µs of network that each
+intervention divides:
 
-| configuration | µs/particle | crossover |
-|---|---|---|
-| as it stands (heun 5, 1.7M params) | 564 | 288 mfp |
-| euler 4 steps | 267 | 170 mfp |
-| + width 128, depth 3 | 78 | 71 mfp |
-| distilled to 1 NFE + width 64, depth 3 | 24 | 31 mfp |
-| an instantaneous model — the driver alone | 16.9 | **24 mfp** |
+| configuration | crossover |
+|---|---|
+| as it stands (heun 5, 1.7M params) | 5,900 mfp |
+| euler 4 steps | 2,500 mfp |
+| + width 128, depth 3 | 530 mfp |
+| distilled to 1 NFE + width 64, depth 3 | 100 mfp |
+| an instantaneous model — the driver alone | **55 mfp** |
 
-Read the last two rows together. Making the network 80× cheaper takes the
-crossover from 288 mfp to 31, and the floor underneath it is 24. **Past about
-that point the Python/NumPy/torch driver is the binding constraint, and
-further model work buys nothing.** A GPU changes the network column and not
-the floor, so it moves the crossover the same way a smaller model does, and
-runs into the same wall.
+The projection is checked against direct measurement at 40 and 80 mfp and
+predicts those within 18%.
+
+**These are lattice numbers, and the lattice is the worst case for this
+method.** 49 small alternating regions is the geometry that maximises
+boundary crossings. What decides everything is scatters replaced per network
+call, and on this geometry it only reaches 283 even at 160 mfp, because the
+crossing count climbs alongside the thickness. A problem with few large
+uniform regions — a shielding slab, a thick block, the hohlraum — has a
+particle enter, random-walk O(W^2) times and leave, for one network call.
+That is the regime the method is built for, and it is not this one.
 
 ## The accuracy budget, so a tradeoff can be priced
 
@@ -230,7 +260,15 @@ them is a model problem.
    Belongs to whoever owns `model.py`.
 5. **Then distil to 1–2 evaluations**, which is the regime the paper actually
    reports and this reproduction does not.
-6. **Only then** is the driver worth rewriting, and by then it will be the
+6. **Add a test problem the method can win on** — few large uniform regions,
+   tens to hundreds of mean free paths each. This matters as much as any of
+   the above: the lattice maximises boundary crossings, and no amount of
+   model work makes a 1 mfp cell worth generating. Note that `make_data.py`
+   stops at `SIZE_MAX = 20.0`, so at 40 mfp and beyond the model is already
+   extrapolating, which is the likeliest reason accuracy degrades there.
+   Training data for thick cells costs exactly what the method is trying to
+   avoid — it has to be budgeted, though it is paid once.
+7. **Only then** is the driver worth rewriting, and by then it will be the
    whole cost.
 
 ## What is not a fix
