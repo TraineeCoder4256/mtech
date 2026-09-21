@@ -169,58 +169,67 @@ approximation.** Cells below a chosen optical width go back to the exact
 walk, which is the reference the whole project is scored against. It is the
 one change that makes the code both faster and more correct.
 
-## The cost is constant per crossing, not per particle
+## The one number that decides everything
 
-The method's promise is a cost that does not grow with optical thickness.
-That is true of one cell crossing and **not** true of one particle history,
-and the difference decides where the crossover is.
+Monte Carlo's work in a cell is the number of scattering events, and that is
+fixed by a theorem `validate.py` already checks: the mean path of a particle
+through a convex region is `4V/S` **whatever the scattering does**. In optical
+units that path *is* the collision count. So one network call replaces about
+one optical mean chord's worth of scattering events — for a `W x H` cell,
+`2WH/(W+H)`, and for a square, `W`.
 
-In an optically thick scattering cell a particle that enters through a face
-most often diffuses around near that face and comes back out of it. It
-re-enters the neighbour it came from, bounces back, and so on. Thicker cells
-mean more cell-to-cell crossings per history, and every crossing is another
-full network call. Measured with the walk done **exactly**, so this is
-physics and not model error:
+Measured with exact walks through the solver's own loop:
 
-| cells (mfp) | 1 | 10 | 20 | 40 | 80 | 160 | 320 |
-|---|---|---|---|---|---|---|---|
-| crossings per particle | 8.1 | 8.0 | 12.0 | 20.0 | 35.9 | 67.6 | 124.7 |
+| cells (mfp) | 10 | 20 | 40 | 80 | 160 | 320 |
+|---|---|---|---|---|---|---|
+| scatters per crossing | 9.3 | 19.9 | 41.3 | 85.8 | 176.5 | 354.6 |
+| ratio to the chord | 0.93 | 0.99 | 1.03 | 1.07 | 1.10 | 1.11 |
 
-That is **W^0.80** over the thick end. Monte Carlo's cost per particle grows
-as W^1.69 over the same range. So the sampler's advantage grows as W^0.88 —
-real, and slower than the flat-cost framing suggests.
+Now write the speedup out. Both methods make the same cell crossings, so
 
-Measured speedups confirm it, doubling with every doubling of thickness:
+```
+    MC time     crossings x chord x t_scatter     chord x t_scatter
+  --------- = ------------------------------- = -------------------
+   GMC time      crossings x cost_per_crossing    cost_per_crossing
+```
 
-| cells | 10 mfp | 20 mfp | 40 mfp | 80 mfp |
-|---|---|---|---|---|
-| MC time / GMC time | 0.0033 | 0.0058 | 0.0104 | 0.0200 |
+**The crossing count cancels exactly.** Geometry, mesh, how many times a
+particle bounces between neighbours — none of it survives. What is left is
+one comparison: the optical mean chord of a cell, times Monte Carlo's cost per
+scattering event, against GMC's cost per crossing.
 
-## Where the crossover moves
+That last one is worth knowing on its own, because it is easy to get wrong.
+Crossings per particle are *not* constant in optical thickness — measured with
+exact walks they go 8.0, 12.0, 20.0, 35.9, 67.6, 124.7 at 10 to 320 mfp, as
+W^0.80, because a thick scattering cell usually returns a particle through the
+face it entered. The cost per *history* therefore grows. It just cancels
+against Monte Carlo's work growing the same way.
 
-Fitting those two exponents, and splitting the per-crossing cost into 2 µs of
-driver that no model work touches plus 122 µs of network that each
-intervention divides:
+## Where the crossover is
 
-| configuration | crossover |
-|---|---|
-| as it stands (heun 5, 1.7M params) | 5,900 mfp |
-| euler 4 steps | 2,500 mfp |
-| + width 128, depth 3 | 530 mfp |
-| distilled to 1 NFE + width 64, depth 3 | 100 mfp |
-| an instantaneous model — the driver alone | **55 mfp** |
+`cost_per_crossing` is 124 µs measured, of which 2 µs is driver. `t_scatter`
+falls from 254 ns at 1 mfp to 23 ns at 160 and flattens there. So break-even
+needs a cell whose optical mean chord is:
 
-The projection is checked against direct measurement at 40 and 80 mfp and
-predicts those within 18%.
+| configuration | cost per crossing | chord needed |
+|---|---|---|
+| as it stands (heun 5, 1.7M params) | 124 µs | ~5,000 mfp |
+| euler 4 steps | 57 µs | ~2,300 mfp |
+| + width 128, depth 3 | 15 µs | ~590 mfp |
+| distilled to 1 NFE + width 64, depth 3 | 3.4 µs | ~135 mfp |
+| an instantaneous model — the driver alone | 2 µs | **~80 mfp** |
 
-**These are lattice numbers, and the lattice is the worst case for this
-method.** 49 small alternating regions is the geometry that maximises
-boundary crossings. What decides everything is scatters replaced per network
-call, and on this geometry it only reaches 283 even at 160 mfp, because the
-crossing count climbs alongside the thickness. A problem with few large
-uniform regions — a shielding slab, a thick block, the hohlraum — has a
-particle enter, random-walk O(W^2) times and leave, for one network call.
-That is the regime the method is built for, and it is not this one.
+Checked directly: measured speedups on the lattice are 0.0033, 0.0058, 0.0104
+and 0.0200 at 10, 20, 40 and 80 mfp, which extrapolate to unity at about
+5,900 mfp — the same place the chord law puts it.
+
+**So the lattice is not badly shaped, it is thin.** A 1 mfp cell is worth one
+scattering event no matter how the mesh is drawn. The way to a large chord is
+a physically large uniform region or a very large cross section, since the
+chord is `(2/3)L x sigma` for a cube of side `L`. Merging four cells into one
+doubles the chord and halves the crossings, which is a real 2x — but the
+lattice alternates material every centimetre, so there is nothing to merge.
+That is why the problem, not the mesh, is what has to change.
 
 ## The accuracy budget, so a tradeoff can be priced
 
@@ -260,10 +269,10 @@ them is a model problem.
    Belongs to whoever owns `model.py`.
 5. **Then distil to 1–2 evaluations**, which is the regime the paper actually
    reports and this reproduction does not.
-6. **Add a test problem the method can win on** — few large uniform regions,
-   tens to hundreds of mean free paths each. This matters as much as any of
-   the above: the lattice maximises boundary crossings, and no amount of
-   model work makes a 1 mfp cell worth generating. Note that `make_data.py`
+6. **Add a test problem the method can win on** — a uniform region whose
+   optical mean chord is in the hundreds of mean free paths. This matters as
+   much as any of the above: no amount of model work makes a 1 mfp cell worth
+   generating, because it is worth one scattering event. Note that `make_data.py`
    stops at `SIZE_MAX = 20.0`, so at 40 mfp and beyond the model is already
    extrapolating, which is the likeliest reason accuracy degrades there.
    Training data for thick cells costs exactly what the method is trying to
