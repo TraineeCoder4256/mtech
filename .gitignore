@@ -16,3 +16,7 @@ results/
 # loss curve and the log are all run artefacts, not source
 models/*
 docs/gmc_paper_src.html
+
+# ...except a dated snapshot of one full run, committed so the numbers in
+# gmc2d/SPEED.md can be checked without re-running the pipeline
+!gmc2d/runs/**

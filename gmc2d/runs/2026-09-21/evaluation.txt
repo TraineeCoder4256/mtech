@@ -1,0 +1,110 @@
+======================================================================
+EVALUATION -- RAW NUMBERS
+======================================================================
+device      cpu
+solver      heun, 5 steps = 10 network evaluations per sample
+
+----------------------------------------------------------------------
+1. CELL PHYSICS: sampled exit distributions vs Monte Carlo
+----------------------------------------------------------------------
+Wasserstein-1 distance in units of the quantity's own spread, shown as
+model / MC-vs-MC floor.  The floor is what two MC runs differ by at the
+same sample size, so 1.00 means indistinguishable from noise.  Entry
+conditions are drawn fresh and were not in training.
+
+    W     H  aspect     p (model/floor)  Ox (model/floor)  log s (model/floor)  unc% MC/GMC
+  1.0   1.0    1.00   0.03 / 0.01    0.01 / 0.01    0.06 / 0.01    42.6   43.5
+  4.0   4.0    1.00   0.03 / 0.02    0.02 / 0.01    0.05 / 0.02     0.1    0.1
+  4.0   1.0    4.00   0.02 / 0.00    0.03 / 0.01    0.06 / 0.01     1.6    1.5
+  1.0   4.0    0.25   0.02 / 0.01    0.01 / 0.00    0.05 / 0.02    29.9   30.1
+  8.0   2.0    4.00   0.01 / 0.01    0.03 / 0.02    0.05 / 0.02     9.7    9.7
+
+Rectangles matter: the model is conditioned on W and H separately, as in
+the paper, so a 4x1 cell is not a special case bolted on -- it is drawn
+from the same distribution the model was trained over.
+
+----------------------------------------------------------------------
+2. FULL PROBLEM: the 7x7 lattice (20,000 particles per solve)
+----------------------------------------------------------------------
+GMC relative L2 error vs MC           0.942 %   (mean of 2 runs)
+MC-vs-MC noise floor                  1.450 %   (3 pairs, range 0.92-1.81)
+ratio to the floor                     0.65 x
+GMC-vs-GMC noise                      1.508 %   (compare with the MC floor: equal means the sampler is neither
+                                              over- nor under-dispersed)
+systematic bias, noise averaged out   0.693 %   (mean of 2 GMC fields vs mean of 3 MC fields)
+total flux, GMC / MC                 1.0003     (1.0 = mass conserved)
+
+The floor is quoted as a range because it is itself a random quantity: two
+MC runs at this particle count can differ by anything in that band purely
+by seed.  A single-pair floor is not a yardstick, which is why three are
+used.  Read the BIAS line for how wrong the model actually is; the error
+line still contains the statistical scatter of both fields.
+
+per-cell relative error   median   5.83 %   90th pct  32.91 %   max 137.53 %
+path lengths clamped to the straight-line minimum: 5.34 %
+
+----------------------------------------------------------------------
+3. COST AT THE PHYSICAL SCALE
+----------------------------------------------------------------------
+MONTE CARLO
+  wall time                         0.0290 s   (mean of repeated runs)
+  scattering events                148,608
+  scatters per particle               7.43
+  time per particle                   1.45 us
+  time per scattering event          195.5 ns
+
+GMC
+  wall time                         9.7974 s
+  macro-cell crossings             166,480
+  crossings per particle              8.32
+  batched sampler calls                400
+  mean / median live batch             416 / 1
+  crossings reaching the network    83,520   (50.2 %; the rest were uncollided)
+  network evaluations              835,200
+  time per particle                 489.87 us
+  time per macro-cell crossing       58.85 us
+  time per network evaluation        11.56 us
+
+  where the wall time goes
+    network (ODE solve)             9.6571 s  ( 98.6 %)
+    analog MC in the birth cell     0.0011 s  (  0.0 %)
+    geometry / tallies (NumPy)      0.1392 s  (  1.4 %)
+
+SPEEDUP                           0.002965 x
+
+----------------------------------------------------------------------
+4. WHY THE SPEEDUP IS WHAT IT IS
+----------------------------------------------------------------------
+MC does one unit of work per scattering event.  GMC does a fixed amount
+per cell crossing, however many scatters that replaces.  So: what does
+one crossing cost each way?
+
+  MC   0.89 scatters x 195.5 ns = 0.17 us per crossing
+  GMC  10 evaluations + host = 58.85 us per crossing
+
+BREAK-EVEN: one GMC crossing costs as much as 301 scattering events,
+            and this geometry has 0.9 per crossing -- so cells
+            must be ~337x optically thicker before GMC wins.
+
+Which problem you have depends on the split above: if the network
+dominates, the model is too expensive (fewer steps, cheaper solver,
+distillation).  If the host loop dominates, the model is not the
+bottleneck and no model work will fix it.
+
+Note the baseline: mc.py is numba-compiled and multi-threaded, so the
+per-scatter time is already a hard target.  A slower baseline would
+flatter GMC without changing anything real.
+
+----------------------------------------------------------------------
+5. SPEED SWEEP (4,000 particles per point)
+----------------------------------------------------------------------
+ scale    W_bg    MC (s)   GMC (s)   speedup  scat/part  scat/cross   net%
+--------------------------------------------------------------------------
+     1     1.0     0.007      2.33  0.003168x        7.4         0.9   96.5%
+     4     4.0     0.007      2.98  0.002425x       22.2         3.7   99.1%
+    10    10.0     0.015      4.59  0.003346x       84.8        10.0   98.1%
+    20    20.0     0.037      6.51  0.005674x      275.1        22.5   98.4%
+
+GMC is SLOWER at every scale tested (up to 20 mfp).
+Best 0.00567x at 20 mfp; extrapolate with the break-even figure below.
+======================================================================

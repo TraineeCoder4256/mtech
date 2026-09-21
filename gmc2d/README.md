@@ -21,10 +21,22 @@ python train.py          # ~40 min  -> models/
 python evaluate.py       # ~10 min  -> figures/ + results/
 ```
 
+Two more, once there is a trained model, for the speed question specifically:
+
+```bash
+python speed_profile.py    # ~8 min    -> where GMC's time goes, and the crossover
+python speed_prototype.py  # ~20 min   -> whether the candidate fixes recover it
+```
+
 No flags. Settings are named constants at the top of each file. A GPU is used
 automatically if `torch.cuda.is_available()`.
 
 Needs `numpy numba matplotlib torch`.
+
+**[`SPEED.md`](SPEED.md) reads those two reports and says what to do.** One
+full run of everything above is committed under
+[`runs/2026-09-21/`](runs/2026-09-21/), so the numbers can be checked without
+re-running the pipeline.
 
 ## What it does
 

@@ -373,6 +373,7 @@ def report(d, path):
                 if r["solver"] == BASE_SOLVER and r["steps"] == BASE_STEPS)
     mcs = d["mc_sweep"]
     mc1 = mcs[0]
+    mc_same = mc1["t_mc"] / mc1["n"] * d["n_lattice"]
     proj = d["projections"]
 
     net_tbl = "\n".join(
@@ -437,11 +438,23 @@ flops per CELL CROSSING (GMC)          {a['flop_per_crossing']:>14,}
 flops per SCATTERING EVENT (MC, est.)  {a['flop_per_scatter_est']:>14,}
 ratio                                  {a['arithmetic_ratio']:>14,.0f} x
 
-Read that last line first.  One generated crossing costs about
-{a['arithmetic_ratio']:,.0f} scattering events in raw arithmetic.  For the sampler to
-win, a cell must contain more scatters than that -- which is a statement
-about the geometry, not about the code.  Everything below is either a
-constant factor on top of this, or a way of reducing it.
+Read that ratio, then discount it.  In raw arithmetic one generated
+crossing is worth about {a['arithmetic_ratio']:,.0f} scattering events, which sounds
+fatal.  It is not the whole story, because the two sides run at wildly
+different efficiency:
+
+  GMC network, batch 4,096       {a['gmc_gflops']:>10,.0f} GFLOP/s   (dense matmuls)
+  MC scattering loop             {a['mc_gflops']:>10.2f} GFLOP/s   (measured, {a['ns_per_scatter']:.0f} ns/scatter)
+
+The network runs at the machine's arithmetic limit.  The Monte Carlo
+walk does not run on arithmetic at all -- it is a random number, a
+logarithm, two divisions and a branch, and its cost is dominated by the
+dependent chain and the RNG, not by flops.  So the baseline wastes about
+{a['gmc_gflops'] / a['mc_gflops']:,.0f}x of this CPU's arithmetic capability, and that waste is the
+only reason the crossover is a few hundred mean free paths away rather
+than a million.
+
+The time ratio, which is the one that matters, is in section H.
 
 ----------------------------------------------------------------------
 B. NETWORK COST vs BATCH SIZE
@@ -480,8 +493,10 @@ floor GMC could reach with a perfect, instantaneous model.
   real model   {real['wall']:>9.3f} {real['wall_net']:>9.3f} {real['wall_birth']:>10.3f} {real['wall_host']:>9.3f} {real['us_per_crossing']:>14.2f}
   free model   {free['wall']:>9.3f} {free['wall_net']:>9.3f} {free['wall_birth']:>10.3f} {free['wall_host']:>9.3f} {free['us_per_crossing']:>14.2f}
 
-  MC on the same problem, same particle count: {mc1['t_mc']:.4f} s
-  GMC with a free model is {free['wall']/mc1['t_mc']:,.1f}x MC's time.
+  MC on the same problem, scaled to the same {N_LATTICE:,} particles: \
+{mc_same:.4f} s
+  GMC as it stands is {real['wall']/mc_same:,.0f}x MC's time; with a free model it
+  would still be {free['wall']/mc_same:,.0f}x.
 
 ----------------------------------------------------------------------
 D. WHERE THE HOST TIME GOES (cProfile, {N_PROFILE:,} particles)
@@ -639,6 +654,13 @@ def main():
             capture_output=True, text=True).stdout.split(":", 1)[1].strip()
     except Exception:
         pass
+
+    best = min(r["t_per_sample_us"] for r in ns
+               if r["threads"] == torch.get_num_threads())
+    arith["gmc_gflops"] = arith["flop_per_nfe"] / (best * 1e-6) / 1e9
+    arith["ns_per_scatter"] = sweep[0]["t_per_scatter_ns"]
+    arith["mc_gflops"] = (arith["flop_per_scatter_est"]
+                          / (arith["ns_per_scatter"] * 1e-9) / 1e9)
 
     d = {"env": env, "arithmetic": arith, "network_scaling": ns,
          "implementation": impl, "size_scaling": sizes,

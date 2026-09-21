@@ -1,0 +1,187 @@
+======================================================================
+SPEED PROFILE -- WHERE THE TIME GOES
+======================================================================
+host        Intel(R) Xeon(R) Processor @ 2.80GHz
+            4 cores, no GPU detected: device = cpu
+            torch 2.14.0+cu130, 4 threads;
+            numba 0.67.0, 4 threads
+baseline    mc.py is numba-compiled and runs on all 4 threads.
+            The GMC host loop is single-threaded NumPy; only the network's
+            matrix multiplies are threaded.  Both sides are CPU, so the
+            comparison is honest, but it is not per-core.
+
+----------------------------------------------------------------------
+A. THE ARITHMETIC, BEFORE ANYTHING IS RUN
+----------------------------------------------------------------------
+network parameters                          1,676,678
+flops per network evaluation                3,333,376
+network evaluations per sample                     10
+flops per CELL CROSSING (GMC)              33,333,760
+flops per SCATTERING EVENT (MC, est.)              30
+ratio                                       1,111,125 x
+
+Read that ratio, then discount it.  In raw arithmetic one generated
+crossing is worth about 1,111,125 scattering events, which sounds
+fatal.  It is not the whole story, because the two sides run at wildly
+different efficiency:
+
+  GMC network, batch 4,096              289 GFLOP/s   (dense matmuls)
+  MC scattering loop                   0.12 GFLOP/s   (measured, 254 ns/scatter)
+
+The network runs at the machine's arithmetic limit.  The Monte Carlo
+walk does not run on arithmetic at all -- it is a random number, a
+logarithm, two divisions and a branch, and its cost is dominated by the
+dependent chain and the RNG, not by flops.  So the baseline wastes about
+2,447x of this CPU's arithmetic capability, and that waste is the
+only reason the crossover is a few hundred mean free paths away rather
+than a million.
+
+The time ratio, which is the one that matters, is in section H.
+
+----------------------------------------------------------------------
+B. NETWORK COST vs BATCH SIZE
+----------------------------------------------------------------------
+  threads    batch   per call (us)  per sample (us)
+        1        1        776.1        776.113
+        1        8       1251.0        156.373
+        1       64       3066.2         47.910
+        1      512      17369.3         33.924
+        1    4,096     162984.0         39.791
+        1   20,000    1018575.4         50.929
+        1  100,000    6446281.4         64.463
+        4        1        612.0        612.035
+        4        8        967.3        120.912
+        4       64       2906.5         45.414
+        4      512       6260.7         12.228
+        4    4,096      47251.2         11.536
+        4   20,000     289147.4         14.457
+        4  100,000    2215267.9         22.153
+
+Per-sample cost falls until the matrix multiplies are large enough to
+amortise the per-call overhead, then flattens at the arithmetic limit.
+Where the solve actually calls it (section E) decides which regime it
+is paying.
+
+----------------------------------------------------------------------
+B2. THE SAME MODEL, EXECUTED DIFFERENTLY (batch 4,096)
+----------------------------------------------------------------------
+  variant                      us/sample   vs shipped  note
+  float32 (as shipped)           10.751        1.00x  
+  inference_mode                 10.782        1.00x  
+  bfloat16                       30.914        0.35x  accuracy unchecked
+  torch.compile (fixed batch)      8.048        1.34x  recompiles per batch shape
+
+B3. WHAT A SMALLER VELOCITY FIELD WOULD COST (untrained: cost only)
+  width depth       params   us/sample   cheaper by
+    256     5    1,676,678      10.526         1.0x
+    256     3    1,017,734       6.628         1.6x
+    128     5      523,398       4.024         2.6x
+    128     3      324,998       2.587         4.1x
+     64     3      126,086       1.337         7.9x
+     64     2       92,870       0.972        10.8x
+
+Cost scales with the layers, so this table is reliable.  Whether a
+smaller field is ACCURATE enough is a training question and is not
+answered here.
+
+----------------------------------------------------------------------
+C. HOST LOOP vs NETWORK: the same solve with a FREE model
+----------------------------------------------------------------------
+The second row replaces the ODE right-hand side with a function that
+returns zeros.  Shapes, batching, tallies, rotations and dtype
+conversions are identical; the arithmetic is gone.  Its wall time is the
+floor GMC could reach with a perfect, instantaneous model.
+
+  variant        wall (s)   network   birth MC      host    us/crossing
+  real model      11.276    11.005      0.128     0.143          68.01
+  free model       0.338     0.203      0.001     0.134           1.84
+
+  MC on the same problem, scaled to the same 20,000 particles: 0.0378 s
+  GMC as it stands is 298x MC's time; with a free model it
+  would still be 9x.
+
+----------------------------------------------------------------------
+D. WHERE THE HOST TIME GOES (cProfile, 4,000 particles)
+----------------------------------------------------------------------
+  %     self(s)     calls  function
+   68.1    1.401     5,890  ~:0(<built-in method torch._C._nn.linear>)
+   10.6    0.218     1,550  model.py:51(forward)
+    5.3    0.110     2,170  ~:0(<built-in method torch._C._nn.silu>)
+    3.8    0.078     1,860  ~:0(<built-in method torch.layer_norm>)
+    1.3    0.027    10,850  module.py:1787(_call_impl)
+    0.9    0.019     1,550  ~:0(<method 'chunk' of 'torch._C.TensorBase' objects>)
+    0.9    0.018    23,870  module.py:1959(__getattr__)
+    0.8    0.017        34  sampler.py:93(sample)
+    0.8    0.016     5,890  linear.py:130(forward)
+    0.7    0.015       100  sampler.py:31(decode_p)
+    0.7    0.015    10,850  module.py:1779(_wrapped_call_impl)
+    0.7    0.014       620  ~:0(<built-in method torch.cat>)
+    0.5    0.011       310  model.py:36(forward)
+    0.5    0.011         1  solve.py:80(gmc_solve)
+    0.4    0.009       310  model.py:73(forward)
+    0.4    0.009        31  sampler.py:52(integrate)
+    0.3    0.007    10,850  ~:0(<built-in method torch._C._get_tracing_state>)
+    0.3    0.006     1,860  functional.py:2972(layer_norm)
+
+----------------------------------------------------------------------
+E. BATCH DECAY ALONG THE CROSSING LOOP
+----------------------------------------------------------------------
+live particles per sampler call:
+  20,000 20,000 19,764 19,346 16,910 15,454 11,777 10,607 7,396 6,596 4,317 3,846 2,351 2,075  ... (386 more, down to 1)
+
+  sampler calls                             400
+  calls carrying 90% of all crossings        11
+  calls with fewer than 512 particles       382
+  crossings in those small calls           1.0 %
+
+----------------------------------------------------------------------
+F. THE FIDELITY KNOB (no retraining required)
+----------------------------------------------------------------------
+Accuracy columns: lattice L2 against the same MC field, and single-cell
+Wasserstein-1 in units of the quantity's own spread (lower is better).
+
+  solver steps   nfe  wall (s)     net%   lattice L2    W1 p/sd  W1 logs/sd    speedup
+   euler     1     1      1.75    90.7%        7.26       0.76       0.73      6.07x
+   euler     2     2      2.56    94.4%        4.97       0.34       0.37      4.14x
+   euler     4     4      4.77    97.0%        2.88       0.15       0.20      2.23x
+    heun     2     4      4.94    97.0%        3.04       0.24       0.22      2.15x
+    heun     5    10     10.61    98.7%        1.11       0.04       0.05      1.00x
+     rk4     5    20     21.19    99.3%        2.00       0.02       0.02      0.50x
+
+----------------------------------------------------------------------
+G. THE BASELINE'S OWN SCALING
+----------------------------------------------------------------------
+  scale    W_bg    MC (s)   scatters/part  ns per scatter
+       1     1.0     0.0076           7.4          254.1
+       4     4.0     0.0078          22.2           88.0
+      10    10.0     0.0166          84.7           48.9
+      20    20.0     0.0388         274.7           35.3
+      40    40.0     0.1091         985.8           27.7
+      80    80.0     0.3638        3788.2           24.0
+     160   160.0     1.3594       14684.2           23.1
+
+MC cost per particle grows because the number of scattering events does.
+That growth is the only thing working in the sampler's favour.
+
+----------------------------------------------------------------------
+H. BREAK-EVEN PROJECTION
+----------------------------------------------------------------------
+MC wall time per particle grows as W^1.41 over the thick end of the
+sweep.  GMC's is flat in W -- the whole point of the method.  Where the
+two lines cross is the crossover.
+
+GMC per particle is split into a host floor of 16.9 us that no model
+work touches, plus the network, which each intervention divides:
+
+  intervention                          network  us/particle    W* (mfp)
+  as measured (heun 5, 10 nfe)                1x       563.8         288
+  euler 4 steps (4 nfe)                       2x       267.2         170
+    + width 128 depth 3                       9x        78.4          71
+  distilled 1 nfe + width 64 depth 3         79x        23.8          31
+  network free (the host loop alone)    1000000x        16.9          24
+
+The last row is the limit of this driver: even an instantaneous model
+leaves the Python/NumPy/torch loop, and that alone needs cells about
+24 mfp wide before it beats numba MC.
+
+======================================================================

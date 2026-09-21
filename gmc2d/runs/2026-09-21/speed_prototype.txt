@@ -1,0 +1,100 @@
+======================================================================
+SPEED PROTOTYPE -- DO THE FIXES RECOVER THE TIME?
+======================================================================
+Every variant is scored on the same lattice against the same Monte Carlo
+field, so a faster number that costs accuracy shows up as a worse L2.
+Nothing in mc.py, model.py, sampler.py or solve.py was modified.
+
+----------------------------------------------------------------------
+1. PARTICLE COUNT: GMC amortises, MC does not
+----------------------------------------------------------------------
+  particles   MC (s)   GMC (s)   MC us/part    GMC us/part  GMC us/cross   mean batch   speedup
+      2,000     0.005      1.47         2.28         734.4          88.1         463  0.003105x
+     20,000     0.028     11.03         1.39         551.5          65.7         420  0.002524x
+    200,000     0.267    170.55         1.34         852.8         102.6       4,158  0.001567x
+
+MC costs the same per particle however many there are.  GMC's cost per
+crossing falls as the live batch grows, because the batch IS the matrix
+multiply.  Any speedup quoted without the particle count is not a number.
+
+----------------------------------------------------------------------
+2. THE THIN-CELL THRESHOLD: stop generating what is cheap to simulate
+----------------------------------------------------------------------
+"analog MC" is the same host loop with the walk done exactly, which is the
+per-crossing cost the sampler has to beat.  Cells below the threshold are
+walked; the rest are generated.
+
+  cells 1 mfp wide, MC reference 0.029 s, noise floor 1.47%
+    variant            GMC (s)   speedup    L2 vs MC   via network
+    pure GMC              10.40   0.00279x      1.08 %        49.6 %
+    walk < 1 mfp           8.04  0.003608x      0.98 %        38.7 %
+    walk < 2 mfp           0.10    0.2811x      2.05 %         0.0 %
+    walk < 5 mfp           0.11    0.2762x      2.05 %         0.0 %
+    analog MC              0.10     0.277x      2.05 %         0.0 %
+
+  cells 4 mfp wide, MC reference 0.031 s, noise floor 0.94%
+    variant            GMC (s)   speedup    L2 vs MC   via network
+    pure GMC              13.54  0.002262x      1.44 %        84.4 %
+    walk < 1 mfp          13.53  0.002263x      0.95 %        84.5 %
+    walk < 2 mfp          13.48  0.002272x      0.95 %        84.5 %
+    walk < 5 mfp           0.09    0.3359x      0.95 %         0.0 %
+    analog MC              0.09    0.3363x      0.95 %         0.0 %
+
+  cells 10 mfp wide, MC reference 0.067 s, noise floor 0.94%
+    variant            GMC (s)   speedup    L2 vs MC   via network
+    pure GMC              20.54  0.003284x      1.83 %        92.9 %
+    walk < 1 mfp          19.22  0.003508x      1.56 %        91.5 %
+    walk < 2 mfp          20.25  0.003331x      1.56 %        91.5 %
+    walk < 5 mfp          20.01  0.003371x      1.56 %        91.5 %
+    analog MC              0.15    0.4459x      1.02 %         0.0 %
+
+  cells 20 mfp wide, MC reference 0.173 s, noise floor 1.62%
+    variant            GMC (s)   speedup    L2 vs MC   via network
+    pure GMC              29.89   0.00579x      2.42 %        95.2 %
+    walk < 1 mfp          30.43  0.005687x      2.61 %        95.2 %
+    walk < 2 mfp          30.47   0.00568x      2.61 %        95.2 %
+    walk < 5 mfp          30.55  0.005664x      2.61 %        95.2 %
+    analog MC              0.28    0.6169x      2.79 %         0.0 %
+
+  best speedup seen: 0.6169x at scale 20, threshold 1e+09, L2 2.79%
+
+----------------------------------------------------------------------
+3. FEWER NETWORK EVALUATIONS, WITH AND WITHOUT THE THRESHOLD
+----------------------------------------------------------------------
+  solver steps   nfe   thresh   GMC (s)   speedup      L2 vs MC
+   euler   1     1      0.0      1.60   0.01933x      7.07 %
+   euler   1     1      2.0      0.11    0.2915x      2.05 %
+   euler   2     2      0.0      2.42   0.01282x      5.57 %
+   euler   2     2      2.0      0.11    0.2746x      2.05 %
+    heun   5    10      0.0     10.16   0.00305x      1.08 %
+    heun   5    10      2.0      0.11    0.2805x      2.05 %
+
+  best: euler 1 at threshold 2, 0.2915x, L2 2.05% (floor 1.47%)
+
+----------------------------------------------------------------------
+4. WHOSE ERROR IS IT: the model, or the loop it sits in?
+----------------------------------------------------------------------
+The same host loop, with the in-cell walk done exactly instead of
+generated.  Its error is the driver's own -- cell-averaged tallies, the
+rotation onto the left face, grazing entry directions clipped to
+Omega_x > 0, the crossing cap.  The sampler cannot do better than this,
+so it is the accuracy ceiling any speed tradeoff is traded against.
+
+  W (mfp)   analog in the loop        GMC          MC floor
+        1               1.51 %       0.98 %           1.47 %
+        4               1.14 %       1.20 %           0.94 %
+       10               1.42 %       1.61 %           0.94 %
+       20               2.94 %       2.39 %           1.62 %
+
+----------------------------------------------------------------------
+5. THREADS
+----------------------------------------------------------------------
+  threads   GMC (s)   network      host
+        1     31.75     31.61     0.137
+        4     10.19     10.05     0.136
+
+The MC baseline uses every core through numba.  The GMC host loop is
+single-threaded; only the network's matrix multiplies are threaded.  A
+per-core comparison would move the crossover, and neither number is wrong
+as long as it says which one it is.
+======================================================================
