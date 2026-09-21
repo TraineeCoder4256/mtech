@@ -81,6 +81,21 @@ of the machine's arithmetic capability unused — and that waste is the only
 reason the crossover is a few hundred mean free paths away instead of a
 million.
 
+Inside one forward pass at batch 4,096, profiled by operation:
+
+| | addmm | silu | copy_ | add | layer_norm | mul |
+|---|---|---|---|---|---|---|
+| share of the forward | **56.0 %** | 15.8 % | 13.9 % | 6.2 % | 2.9 % | 2.8 % |
+
+Only 56% of the pass is matrix multiplication, and 56% of this machine's 521
+GFLOP/s sgemm peak is 292 GFLOP/s — which is the 289 measured. **The matmuls
+are already running at full speed; the entire gap to peak is the other 44%**,
+which is elementwise traffic: a FiLM block does two matmuls against five
+passes over 256- to 512-wide tensors, plus the chunk and residual copies.
+
+That is what `torch.compile` is worth 1.34x on — it fuses exactly those — and
+it also bounds how much any further implementation work could ever return.
+
 **What this rules out.** There is no implementation fix of any size here.
 `torch.compile` at a fixed batch shape is worth 1.34×, `inference_mode`
 nothing (the sampler already runs under `no_grad`), and bfloat16 is 2.9×
@@ -111,7 +126,7 @@ Note also that the macro-cell driver *with an exact walk* is only 1.6–3.5×
 slower than the fine-mesh solver, and the gap narrows as cells thicken,
 because it skips the fine mesh crossings.
 
-### 3. The call shape wastes about a quarter of the network time
+### 3. The call shape is already tight — this one turned out not to be a bottleneck
 
 Per-sample network cost against batch size, 4 threads:
 
@@ -119,17 +134,31 @@ Per-sample network cost against batch size, 4 threads:
 |---|---|---|---|---|---|---|---|
 | µs/sample | 612 | 121 | 45 | 12.2 | **11.5** | 14.5 | 22.2 |
 
-Both ends are bad, and the solve visits both. The crossing loop makes 400
-sampler calls; 384 of them carry fewer than 512 particles. Those calls are
-1.8% of the crossings and **12.9% of the network time**. At the other end, a
-200,000-particle solve pushes batches past 4,096, where activations stop
-fitting in cache, and the per-particle cost rises from 551 µs to 853 µs —
-so simply running more particles makes it *worse*, not better.
+That curve is real, and it is tempting to conclude the solve is paying the bad
+ends of it. Timing every sampler call in place says otherwise:
 
-Holding every crossing at the batch-4,096 cost would be worth about **1.24×**
-on its own: tile large batches at a few thousand rows, and hand the long thin
-tail of stragglers to analog MC rather than calling a network with one
-particle in it.
+| batch | calls | crossings | reach the network | % of time | µs/crossing |
+|---|---|---|---|---|---|
+| 1–8 | 367 | 1,839 | **2** | 0.7 % | 44.1 |
+| 8–64 | 9 | 206 | 91 | 1.0 % | 550.2 |
+| 64–512 | 6 | 1,167 | 593 | 1.6 % | 155.1 |
+| 512–4,096 | 7 | 12,307 | 6,034 | 7.1 % | 64.0 |
+| 4,096+ | 11 | 152,284 | 76,537 | **89.5 %** | 64.8 |
+
+**365 of the 400 calls never reach the network at all.** Their particles are
+all uncollided and handled analytically, so the long thin tail costs 67 ms out
+of 11 s. The particles that survive longest are exactly the ones crossing thin
+cells without scattering, which is why the tail is cheap.
+
+Nearly 90% of the time is eleven calls at batch 4,096 or more, and the cost per
+crossing is flat at 64 µs from batch 512 upward. Truncating the loop confirms
+it: capping crossings at 25 instead of 400 removes 375 calls and changes the
+wall time by under 2%, inside run-to-run noise.
+
+One end of the curve does still bite. A 200,000-particle solve pushes batches
+past 4,096, where activations stop fitting in cache, and the cost per particle
+rises from 551 µs to 853 µs. **More particles makes it worse, not better** —
+the opposite of what a GPU would do.
 
 ### 4. The driver's own floor, which becomes the wall
 
@@ -149,7 +178,6 @@ Measured, except where the last column says otherwise.
 | ODE: heun 5 → euler 2 | 4.1× | L2 → 4.97% | no |
 | ODE: heun 5 → euler 1 | 6.1× | L2 → 7.26% | no |
 | `torch.compile`, fixed batch shapes | 1.34× | none | no |
-| batch tiling + tail cutover | ~1.24× | none | no |
 | thin-cell threshold | up to 100× | none — it improves | no |
 | width 128, depth 3 | 4.3× | **unmeasured** | yes |
 | width 64, depth 3 | 8.9× | **unmeasured** | yes |
@@ -259,9 +287,9 @@ them is a model problem.
 1. **Stop calling the network where it cannot win.** A threshold on optical
    width, with thin cells walked. Costs nothing in accuracy, needs no
    retraining, and at the published scale it is the whole 100×.
-2. **Fix the call shape.** Tile batches at a few thousand rows; cut the tail
-   over to analog MC instead of calling the network with one particle.
-   Worth ~1.24×, free.
+2. **Cap the live particle count per solve at a few thousand**, or tile the
+   batch there. Not a bottleneck today, but a 200,000-particle solve pays 55%
+   more per particle than a 20,000-particle one.
 3. **Drop to 4 network evaluations** if 2.9% against a 1.5% floor is
    acceptable for the study. Worth 2.2×, free, reversible.
 4. **Then shrink the model** — this is the large one, 4–9×, and the only
