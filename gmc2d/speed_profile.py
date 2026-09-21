@@ -314,31 +314,47 @@ def fidelity_ladder(net, yn, cn, prob, n, mc_macro, cell_ref):
 
 
 # --------------------------------------------------------- G. projection
-def projection(sweep, per_crossing_us, tag):
-    """At what optical thickness does a GMC crossing cost less than the
-    scatters it replaces?  Fit scatters-per-crossing against scale from the
-    measured sweep and solve, rather than guessing a power law."""
-    W = np.array([r["W"] for r in sweep], float)
-    spc = np.array([r["scatters_per_crossing"] for r in sweep], float)
-    tsc = np.array([r["t_per_scatter_ns"] for r in sweep], float)
-    t_scatter = float(np.median(tsc)) * 1e-3          # us
-    a, b = np.polyfit(np.log(W), np.log(spc), 1)      # spc ~ exp(b) W^a
-    need = per_crossing_us / t_scatter                # scatters to break even
-    W_star = float(np.exp((np.log(need) - b) / a))
-    return {"intervention": tag, "us_per_crossing": per_crossing_us,
-            "t_per_scatter_us": t_scatter,
-            "scatters_needed_per_crossing": float(need),
-            "spc_exponent": float(a),
-            "breakeven_W_mfp": W_star}
+def fit_mc(sweep, w_min=4.0):
+    """MC wall time per particle against cell optical width, fitted on the
+    thick end.
+
+    Fitting the TIME rather than the scatter count matters: the cost of one
+    scattering event is not constant.  It falls from 250 ns to 27 ns across
+    this sweep, because a thicker cell means more scatters between mesh
+    crossings and a better-behaved inner loop.  A projection built on one
+    nominal per-scatter time inherits that error and puts the crossover in
+    the wrong place.
+    """
+    pts = [r for r in sweep if r["W"] >= w_min]
+    W = np.array([r["W"] for r in pts], float)
+    t = np.array([r["t_mc"] / r["n"] * 1e6 for r in pts], float)   # us/particle
+    b, a = np.polyfit(np.log(W), np.log(t), 1)
+    return float(a), float(b)
 
 
-def mc_sweep(scales=(1, 4, 10, 20, 40)):
+def projection(sweep, t_host_us, t_net_us, speedup, tag, fit):
+    """Optical width at which GMC per particle finally costs less than MC.
+
+    `speedup` is how much cheaper the NETWORK becomes under this
+    intervention.  The host loop does not shrink with it, so it stays as an
+    additive floor -- which is why the last rows stop improving.
+    """
+    a, b = fit
+    t_gmc = t_host_us + t_net_us / speedup
+    W_star = float(np.exp((np.log(t_gmc) - a) / b))
+    return {"intervention": tag, "network_speedup": speedup,
+            "us_per_particle": t_gmc, "host_floor_us": t_host_us,
+            "breakeven_W_mfp": W_star,
+            "mc_fit_exponent": b, "mc_fit_intercept": a}
+
+
+def mc_sweep(scales=(1, 4, 10, 20, 40, 80, 160)):
     rows = []
     for sc in scales:
         p = mc.lattice(sc)
         _, st, t = timed_mc(p, 4000, SEED + 10)
         # macro crossings: the lattice is 7x7 one-cm cells
-        rows.append({"scale": sc, "W": 1.0 * sc, "t_mc": t,
+        rows.append({"scale": sc, "W": 1.0 * sc, "t_mc": t, "n": 4000,
                      "scatters": st["scatters"],
                      "scatters_per_particle": st["scatters_per_particle"],
                      "t_per_scatter_ns": t / max(st["scatters"], 1) * 1e9})
@@ -389,8 +405,8 @@ def report(d, path):
         for r in mcs)
 
     proj_tbl = "\n".join(
-        f"  {p['intervention']:<34} {p['us_per_crossing']:>9.2f} "
-        f"{p['scatters_needed_per_crossing']:>12,.0f} {p['breakeven_W_mfp']:>12,.1f}"
+        f"  {p['intervention']:<36} {p['network_speedup']:>8.0f}x "
+        f"{p['us_per_particle']:>11.1f} {p['breakeven_W_mfp']:>11,.0f}"
         for p in proj)
 
     sizes = bd["sizes"]
@@ -505,12 +521,19 @@ That growth is the only thing working in the sampler's favour.
 ----------------------------------------------------------------------
 H. BREAK-EVEN PROJECTION
 ----------------------------------------------------------------------
-Scatters per crossing grows with optical thickness as W^{proj[0]['spc_exponent']:.2f} (fitted
-over the measured sweep).  For each cost below, the thickness at which
-one GMC crossing finally costs less than the scatters it replaces:
+MC wall time per particle grows as W^{proj[0]['mc_fit_exponent']:.2f} over the thick end of the
+sweep.  GMC's is flat in W -- the whole point of the method.  Where the
+two lines cross is the crossover.
 
-  intervention                       us/crossing  scatters req   W* (mfp)
+GMC per particle is split into a host floor of {proj[0]['host_floor_us']:.1f} us that no model
+work touches, plus the network, which each intervention divides:
+
+  intervention                          network  us/particle    W* (mfp)
 {proj_tbl}
+
+The last row is the limit of this driver: even an instantaneous model
+leaves the Python/NumPy/torch loop, and that alone needs cells about
+{proj[-1]['breakeven_W_mfp']:,.0f} mfp wide before it beats numba MC.
 
 ======================================================================
 """
@@ -580,20 +603,28 @@ def main():
     print("H. projection")
     real = next(x for x in hv if x["variant"] == "real model")
     free = next(x for x in hv if x["variant"] == "free model")
-    cr = max(real["crossings"], 1)
-    net_only = real["wall_net"] / cr * 1e6
-    host_only = free["wall"] / max(free["crossings"], 1) * 1e6
+    n = N_LATTICE
+    t_host = free["wall"] / n * 1e6                   # us/particle, no model
+    t_net = (real["wall"] - free["wall"]) / n * 1e6   # us/particle, the model
+    fit = fit_mc(sweep)
+    by_size = {(r["width"], r["depth"]): r["cheaper_than_shipped"]
+               for r in sizes}
+    nfe_gain = {r["nfe"]: lad[4]["wall_net"] / r["wall_net"] for r in lad}
     projs = [
-        projection(sweep, real["us_per_crossing"], "as measured today"),
-        projection(sweep, net_only, "host loop made free (network only)"),
-        projection(sweep, host_only, "network made free (host loop only)"),
-        projection(sweep, net_only / 10 + host_only,
-                   "network 10x cheaper (1 NFE, smaller net)"),
-        projection(sweep, (net_only / 10 + host_only) / 20,
-                   "  + host loop 20x cheaper (compiled)"),
+        projection(sweep, t_host, t_net, 1.0, "as measured (heun 5, 10 nfe)", fit),
+        projection(sweep, t_host, t_net, nfe_gain.get(4, 2.5),
+                   "euler 4 steps (4 nfe)", fit),
+        projection(sweep, t_host, t_net,
+                   nfe_gain.get(4, 2.5) * by_size.get((128, 3), 4.3),
+                   "  + width 128 depth 3", fit),
+        projection(sweep, t_host, t_net, 10.0 * by_size.get((64, 3), 8.9),
+                   "distilled 1 nfe + width 64 depth 3", fit),
+        projection(sweep, t_host, t_net, 1e6,
+                   "network free (the host loop alone)", fit),
     ]
     for p in projs:
-        print(f"   {p['intervention']:<38} W* = {p['breakeven_W_mfp']:,.1f} mfp")
+        print(f"   {p['intervention']:<38} {p['us_per_particle']:8.1f} "
+              f"us/particle   W* = {p['breakeven_W_mfp']:,.1f} mfp")
 
     env = {"cpu": platform.processor() or platform.machine(),
            "cores": len(__import__("os").sched_getaffinity(0)),

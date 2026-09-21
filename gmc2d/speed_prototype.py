@@ -283,6 +283,43 @@ def lever_nfe(prob, n=N_ACC, ladder=(("euler", 1), ("euler", 2),
     return rows
 
 
+def lever_chaining(scales=SCALES, n=N_ACC, seeds=(7, 77, 177)):
+    """How much of GMC's error is the MODEL, and how much is the macro-cell
+    chaining it sits inside?
+
+    Run the identical host loop with the walk done exactly instead of
+    generated.  Whatever error survives that substitution belongs to the
+    driver -- the cell-averaged tally, the rotation onto the left face, the
+    clipping of grazing entry directions, the crossing cap -- and no amount
+    of model work will remove it.  It is also the accuracy ceiling the
+    sampler is being measured against, so it is worth knowing before any
+    tradeoff is called acceptable.
+    """
+    inner = load_sampler()
+    walker = HybridSampler(inner, 1e9)
+    rows = []
+    for sc in scales:
+        prob = mc.lattice(sc)
+        ref, floor = mc_reference(prob, n)
+        errs = {}
+        for tag, smp in (("analog in the loop", walker), ("GMC", inner)):
+            e = []
+            for sd in seeds:
+                smp.reset()
+                g, _ = gmc_solve(prob, n, smp, seed=SEED + sd)
+                e.append(rel(g, ref) * 100)
+            errs[tag] = e
+        rows.append({"scale": sc, "W": 1.0 * sc, "floor_pct": floor * 100,
+                     "chaining_pct": errs["analog in the loop"],
+                     "gmc_pct": errs["GMC"],
+                     "chaining_mean": float(np.mean(errs["analog in the loop"])),
+                     "gmc_mean": float(np.mean(errs["GMC"]))})
+        print(f"   scale {sc:>3}  chaining {rows[-1]['chaining_mean']:6.2f}%  "
+              f"GMC {rows[-1]['gmc_mean']:6.2f}%  floor {floor*100:5.2f}%",
+              flush=True)
+    return rows
+
+
 # --------------------------------------------------------- 4. thread fairness
 def lever_threads(prob, n=N_ACC):
     rows = []
@@ -337,6 +374,10 @@ def report(d, path):
         f" {r['t_gmc']:>9.2f} {r['speedup']:>9.4g}x {r['l2_pct']:>9.2f} %"
         for r in nf)
 
+    ch_tbl = "\n".join(
+        f"  {r['W']:>7.0f}   {r['chaining_mean']:>16.2f} % {r['gmc_mean']:>10.2f} %"
+        f" {r['floor_pct']:>14.2f} %" for r in d["chaining"])
+
     tr_tbl = "\n".join(
         f"  {r['torch_threads']:>7} {r['t_gmc']:>9.2f} {r['wall_net']:>9.2f}"
         f" {r['wall_host']:>9.3f}" for r in tr)
@@ -386,7 +427,19 @@ threshold {best['thresh']:g}, L2 {best['l2_pct']:.2f}%
 (floor {bestn['floor_pct']:.2f}%)
 
 ----------------------------------------------------------------------
-4. THREADS
+4. WHOSE ERROR IS IT: the model, or the loop it sits in?
+----------------------------------------------------------------------
+The same host loop, with the in-cell walk done exactly instead of
+generated.  Its error is the driver's own -- cell-averaged tallies, the
+rotation onto the left face, grazing entry directions clipped to
+Omega_x > 0, the crossing cap.  The sampler cannot do better than this,
+so it is the accuracy ceiling any speed tradeoff is traded against.
+
+  W (mfp)   analog in the loop        GMC          MC floor
+{ch_tbl}
+
+----------------------------------------------------------------------
+5. THREADS
 ----------------------------------------------------------------------
   threads   GMC (s)   network      host
 {tr_tbl}
@@ -415,10 +468,13 @@ def main():
     th = lever_threshold()
     print("3. network evaluations")
     nf = lever_nfe(prob)
-    print("4. threads")
+    print("4. chaining error vs model error")
+    ch = lever_chaining()
+    print("5. threads")
     tr = lever_threads(prob)
 
     d = {"batch": b, "threshold": th, "nfe": nf, "threads": tr,
+         "chaining": ch,
          "thresholds": THRESHOLDS, "scales": SCALES, "n_acc": N_ACC}
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "speed_prototype.json").write_text(json.dumps(d, indent=1))
