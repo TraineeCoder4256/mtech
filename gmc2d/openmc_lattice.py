@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The lattice benchmark solved with OpenMC.  Run: python openmc_lattice.py
+"""The lattice benchmark solved with OpenMC.  Run: python openmc_lattice.py [scale]
 
 A self-contained OpenMC solution of the 7 x 7 cm checkerboard lattice used by
 Farmer et al. (arXiv:2512.13965).  It imports nothing from this project and
@@ -11,6 +11,17 @@ A 7 x 7 cm square divided into 1 cm cells.  The background scatters without
 absorbing (sig_s = 1.0, sig_a = 0.0 per cm).  Eleven cells are strong
 absorbers (sig_s = 0.5, sig_a = 9.5, so sig_t = 10).  An isotropic source
 fills the central 1 x 1 cm cell.  The boundary is vacuum.
+
+This is Farmer et al.'s steady-state variant of the ORNL lattice geometry
+(Schotthoefer & Hauck, arXiv:2505.17284).  The ORNL problem itself is
+time-dependent (final time 3.2) and its absorbers do not scatter
+(sig_a = 10, sig_s = 0), so ORNL's published solutions are not a reference
+for this one.
+
+The optional argument multiplies every cross section, exactly as
+mc.lattice(scale) does: `python openmc_lattice.py 10` solves the lattice
+with cells ten times optically thicker, which is where the sampler is
+supposed to pay off.  Outputs for scale != 1 carry an _x<scale> suffix.
 
 Three modelling choices make this a faithful OpenMC statement of that problem,
 and each is somewhere a careless setup would silently solve something else:
@@ -31,6 +42,7 @@ and each is somewhere a careless setup would silently solve something else:
 Requires OpenMC: conda install -c conda-forge openmc
 """
 import pathlib
+import sys
 import time
 
 import numpy as np
@@ -40,8 +52,9 @@ import openmc
 L = 7.0                    # domain is L x L cm
 PITCH = 1.0                # material cells are PITCH x PITCH cm
 MESH = 112                 # tally mesh is MESH x MESH
-BG = (1.0, 0.0)            # background      (sig_s, sig_a) per cm
-AB = (0.5, 9.5)            # absorber blocks (sig_s, sig_a) per cm
+SCALE = float(sys.argv[1]) if len(sys.argv) > 1 else 1.0   # cross-section multiplier
+BG = (1.0 * SCALE, 0.0)            # background      (sig_s, sig_a) per cm
+AB = (0.5 * SCALE, 9.5 * SCALE)    # absorber blocks (sig_s, sig_a) per cm
 SOURCE_CELL = (3, 3)       # zero-indexed (x, y) of the source cell
 ABSORBERS = [(1, 1), (3, 1), (5, 1), (2, 2), (4, 2), (1, 3), (5, 3),
              (2, 4), (4, 4), (1, 5), (5, 5)]
@@ -50,7 +63,8 @@ ABSORBERS = [(1, 1), (3, 1), (5, 1), (2, 2), (4, 2), (1, 3), (5, 3),
 PARTICLES = 200_000
 BATCHES = 20               # total histories = PARTICLES * BATCHES
 SEED = 20250901
-RUNDIR = pathlib.Path("results/openmc")
+TAG = "" if SCALE == 1.0 else f"_x{SCALE:g}"
+RUNDIR = pathlib.Path(f"results/openmc{TAG}")
 OUT = pathlib.Path("results")
 
 GROUP_TOP = 20.0e6         # the single group is [0, 20 MeV); the value is arbitrary
@@ -148,6 +162,12 @@ def build():
 
     bal = openmc.Tally(name="absorption")
     bal.scores = ["absorption"]
+    # COLLISION, set explicitly.  Left unset, OpenMC picks tracklength -- the
+    # same estimator as the flux tallies -- and the absorption cross-check in
+    # main() then agrees to every printed digit whatever is wrong with the
+    # physics.  A collision estimator scores at collision sites instead of
+    # along tracks, so the two only agree if the flux field is right.
+    bal.estimator = "collision"
     tallies.append(bal)
 
     return openmc.Model(geometry, materials, settings, tallies)
@@ -239,7 +259,8 @@ def figure(flux, sd, path):
     ax[2].set_ylabel(r"$\log_{10}\,\phi$", color=MUTED, fontsize=9.5)
     ax[2].set_xlim(0, L)
 
-    fig.suptitle(f"Lattice benchmark, OpenMC multi-group, "
+    fig.suptitle(f"Lattice benchmark{'' if SCALE == 1 else f' x{SCALE:g}'}, "
+                 f"OpenMC multi-group, "
                  f"{PARTICLES * BATCHES:,} histories",
                  color=INK, fontsize=12.5, y=0.99)
     fig.tight_layout(rect=(0, 0, 1, 0.94))
@@ -250,7 +271,8 @@ def figure(flux, sd, path):
 # --------------------------------------------------------------------- run
 def main():
     n_hist = PARTICLES * BATCHES
-    print(f"lattice {L:g}x{L:g} cm, {MESH}x{MESH} mesh")
+    print(f"lattice {L:g}x{L:g} cm, {MESH}x{MESH} mesh, "
+          f"cross sections x{SCALE:g}")
     print(f"  background  sig_s={BG[0]:g}  sig_a={BG[1]:g}")
     print(f"  absorbers   sig_s={AB[0]:g}  sig_a={AB[1]:g}   "
           f"({len(ABSORBERS)} cells)")
@@ -270,11 +292,11 @@ def main():
         absorbed_sd = float(sp.get_tally(name="absorption").std_dev.ravel()[0])
 
     OUT.mkdir(parents=True, exist_ok=True)
-    np.save(OUT / "openmc_fine.npy", fine)
-    np.save(OUT / "openmc_fine_sd.npy", fine_sd)
-    np.save(OUT / "openmc_cell.npy", cell)
-    np.save(OUT / "openmc_cell_sd.npy", cell_sd)
-    figure(fine, fine_sd, OUT / "openmc_lattice.png")
+    np.save(OUT / f"openmc_fine{TAG}.npy", fine)
+    np.save(OUT / f"openmc_fine_sd{TAG}.npy", fine_sd)
+    np.save(OUT / f"openmc_cell{TAG}.npy", cell)
+    np.save(OUT / f"openmc_cell_sd{TAG}.npy", cell_sd)
+    figure(fine, fine_sd, OUT / f"openmc_lattice{TAG}.png")
 
     scored = fine > 0
     rel = np.where(scored, fine_sd / np.maximum(fine, 1e-300), np.nan)
@@ -282,9 +304,11 @@ def main():
 
     # Internal consistency: the absorption rate implied by the flux field,
     # sum(sig_a * phi * V) over EVERY cell, must equal the independently
-    # scored absorption tally.  They come from different estimators, so
-    # agreement means the mesh, the volume normalisation and the material
-    # assignment are all consistent with one another.
+    # scored absorption tally.  They come from different estimators
+    # (tracklength vs collision, see build()), so they agree only to within
+    # their statistics -- and agreement means the mesh, the volume
+    # normalisation and the material assignment are all consistent with one
+    # another.
     #
     # Every cell, not just the absorbers: with the benchmark's sig_a = 0
     # background the two are the same sum, but a real moderator absorbs
@@ -292,11 +316,16 @@ def main():
     # short.  It read as a failure the first time a real material was used.
     sig_a_map = np.where(absorbing, AB[1], BG[1])
     implied = float((sig_a_map * cell).sum()) * PITCH ** 2
+    # treating cells as independent; the two estimators also share
+    # histories, so this z is approximate but the right order
+    implied_sd = float(np.sqrt(((sig_a_map * cell_sd) ** 2).sum())) * PITCH ** 2
+    z_abs = (implied - absorbed) / np.hypot(implied_sd, absorbed_sd)
     lines = [
         "=" * 66,
         "LATTICE BENCHMARK -- OpenMC multi-group, one energy group",
         "=" * 66,
         f"histories            {n_hist:,}  ({BATCHES} x {PARTICLES:,})",
+        f"cross sections       x{SCALE:g} (1 = the published benchmark)",
         f"wall time            {wall:.1f} s",
         f"OpenMC               {openmc.__version__}",
         "",
@@ -308,7 +337,8 @@ def main():
         "ABSORPTION CROSS-CHECK  (two independent estimators)",
         f"  from the flux map   {implied:.6f}   sum of sig_a * phi * V",
         f"  from the tally      {absorbed:.6f}",
-        f"  difference          {abs(implied - absorbed) / absorbed * 100:.3f} %",
+        f"  difference          {abs(implied - absorbed) / absorbed * 100:.3f} %"
+        f"   (z = {z_abs:+.2f}; |z| < 3 passes)",
         "",
         "SCALAR FLUX  (per unit volume, per source particle)",
         f"  domain integral    {fine.sum() * d * d:.6f}",
@@ -333,9 +363,23 @@ def main():
     lines += ["", "  A marks an absorber cell.", "=" * 66]
 
     text = "\n".join(lines)
-    (OUT / "openmc_results.txt").write_text(text + "\n")
+    (OUT / f"openmc_results{TAG}.txt").write_text(text + "\n")
+
+    # One self-describing file: the arrays AND the problem that produced
+    # them.  A consumer (make_reference.py) checks these parameters against
+    # its own definition before trusting the numbers.
+    np.savez_compressed(
+        OUT / f"openmc_reference{TAG}.npz",
+        fine=fine, fine_sd=fine_sd, cell=cell, cell_sd=cell_sd,
+        absorbed=absorbed, absorbed_sd=absorbed_sd,
+        scale=SCALE, L=L, pitch=PITCH, mesh=MESH, bg=np.array(BG),
+        ab=np.array(AB), absorbers=np.array(ABSORBERS),
+        source_cell=np.array(SOURCE_CELL), particles=PARTICLES,
+        batches=BATCHES, seed=SEED, wall_seconds=wall,
+        openmc_version=openmc.__version__)
     print(text)
-    print(f"\nwrote {OUT}/openmc_results.txt, openmc_lattice.png, and four .npy arrays")
+    print(f"\nwrote {OUT}/openmc_results{TAG}.txt, openmc_lattice{TAG}.png, "
+          f"openmc_reference{TAG}.npz and four .npy arrays")
 
 
 if __name__ == "__main__":
