@@ -1,0 +1,9 @@
+ok    definitions: openmc_lattice.py == mc.lattice() at scales [1, 4, 10, 20]
+ok    reference: 4 files match the definition and the manifest
+      scale   1: 7x7 chi2/cell 1.16, max|z| 2.73, median diff 0.65%; fine chi2 1.15; absorption z +0.83; control chi2 67,833
+--    scale 4: no OpenMC field in the reference
+      scale  10: 7x7 chi2/cell 1.25, max|z| 3.67, median diff 2.49%; fine chi2 1.01; absorption z -0.73; control chi2 22,131
+--    scale 20: no OpenMC field in the reference
+ok    agreement: mc.py == OpenMC to within statistics wherever both exist
+
+BENCHMARK CONSISTENT

@@ -3,3 +3,7 @@ models/
 figures/
 results/
 __pycache__/
+
+# the frozen benchmark reference IS source: every model is scored against it
+!reference/
+!reference/*.npz

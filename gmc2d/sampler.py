@@ -1,22 +1,33 @@
-"""Turn noise into an exit state: cell geometry, the ODE solve, decoding.
+"""Turn noise into an exit state: the physics wrapper shared by every model.
+
+CellSampler does everything around the generative draw, in exactly one copy
+that every model family goes through, so that a comparison between families
+measures the families and not differences in this code.
 
 Two branches per particle.
 
   UNCOLLIDED, with probability exp(-chord): the particle crosses without
   scattering, so its exit is an exact function of its entry.  That is a
-  Dirac delta a smooth flow cannot represent, so it is done analytically
-  and the network never sees it.
+  Dirac delta a smooth generative model cannot represent, so it is done
+  analytically and no model ever sees it.
 
-  COLLIDED: integrate dx/dt = v(x, t, c) from noise at t=0 to t=1, then
-  decode the six outputs back to (p, Omega, s).
+  COLLIDED: encode and standardise the condition, ask the plugged-in
+  Generator for a standardised exit state, then decode the six outputs back
+  to (p, Omega, s).
+
+The draw itself -- integrating the flow ODE, or any other family's method --
+lives in generators/.  Until 23 Sept 2026 the ODE solve was in this file;
+check_refactor.py proves that moving it out changed no output bit.
+
+`Sampler` is kept as the old constructor, so evaluate.py and the two speed
+scripts run unchanged.
 """
 
 import numpy as np
 import torch
 
 from data import encode_conditions, mean_chord
-
-NFE_PER_STEP = {"euler": 1, "heun": 2, "rk4": 4}
+from generators.cfm import CFM, NFE_PER_STEP, integrate   # noqa: F401  (re-exported)
 
 
 def chord(W, H, xi, ox, oy):
@@ -49,40 +60,17 @@ def decode_p(p, W, H):
     return x, y, face
 
 
-@torch.no_grad()
-def integrate(model, x, c, steps, solver):
-    """Fixed-step flow ODE.  Cost is steps * NFE_PER_STEP[solver]."""
-    dt = 1.0 / steps
-    # t only takes values on a half-step grid, so build them once
-    ts = [torch.full((x.shape[0], 1), i / (2.0 * steps), device=x.device)
-          for i in range(2 * steps + 1)]
-    for i in range(steps):
-        if solver == "euler":
-            x = x + dt * model(x, ts[2 * i], c)
-        elif solver == "heun":
-            v0 = model(x, ts[2 * i], c)
-            v1 = model(x + dt * v0, ts[2 * i + 2], c)
-            x = x + 0.5 * dt * (v0 + v1)
-        elif solver == "rk4":
-            k1 = model(x, ts[2 * i], c)
-            k2 = model(x + 0.5 * dt * k1, ts[2 * i + 1], c)
-            k3 = model(x + 0.5 * dt * k2, ts[2 * i + 1], c)
-            k4 = model(x + dt * k3, ts[2 * i + 2], c)
-            x = x + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
-        else:
-            raise ValueError(f"unknown solver {solver!r}")
-    return x
+class CellSampler:
+    """A plugged-in Generator + the shared normalisers -> physical exit states.
 
+    Drop-in for gmc_solve: it offers .sample(), .reset(), .stats and
+    .nfe_per_sample, which are the only things the transport loop uses.
+    """
 
-class Sampler:
-    """Trained model + normalizers -> physical exit states."""
-
-    def __init__(self, model, ynorm, cnorm, device="cpu", steps=5,
-                 solver="heun"):
-        self.model = model.to(device).eval()
+    def __init__(self, gen, ynorm, cnorm):
+        self.gen = gen
         self.ynorm, self.cnorm = ynorm, cnorm
-        self.device, self.steps, self.solver = device, steps, solver
-        self.nfe_per_sample = steps * NFE_PER_STEP[solver]
+        self.nfe_per_sample = gen.nfe
         self.reset()
 
     def reset(self):
@@ -123,10 +111,11 @@ class Sampler:
             c = torch.from_numpy(self.cnorm.transform(
                 encode_conditions(W[m], H[m], xi[m], ox_in[m], oy_in[m])))
             g = torch.Generator().manual_seed(int(rng.integers(2**31)))
-            z = torch.randn(n_flow, 6, generator=g).to(self.device)
-            y = self.ynorm.inverse(integrate(self.model, z, c.to(self.device),
-                                             self.steps, self.solver)
-                                   .cpu().numpy())
+            y = self.gen.sample(c, g, cond={"W": W[m], "H": H[m], "xi": xi[m],
+                                            "ox_in": ox_in[m], "oy_in": oy_in[m]})
+            if torch.is_tensor(y):
+                y = y.numpy()
+            y = self.ynorm.inverse(np.asarray(y))
 
             frac = np.mod(np.arctan2(y[:, 1], y[:, 0]) / (2 * np.pi), 1.0)
             p[m] = frac * 2.0 * (W[m] + H[m])
@@ -146,3 +135,10 @@ class Sampler:
 
         _, _, face = decode_p(p, W, H)
         return {"p": p, "dir": dirs, "s": s, "face": face, "uncollided": unc}
+
+
+def Sampler(model, ynorm, cnorm, device="cpu", steps=5, solver="heun"):
+    """The pre-pipeline constructor: a bare velocity-field network in, a
+    CellSampler around a CFM generator out.  Kept so every script written
+    before the split runs unchanged."""
+    return CellSampler(CFM(model, steps, solver, device), ynorm, cnorm)

@@ -1,0 +1,65 @@
+{
+ "model": {
+  "name": "free",
+  "nfe": 0
+ },
+ "command": "run.py free",
+ "git_commit": "93c437b49f1520b67e321cad5971de8a1a4306a4",
+ "git_dirty": false,
+ "data_sha256": "c92233ce06e91662db2332e25b1536779fcd8f2d2ccd2f6e8c0c41cb5643ad23",
+ "checkpoint": null,
+ "train": null,
+ "warnings": [],
+ "reference_manifest_sha256": "22b2a2e10e6d1299ac21c6753fe54fefd4aa55fa6fa2186a32864974bbea3dde",
+ "protocol": {
+  "scales": [
+   1,
+   4,
+   10,
+   20
+  ],
+  "N": 20000,
+  "speed_n": 4000,
+  "seed": 1,
+  "gmc_seeds": [
+   8,
+   78
+  ],
+  "cell_n": 20000,
+  "cell_shapes": [
+   [
+    1.0,
+    1.0
+   ],
+   [
+    4.0,
+    4.0
+   ],
+   [
+    4.0,
+    1.0
+   ],
+   [
+    1.0,
+    4.0
+   ],
+   [
+    8.0,
+    2.0
+   ]
+  ]
+ },
+ "hardware": {
+  "cpu": "Intel(R) Xeon(R) Processor @ 2.80GHz",
+  "cores": 4,
+  "device": "cpu",
+  "torch_threads": 4,
+  "gpu": null
+ },
+ "versions": {
+  "python": "3.12.14",
+  "numpy": "2.5.3",
+  "numba": "0.67.0",
+  "torch": "2.14.0+cu130"
+ }
+}
