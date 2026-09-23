@@ -1,0 +1,18 @@
+{
+ "steps_done": 20000,
+ "train_seconds": 4584.0,
+ "final_train_loss": 1.041,
+ "final_val_loss": 1.0388,
+ "data_sha256": "c92233ce06e91662db2332e25b1536779fcd8f2d2ccd2f6e8c0c41cb5643ad23",
+ "config": {
+  "width": 256,
+  "depth": 5,
+  "x_dim": 6,
+  "c_dim": 5,
+  "steps": 20000,
+  "batch": 4096,
+  "lr": 0.002,
+  "seed": 0
+ },
+ "note": "trained by train.py at commit 81d8340 (unmodified), sharing 4 cores with make_reference.py for part of the run, so the time is inflated"
+}

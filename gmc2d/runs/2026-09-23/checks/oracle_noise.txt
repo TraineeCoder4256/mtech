@@ -1,0 +1,5 @@
+oracle-GMC vs ref, 8 runs: 0.99 1.21 0.95 1.66 0.95 0.77 1.33 0.78 mean 1.080
+mc.py      vs ref, 6 runs: 0.90 0.81 1.08 0.90 1.08 1.10 mean 0.979
+mean of 8 oracle vs ref: 0.415%  (pure noise would give ~0.382%)
+per-cell sd ratio oracle/mc, source cell and 4 neighbours: ['1.04', '0.78', '1.79', '0.89', '1.98']
+flux mean in those cells, oracle/ref: ['1.0005', '0.9927', '0.9954', '0.9958', '1.0069']

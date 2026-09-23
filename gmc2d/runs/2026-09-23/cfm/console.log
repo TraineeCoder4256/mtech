@@ -1,0 +1,124 @@
+data  data/cells.npz
+model {"name": "cfm", "nfe": 10, "ode_steps": 5, "solver": "heun", "train_config": {"width": 256, "depth": 5, "x_dim": 6, "c_dim": 5, "steps": 20000, "batch": 4096, "lr": 0.002, "seed": 0}, "params": 1676678}
+
+1. cell physics (marginals and joint)
+    1.0 x 1.0   p 0.03/0.01   Ox 0.01/0.01   log s 0.06/0.01   sliced 2.28   C2ST 50.9% (floor 49.5%)
+    4.0 x 4.0   p 0.03/0.02   Ox 0.02/0.01   log s 0.05/0.02   sliced 1.54   C2ST 51.2% (floor 50.5%)
+    4.0 x 1.0   p 0.02/0.00   Ox 0.03/0.01   log s 0.06/0.01   sliced 3.63   C2ST 51.3% (floor 49.4%)
+    1.0 x 4.0   p 0.02/0.01   Ox 0.01/0.00   log s 0.05/0.02   sliced 1.82   C2ST 51.5% (floor 50.1%)
+    8.0 x 2.0   p 0.01/0.01   Ox 0.03/0.02   log s 0.05/0.02   sliced 1.77   C2ST 51.8% (floor 50.3%)
+
+2. full problem vs the frozen reference (20,000 particles)
+   scale   1  error   1.026 %  floor  0.979 %  ratio   1.05x  bias  0.703 %  cell chi2    1.31
+   scale   4  error   1.268 %  floor  0.930 %  ratio   1.36x  bias  1.023 %  cell chi2   31.72
+   scale  10  error   1.528 %  floor  1.040 %  ratio   1.47x  bias  1.463 %  cell chi2   17.33
+   scale  20  error   3.538 %  floor  1.000 %  ratio   3.54x  bias  3.527 %  cell chi2   57.22
+
+3. cost at the published scale (20,000 particles)
+   MC 0.0345 s   GMC 10.207 s   speedup 0.003379x   break-even 264 scatters per crossing
+
+4. speed sweep (4,000 particles per point)
+   scale   1  MC   0.0096s  GMC    2.63s  speedup 0.003639x
+   scale   4  MC   0.0098s  GMC    2.99s  speedup 0.003281x
+   scale  10  MC   0.0175s  GMC    4.89s  speedup 0.003573x
+   scale  20  MC   0.0429s  GMC    7.18s  speedup 0.005975x
+
+======================================================================
+CFM -- RAW NUMBERS
+======================================================================
+model       {"name": "cfm", "nfe": 10, "ode_steps": 5, "solver": "heun", "train_config": {"width": 256, "depth": 5, "x_dim": 6, "c_dim": 5, "steps": 20000, "batch": 4096, "lr": 0.002, "seed": 0}, "params": 1676678}
+trained     20000 steps in 76.4 min
+device      cpu
+cost class  10 network evaluations per collided sample
+
+
+----------------------------------------------------------------------
+1. CELL PHYSICS: sampled exit distributions vs Monte Carlo
+----------------------------------------------------------------------
+Marginals: Wasserstein-1 in units of the quantity's own spread, as
+model / MC-vs-MC floor (the same numbers evaluate.py prints).
+Joint: sliced W1 over 64 random directions of the whole exit state
+(position, direction, log path length), as a ratio to the MC floor, so
+1.00 = as close to MC as another MC run.  C2ST: a small classifier's
+held-out accuracy at telling model from MC (50% = cannot tell), with its
+z-score against 50%; the MC-vs-MC column is the same test between two MC
+runs, i.e. what "indistinguishable" looks like at this sample size.
+
+    W     H   p model/floor  Ox model/floor  log s m/f   sliced   C2ST model (z)  MC-vs-MC (z)   unc% MC GMC
+  1.0   1.0  0.03/0.01   0.01/0.01   0.06/0.01    2.28    50.9 ( +2.5)   49.5 ( -1.3)    42.6  43.5
+  4.0   4.0  0.03/0.02   0.02/0.01   0.05/0.02    1.54    51.2 ( +3.5)   50.5 ( +1.4)     0.1   0.1
+  4.0   1.0  0.02/0.00   0.03/0.01   0.06/0.01    3.63    51.3 ( +3.8)   49.4 ( -1.8)     1.6   1.5
+  1.0   4.0  0.02/0.01   0.01/0.00   0.05/0.02    1.82    51.5 ( +4.3)   50.1 ( +0.2)    29.9  30.1
+  8.0   2.0  0.01/0.01   0.03/0.02   0.05/0.02    1.77    51.8 ( +5.0)   50.3 ( +0.9)     9.7   9.7
+
+----------------------------------------------------------------------
+2. FULL PROBLEM vs the frozen reference (20,000 particles per solve)
+----------------------------------------------------------------------
+Reference: reference/lattice_x*.npz (mc.py, 40,000,000 histories at scale 1),
+checked against OpenMC.  Error = mean over 2 GMC solves of the relative
+L2 difference of the 7x7 cell fluxes.  Floor = the same number for
+6 independent mc.py solves at the same particle count, i.e.
+what an exact method scores.  Ratio 1.00 = as good as Monte Carlo.
+Bias = the 2 GMC fields averaged; "noise only" is what that
+average would score if the model were exact.  cell chi2 ~ 1 means every
+cell is right to within statistics; >> 1 means systematic error.
+
+ scale  error %  floor %   ratio   bias %  noise %  cell chi2  flux GMC/ref  med %  worst %
+     1    1.026    0.979    1.05x    0.703    0.693      1.31   1.0012    3.54     37.9
+     4    1.268    0.930    1.36x    1.023    0.657     31.72   0.9943   12.42    367.1
+    10    1.528    1.040    1.47x    1.463    0.735     17.33   0.9826   49.57    183.2
+    20    3.538    1.000    3.54x    3.527    0.707     57.22   0.9549   86.19    571.8
+
+At the published scale: floor range 0.81-1.10 %, GMC-vs-GMC 1.508 %
+(vs MC-vs-MC 1.307 %: equal = neither over- nor under-dispersed).
+Path lengths clamped to the straight-line minimum: 5.34 %
+
+----------------------------------------------------------------------
+3. COST AT THE PUBLISHED SCALE (same particle count, this machine)
+----------------------------------------------------------------------
+MONTE CARLO
+  wall time                         0.0345 s   (mean of repeated runs)
+  scattering events                148,398
+  scatters per particle               7.42
+  time per scattering event          232.4 ns
+
+GMC
+  wall time                        10.2067 s
+  macro-cell crossings             166,480
+  crossings per particle              8.32
+  batched sampler calls                400
+  crossings reaching the model      83,520   (50.2 %; the rest were uncollided)
+  network evaluations              835,200
+  time per macro-cell crossing       61.31 us
+  where the wall time goes
+    model                          10.0596 s  ( 98.6 %)
+    analog MC in the birth cell     0.0011 s  (  0.0 %)
+    geometry / tallies (NumPy)      0.1460 s  (  1.4 %)
+
+SPEEDUP                           0.003379 x
+
+----------------------------------------------------------------------
+4. BREAK-EVEN
+----------------------------------------------------------------------
+  MC   0.89 scatters x 232.4 ns = 0.21 us per crossing
+  GMC  61.31 us per crossing
+
+One GMC crossing costs as much as 264 scattering events, and this
+geometry has 0.9 per crossing, so cells must be
+~296x optically thicker before GMC wins.
+
+----------------------------------------------------------------------
+5. SPEED SWEEP (4,000 particles per point)
+----------------------------------------------------------------------
+ scale    W_bg    MC (s)   GMC (s)   speedup  scat/part  scat/cross  model%
+--------------------------------------------------------------------------
+     1     1.0     0.010      2.63  0.003639x        7.5         0.9   96.5%
+     4     4.0     0.010      2.99  0.003281x       22.2         3.7   99.1%
+    10    10.0     0.017      4.89  0.003573x       85.1        10.0   97.9%
+    20    20.0     0.043      7.18  0.005975x      275.7        22.5   98.4%
+
+GMC is SLOWER at every scale tested (up to 20 mfp).
+Best 0.00597x at 20 mfp; extrapolate with the break-even figure in section 4.
+======================================================================
+
+wrote results/cfm/2026-09-23T061644/

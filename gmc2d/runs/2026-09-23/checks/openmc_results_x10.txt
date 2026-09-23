@@ -1,0 +1,41 @@
+==================================================================
+LATTICE BENCHMARK -- OpenMC multi-group, one energy group
+==================================================================
+histories            4,000,000  (20 x 200,000)
+cross sections       x10 (1 = the published benchmark)
+wall time            148.4 s
+OpenMC               0.16.0
+
+PARTICLE BALANCE  (per source particle)
+  absorption         0.997510 +/- 0.000140
+  leakage            0.002490
+  sum                1.000000
+
+ABSORPTION CROSS-CHECK  (two independent estimators)
+  from the flux map   0.996557   sum of sig_a * phi * V
+  from the tally      0.997510
+  difference          0.095 %   (z = -1.39; |z| < 3 passes)
+
+SCALAR FLUX  (per unit volume, per source particle)
+  domain integral    7.420943
+  peak               5.1341
+  smallest scored    4.692e-09
+  dynamic range      9.0 decades
+  unscored cells     5275 of 12544  (42.05 %, all in the far corners)
+
+STATISTICAL PRECISION  (relative standard deviation, scored cells)
+  median             20.444 %
+  90th percentile    100.000 %
+  worst cell         100.000 %
+
+CELL-AVERAGED FLUX  (7 x 7, y increasing upward)
+  8.677e-05 1.170e-03 1.044e-02 2.037e-02 1.047e-02 1.183e-03 8.974e-05   .......
+  2.183e-05 1.236e-05 2.261e-02 9.288e-02 2.259e-02 1.241e-05 2.120e-05   .A...A.
+  4.196e-06 3.352e-05 2.469e-03 8.653e-01 2.474e-03 3.896e-05 4.905e-06   ..A.A..
+  1.240e-06 2.574e-04 8.192e-01 3.903e+00 8.199e-01 2.589e-04 4.380e-06   .A...A.
+  4.513e-06 4.349e-05 2.375e-03 8.204e-01 2.372e-03 5.392e-05 7.801e-06   ..A.A..
+  1.372e-07 1.251e-08 4.071e-05 2.585e-04 4.783e-05 5.112e-08 1.844e-08   .A.A.A.
+  0.000e+00 2.369e-06 4.633e-06 1.249e-06 1.417e-06 5.426e-07 0.000e+00   .......
+
+  A marks an absorber cell.
+==================================================================

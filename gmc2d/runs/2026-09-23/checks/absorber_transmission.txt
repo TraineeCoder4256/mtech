@@ -1,0 +1,8 @@
+scale  1  W  0.5  entry (0.5,1.0,0.0)  surviving weight MC 7.8370e-03  CFM 7.3070e-03  ratio 0.932  z -1.3
+scale  1  W  0.5  entry (0.3,0.6,0.5)  surviving weight MC 1.0274e-02  CFM 9.8178e-03  ratio 0.956  z -0.9
+scale  4  W  2.0  entry (0.5,1.0,0.0)  surviving weight MC 7.1722e-03  CFM 4.5478e-03  ratio 0.634  z -7.5
+scale  4  W  2.0  entry (0.3,0.6,0.5)  surviving weight MC 9.8684e-03  CFM 6.4153e-03  ratio 0.650  z -8.4
+scale 10  W  5.0  entry (0.5,1.0,0.0)  surviving weight MC 7.5802e-03  CFM 2.3776e-03  ratio 0.314  z -15.7
+scale 10  W  5.0  entry (0.3,0.6,0.5)  surviving weight MC 1.0573e-02  CFM 3.4110e-03  ratio 0.323  z -18.2
+scale 20  W 10.0  entry (0.5,1.0,0.0)  surviving weight MC 8.1897e-03  CFM 1.3558e-03  ratio 0.166  z -20.5
+scale 20  W 10.0  entry (0.3,0.6,0.5)  surviving weight MC 9.7449e-03  CFM 1.7847e-03  ratio 0.183  z -22.4

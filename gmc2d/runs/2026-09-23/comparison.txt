@@ -1,0 +1,20 @@
+MODEL COMPARISON  (latest run of each; accuracy vs the frozen reference)
+=============================================================================================================================
+model       nfe    params      x1      x4     x10     x20   bias%    chi2  sliced  C2ST%  clamp%  us/cross   speedup   b-even
+-----------------------------------------------------------------------------------------------------------------------------
+oracle        0         -   1.52x   1.16x   0.74x   1.03x   1.021    1.40    1.00   50.0    0.00      1.24   0.1514x        6
+free          0         -  33.13x  23.50x  18.21x  40.37x  32.435  365.49   22.68   81.2   38.98      1.90  0.09506x        8
+cfm          10   1676678   1.05x   1.36x   1.47x   3.54x   0.703    1.31    2.21   51.3    5.34     61.31 0.003379x      264
+-----------------------------------------------------------------------------------------------------------------------------
+x<scale>  lattice error as a multiple of the Monte Carlo noise floor (1.00 = as good as MC)
+bias%    systematic error at scale 1 with the noise averaged out; chi2 = per-cell bias test (~1 is clean)
+sliced   joint exit-state distance, x the MC floor, mean over the cell shapes
+C2ST%    classifier accuracy telling model from MC (50 = cannot; MC vs MC scores 50.0)
+us/cross time per macro-cell crossing at scale 1; speedup = MC time / GMC time at scale 1
+b-even   scattering events one crossing must replace before GMC wins
+  free's accuracy columns are meaningless by design (it draws noise); read only its cost columns
+
+runs:
+  oracle     results/oracle/2026-09-23T061620  (Intel(R) Xeon(R) Processor @ 2.80GHz x4 cpu)
+  free       results/free/2026-09-23T061555  (Intel(R) Xeon(R) Processor @ 2.80GHz x4 cpu)
+  cfm        results/cfm/2026-09-23T061644  (Intel(R) Xeon(R) Processor @ 2.80GHz x4 cpu)

@@ -1,0 +1,20 @@
+scale   1: mc.py 100 x 400,000 histories ...
+           112 s, 7.5 scatters per particle
+           OpenMC 0.16.0, 4,000,000 histories
+           vs OpenMC, 7x7: chi2/cell 1.16, max |z| 2.73, median diff 0.65%
+           noise floor at N=20,000: 0.979% vs reference
+scale   4: mc.py 100 x 400,000 histories ...
+           114 s, 22.9 scatters per particle
+           no results/openmc_reference_x4.npz (run: python openmc_lattice.py 4)
+           noise floor at N=20,000: 0.930% vs reference
+scale  10: mc.py 100 x 400,000 histories ...
+           274 s, 86.0 scatters per particle
+           OpenMC 0.16.0, 4,000,000 histories
+           vs OpenMC, 7x7: chi2/cell 1.25, max |z| 3.67, median diff 2.49%
+           noise floor at N=20,000: 1.040% vs reference
+scale  20: mc.py 100 x 400,000 histories ...
+           703 s, 280.8 scatters per particle
+           no results/openmc_reference_x20.npz (run: python openmc_lattice.py 20)
+           noise floor at N=20,000: 1.000% vs reference
+
+wrote 4 reference files (1.02 MiB) and reference/manifest.json
