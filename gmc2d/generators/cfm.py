@@ -176,8 +176,8 @@ class CFM(Generator):
         return g
 
     def describe(self):
-        d = {"name": self.name, "nfe": self.nfe, "steps": self.steps,
-             "solver": self.solver, **self.config}
+        d = {"name": self.name, "nfe": self.nfe, "ode_steps": self.steps,
+             "solver": self.solver, "train_config": self.config}
         if self.net is not None:
             d["params"] = int(sum(p.numel() for p in self.net.parameters()))
         return d

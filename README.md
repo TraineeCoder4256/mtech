@@ -2,27 +2,32 @@
 
 M.Tech project: a comparative study of generative surrogate models for
 accelerating Monte Carlo particle transport, reproducing and extending
-**arXiv:2512.13965v1** (Farmer, Murray, Krotz & McClarren) on the Lattice
-benchmark of **arXiv:2505.17284** (Schotthöfer & Hauck, ORNL).
+**arXiv:2512.13965v1** (Farmer, Murray, Krotz & McClarren) on their
+steady-state variant of the Lattice geometry of **arXiv:2505.17284**
+(Schotthöfer & Hauck, ORNL). The variant differs from ORNL's benchmark: it is
+steady-state rather than time-dependent, and its absorbers scatter a little
+(σs = 0.5, σa = 9.5) instead of not at all.
 
 ## Everything lives in [`gmc2d/`](gmc2d/)
 
 ```bash
 cd gmc2d
 python make_data.py         # single-cell training set
-python train.py             # conditional flow-matching model
-python evaluate.py          # accuracy and cost against the Monte Carlo baseline
+python run.py cfm           # train (if needed) and score one model
+python compare.py           # every scored model side by side
 ```
 
 See [`gmc2d/README.md`](gmc2d/README.md) for what each file does and how the
 pieces fit together.
 
-Two checks sit outside that three-command pipeline:
+Three checks sit outside that pipeline:
 
 ```bash
 python validate.py          # the MC baseline against three exact identities
-python openmc_lattice.py    # the same lattice solved by OpenMC, differenced
-                            # cell by cell (needs conda install -c conda-forge openmc)
+python openmc_lattice.py    # the same lattice solved by OpenMC
+                            # (needs conda install -c conda-forge openmc)
+python check_benchmark.py   # both lattice definitions agree, and the frozen
+                            # reference agrees with OpenMC
 ```
 
 ## History
