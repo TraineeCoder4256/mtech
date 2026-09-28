@@ -1,0 +1,147 @@
+data  data/cells.npz
+model {"name": "oracle", "nfe": 0}
+
+1. cell physics (marginals and joint)
+    1.0 x 1.0   p 0.02/0.01   Ox 0.02/0.01   log s 0.02/0.01   sliced 1.19   C2ST 49.6% (floor 49.5%)
+    4.0 x 4.0   p 0.01/0.02   Ox 0.01/0.01   log s 0.01/0.02   sliced 0.71   C2ST 49.6% (floor 50.5%)
+    4.0 x 1.0   p 0.01/0.00   Ox 0.01/0.01   log s 0.01/0.01   sliced 1.15   C2ST 49.8% (floor 49.4%)
+    1.0 x 4.0   p 0.01/0.01   Ox 0.01/0.00   log s 0.02/0.02   sliced 1.02   C2ST 50.7% (floor 50.1%)
+    8.0 x 2.0   p 0.01/0.01   Ox 0.02/0.02   log s 0.02/0.02   sliced 0.94   C2ST 50.4% (floor 50.3%)
+
+1b. absorber tail: weight surviving one absorber cell (100,000 per entry)
+   scale   1  W   0.5  model/MC 0.985 (z -0.4)  0.964 (z -1.2)
+   scale   4  W   2.0  model/MC 1.017 (z +0.5)  0.954 (z -1.5)
+   scale  10  W   5.0  model/MC 1.005 (z +0.1)  0.994 (z -0.2)
+   scale  20  W  10.0  model/MC 0.974 (z -0.7)  0.982 (z -0.6)
+
+2. full problem vs the frozen reference (20,000 particles)
+   scale   1  error   1.191 %  floor  0.979 %  ratio   1.22x  bias  0.503 %  cell chi2    0.82
+   scale   4  error   0.772 %  floor  0.930 %  ratio   0.83x  bias  0.329 %  cell chi2    1.79
+   scale  10  error   1.048 %  floor  1.040 %  ratio   1.01x  bias  0.474 %  cell chi2    0.79
+   scale  20  error   0.973 %  floor  1.000 %  ratio   0.97x  bias  0.559 %  cell chi2    0.39
+
+3. cost at the published scale (20,000 particles)
+   MC 0.0437 s   GMC 0.234 s   speedup 0.1869x   break-even 5 scatters per crossing
+
+4. speed sweep (4,000 particles per point)
+   scale   1  MC   0.0117s  GMC    0.08s  speedup   0.1443x
+   scale   4  MC   0.0109s  GMC    0.07s  speedup   0.1634x
+   scale  10  MC   0.0195s  GMC    0.10s  speedup   0.1899x
+   scale  20  MC   0.0426s  GMC    0.21s  speedup   0.1999x
+
+======================================================================
+ORACLE -- RAW NUMBERS
+======================================================================
+model       {"name": "oracle", "nfe": 0}
+trained     n/a (not trainable, or trained before the pipeline)
+device      cpu
+cost class  0 network evaluations per collided sample
+  ! oracle ran 5,115,345 Monte Carlo walks in total (rejected uncollided walks included)
+
+----------------------------------------------------------------------
+1. CELL PHYSICS: sampled exit distributions vs Monte Carlo
+----------------------------------------------------------------------
+Marginals: Wasserstein-1 in units of the quantity's own spread, as
+model / MC-vs-MC floor (the same numbers evaluate.py prints).
+Joint: sliced W1 over 64 random directions of the whole exit state
+(position, direction, log path length), as a ratio to the MC floor, so
+1.00 = as close to MC as another MC run.  C2ST: a small classifier's
+held-out accuracy at telling model from MC (50% = cannot tell), with its
+z-score against 50%; the MC-vs-MC column is the same test between two MC
+runs, i.e. what "indistinguishable" looks like at this sample size.
+
+    W     H   p model/floor  Ox model/floor  log s m/f   sliced   C2ST model (z)  MC-vs-MC (z)   unc% MC GMC
+  1.0   1.0  0.02/0.01   0.02/0.01   0.02/0.01    1.19    49.6 ( -1.1)   49.5 ( -1.3)    42.6  43.5
+  4.0   4.0  0.01/0.02   0.01/0.01   0.01/0.02    0.71    49.6 ( -1.0)   50.5 ( +1.4)     0.1   0.1
+  4.0   1.0  0.01/0.00   0.01/0.01   0.01/0.01    1.15    49.8 ( -0.7)   49.4 ( -1.8)     1.6   1.5
+  1.0   4.0  0.01/0.01   0.01/0.00   0.02/0.02    1.02    50.7 ( +2.0)   50.1 ( +0.2)    29.9  30.1
+  8.0   2.0  0.01/0.01   0.02/0.02   0.02/0.02    0.94    50.4 ( +1.1)   50.3 ( +0.9)     9.7   9.7
+
+----------------------------------------------------------------------
+1b. ABSORBER TAIL: weight surviving one absorber cell, model vs MC
+----------------------------------------------------------------------
+solve.py multiplies the weight by exp(-19 s) per absorber crossing, so
+this mean is decided by the rare SHORTEST paths, which section 1 barely
+sees.  Same cell and entry for model and MC, 100,000 samples each.
+Ratio 1.00 = right; below 1 = the model lets too little through.
+
+                entry (0.5, 1.0, 0.0)                       entry (0.3, 0.6, 0.5)
+ scale      W  MC         model       ratio      z  MC         model       ratio      z
+     1    0.5 8.0254e-03 7.9026e-03  0.985   -0.4  1.0992e-02 1.0592e-02  0.964   -1.2
+     4    2.0 8.2432e-03 8.3803e-03  1.017   +0.5  1.1067e-02 1.0560e-02  0.954   -1.5
+    10    5.0 7.9833e-03 8.0231e-03  1.005   +0.1  1.0710e-02 1.0647e-02  0.994   -0.2
+    20   10.0 7.9426e-03 7.7385e-03  0.974   -0.7  1.0833e-02 1.0637e-02  0.982   -0.6
+
+----------------------------------------------------------------------
+2. FULL PROBLEM vs the frozen reference (20,000 particles per solve)
+----------------------------------------------------------------------
+Reference: reference/lattice_x*.npz (mc.py, 40,000,000 histories at scale 1),
+checked against OpenMC.  Error = mean over 6 GMC solves of the relative
+L2 difference of the 7x7 cell fluxes.  Floor = the same number for
+6 independent mc.py solves at the same particle count, i.e.
+what an exact method scores.  Ratio 1.00 = as good as Monte Carlo.
+Bias = the 6 GMC fields averaged; "noise only" is what that
+average would score if the model were exact.  cell chi2: per-cell bias
+test over the cells one 20,000-particle MC solve resolves to better than
+20% (count in brackets), in units of the model runs' own spread.
+Exact Monte Carlo scores 0.3-2.3 (mean ~1); well above ~2.5 = systematic error.
+
+ scale  error %  floor %   ratio   bias %  noise %   cell chi2  flux GMC/ref  med %  worst %
+     1    1.191    0.979    1.22x    0.503    0.400   0.82 (36)   1.0013    1.98     25.8
+     4    0.772    0.930    0.83x    0.329    0.380   1.79 (20)   1.0004    7.29     99.3
+    10    1.048    1.040    1.01x    0.474    0.425   0.79 (18)   1.0036   22.50   1006.8
+    20    0.973    1.000    0.97x    0.559    0.408   0.39 (16)   1.0051   45.18    279.0
+
+At the published scale: floor range 0.81-1.10 %, GMC-vs-GMC 2.200 %
+(vs MC-vs-MC 1.307 %: equal = neither over- nor under-dispersed).
+Path lengths clamped to the straight-line minimum: 0.00 %
+
+----------------------------------------------------------------------
+3. COST AT THE PUBLISHED SCALE (same particle count, this machine)
+----------------------------------------------------------------------
+MONTE CARLO
+  wall time                         0.0437 s   (mean of repeated runs)
+  scattering events                148,063
+  scatters per particle               7.40
+  time per scattering event          295.3 ns
+
+GMC
+  wall time                         0.2340 s
+  macro-cell crossings             163,708
+  crossings per particle              8.19
+  batched sampler calls                 40
+  crossings reaching the model      83,049   (50.7 %; the rest were uncollided)
+  network evaluations                    0
+  time per macro-cell crossing        1.43 us
+  where the wall time goes
+    model                           0.1504 s  ( 64.3 %)
+    analog MC in the birth cell     0.0013 s  (  0.6 %)
+    geometry / tallies (NumPy)      0.0822 s  ( 35.2 %)
+
+SPEEDUP                             0.1869 x
+
+----------------------------------------------------------------------
+4. BREAK-EVEN
+----------------------------------------------------------------------
+  MC   0.90 scatters x 295.3 ns = 0.27 us per crossing
+  GMC  1.43 us per crossing
+
+One GMC crossing costs as much as 5 scattering events, and this
+geometry has 0.9 per crossing, so cells must be
+~5x optically thicker before GMC wins.
+
+----------------------------------------------------------------------
+5. SPEED SWEEP (4,000 particles per point)
+----------------------------------------------------------------------
+ scale    W_bg    MC (s)   GMC (s)   speedup  scat/part  scat/cross  model%
+--------------------------------------------------------------------------
+     1     1.0     0.012      0.08    0.1443x        7.5         0.9   65.7%
+     4     4.0     0.011      0.07    0.1634x       22.2         3.8   67.0%
+    10    10.0     0.020      0.10    0.1899x       85.6        10.6   68.7%
+    20    20.0     0.043      0.21    0.1999x      275.7        23.5   67.4%
+
+GMC is SLOWER at every scale tested (up to 20 mfp).
+Best 0.2x at 20 mfp; extrapolate with the break-even figure in section 4.
+======================================================================
+
+wrote results/oracle/2026-09-28T050509/

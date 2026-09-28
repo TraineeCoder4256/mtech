@@ -1,0 +1,42 @@
+mc.py, data.py, model.py, solve.py unchanged since 81d8340: yes
+
+1. SAMPLING  (20,000 entry states, every output array compared)
+   euler x4  Sampler()         bit-identical
+   euler x4  CellSampler(CFM)  bit-identical
+   heun  x5  Sampler()         bit-identical
+   heun  x5  CellSampler(CFM)  bit-identical
+   rk4   x2  Sampler()         bit-identical
+   rk4   x2  CellSampler(CFM)  bit-identical
+
+2. TRANSPORT  (gmc_solve on the lattice, 3,000 particles)
+   flux field and 10 counters  bit-identical
+
+3. TRAINING  (60 steps at batch 4096, weights and normalisers)
+device cpu
+data   2,880,000 rows -> 1,510,003 collided, 58,709 conditions
+split  1,435,240 train / 74,763 val (2,905 held-out conditions)
+model  width 256 depth 5, 1,676,678 params
+train  60 steps at batch 4,096 = 0 nominal epochs
+
+step     20 (ep   0.1)  train 1.9923  val(EMA) 2.0010  21,946 samp/s
+step     40 (ep   0.1)  train 1.9713  val(EMA) 1.9998  21,670 samp/s
+step     60 (ep   0.2)  train 1.9435  val(EMA) 1.9888  21,239 samp/s
+
+saved to /tmp/tmps1tlcoqh/old/
+device cpu
+data   2,880,000 rows -> 1,510,003 collided, 58,709 conditions
+split  1,435,240 train / 74,763 val (2,905 held-out conditions)
+cfm    width 256 depth 5
+model  1,676,678 params
+train  60 steps at batch 4,096 = 0 nominal epochs
+
+step     20 (ep   0.1)  train 1.9923  val(EMA) 2.0010  20,246 samp/s
+step     40 (ep   0.1)  train 1.9713  val(EMA) 1.9998  20,927 samp/s
+step     60 (ep   0.2)  train 1.9435  val(EMA) 1.9888  20,838 samp/s
+
+saved to /tmp/tmps1tlcoqh/new/
+   51 weight tensors  bit-identical
+   normalisers        identical
+   loss log           identical (throughput column excluded: it is wall-clock)
+
+REFACTOR CHANGES NOTHING
