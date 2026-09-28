@@ -21,7 +21,7 @@ solutions therefore cannot validate this code; OpenMC does instead.
 ## Run it
 
 ```bash
-python validate.py       # ~3 min   -> checks the MC baseline against exact results
+python validate.py       # ~20 s    -> checks the MC baseline against exact results
 python make_data.py      # ~2 s     -> data/cells.npz (65 MiB, 2.88M rows)
 python run.py cfm        # ~50 min training the first time, then ~10 min
                          #          -> models/cfm/ + results/cfm/<timestamp>/
@@ -31,7 +31,8 @@ python compare.py        # -> results/comparison.txt, comparison.pdf
 ```
 
 Settings are named constants at the top of each file; the only argument is
-the model's name (and `train` to force retraining). A GPU is used
+the model's name (and `train` to force retraining, `seed=K` for another
+training seed, kept apart as `models/<name>-seedK/`). A GPU is used
 automatically if `torch.cuda.is_available()`.
 
 Needs `numpy numba matplotlib torch`; `openmc_lattice.py` also needs OpenMC
@@ -96,6 +97,13 @@ nfe                            network evaluations per sample (its cost class)
 ```
 
 Register it in `generators/__init__.py` and run `python run.py <name>`.
+Unless it is a GAN, `fit()` should hand its network and its loss to
+`generators/training.fit_loop`, the loop cfm uses, so every family trains
+with the same optimiser, schedule, weight averaging, validation and time
+cap. The rules a family must keep for the comparison to be fair (same data,
+the 3 h cap, a parameter count within ±20% of cfm's, a bounded tuning
+search, two training seeds in the final table) are at the top of
+`generators/base.py`.
 Everything physical stays outside the model, in `sampler.CellSampler`: the
 analytic uncollided branch, decoding to a position and direction, the
 clamp to the straight-line path, and the cost counters. So every model is
@@ -133,15 +141,17 @@ mc.py              Monte Carlo: the single-cell walk, the full-domain solver,
 validate.py        checks mc.py against three exact analytic identities
 data.py            encodings, normalisation, leak-free dataset split
 model.py           the velocity field, the CFM loss, weight averaging
-generators/        one file per model: base.py (the interface), cfm.py,
-                   oracle.py, free.py
+generators/        one file per model: base.py (the interface and the
+                   fairness rules), training.py (the shared training loop),
+                   cfm.py, oracle.py, free.py
 sampler.py         CellSampler: the physics around any model's draw
 solve.py           chain the sampler across a mesh
 make_data.py       the training set
 benchmark.py       the protocol (scales, particle counts, seeds) and the
                    reference loader
 make_reference.py  builds reference/
-metrics.py         cell-level (marginal and joint) and lattice-level scores
+metrics.py         cell-level (marginal, joint, absorber tail) and
+                   lattice-level scores
 run.py             train if needed, then score one model
 compare.py         all scored models in one table
 openmc_lattice.py  the lattice in OpenMC, as an independent check
@@ -167,7 +177,7 @@ code is right.
 | particle balance | absorbed / source = 1 in a thick pure absorber | mesh traversal, track-length estimator, implicit capture, tally normalisation |
 
 `python validate.py` reports each as `z = (measured - exact) / standard error`;
-`|z| < 3` passes. All twelve cases currently pass, with relative errors below
+`|z| < 3` passes. All fifteen cases currently pass, with relative errors below
 0.5%, down to an uncollided probability of 8.6e-4 (about 7 mean free paths).
 
 One subtlety worth knowing: in test 1 the standard error is computed over

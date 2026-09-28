@@ -34,16 +34,41 @@ What the pipeline asks of a family:
               least once -- the uncollided ones never reach a model.
   save/load   one directory per trained model.
 
+RULES OF A FAIR COMPARISON.  A family can only be said to beat another if
+neither was given an advantage the other did not get.  So, for every family:
+
+  data        the same data/cells.npz and the same train/validation split
+              (run.py builds both; a family never reads data itself)
+  budget      the same training time cap, run.TIME_CAP (3 h on this
+              machine), and a parameter count within +-20% of cfm's
+              (run.PARAM_BUDGET; run.py flags a model outside it)
+  loop        generators/training.py, unless the family cannot use it
+              (a GAN); then its own loop copies that file's conventions
+  tuning      the same small search: at most TUNING_RUNS short trials of
+              its own settings before the one run that is scored, and the
+              trials are listed in the model file's docstring
+  seeds       the final table scores each family at two training seeds
+              (python run.py <name> train seed=1), so no ranking rests on
+              one lucky initialisation
+  scoring     run.py and metrics.py, unchanged, for every family
+
 `cond` in sample() carries the same conditions in physical units (W, H, xi,
 Omega_in).  Learned models must ignore it: it exists for the two REFERENCE
 generators (oracle.py, free.py), which are goalposts rather than models.
 """
 
 
+TUNING_RUNS = 4
+
+
 class Generator:
     name = "base"
     nfe = 0                 # network evaluations per sample
     trainable = True        # False for the reference generators
+
+    # __init__(self, device="cpu", seed=0, **settings): run.py passes the
+    # training seed; a family must fix every random number it trains with
+    # from it (fit_loop in generators/training.py does this).
 
     def fit(self, data, out_dir, time_cap):
         """Train on data.load_dataset() output; write logs into out_dir.

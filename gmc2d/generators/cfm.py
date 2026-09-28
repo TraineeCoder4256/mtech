@@ -1,10 +1,11 @@
 """Conditional flow matching -- the model this project started with.
 
-This file is the old train.py loop and the old sampler.integrate(), moved
-behind the Generator interface without changing a single operation.  The
-check that nothing changed is check_refactor.py: given the same data and
-seed, the weights this trains and the samples it draws are bit-identical to
-the code at commit 81d8340.
+This file is the old sampler.integrate() and the flow-matching half of the
+old train.py, behind the Generator interface.  The other half of train.py,
+the loop that every family shares, now lives in generators/training.py.
+Neither move changed a single operation: check_refactor.py shows that, given
+the same data and seed, the weights this trains and the samples it draws are
+bit-identical to the code at commit 81d8340.
 
 How it draws: start from Gaussian noise z and integrate dx/dt = v(x, t, c)
 from t = 0 to t = 1 with a FIXED number of steps.  Fixed matters -- a fixed
@@ -16,15 +17,13 @@ in model.py.
 Cost: steps x NFE_PER_STEP[solver] network evaluations per sample; the
 shipped setting, heun with 5 steps, is 10.
 """
-import json
 import pathlib
-import time
 
-import numpy as np
 import torch
 
-from model import VelocityField, cfm_loss, EMA
+from model import VelocityField, cfm_loss
 from generators.base import Generator
+from generators.training import fit_loop
 
 NFE_PER_STEP = {"euler": 1, "heun": 2, "rk4": 4}
 
@@ -63,91 +62,28 @@ def integrate(model, x, c, steps, solver):
 class CFM(Generator):
     name = "cfm"
 
-    def __init__(self, net=None, steps=5, solver="heun", device="cpu"):
+    def __init__(self, net=None, steps=5, solver="heun", device="cpu", seed=SEED):
         self.net = None if net is None else net.to(device).eval()
-        self.steps, self.solver, self.device = steps, solver, device
+        self.steps, self.solver, self.device, self.seed = steps, solver, device, seed
         self.nfe = steps * NFE_PER_STEP[solver]
         self.config = {}
 
     # ------------------------------------------------------------ training
     def fit(self, data, out_dir, time_cap=float("inf")):
-        """The train.py loop, operation for operation, so the RNG streams
-        line up: seed, build the net, build the EMA, then one generator for
-        the batch indices.  The only addition is the time cap, which reads
-        the clock and draws no random numbers."""
-        import matplotlib
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-
-        out_dir = pathlib.Path(out_dir)
-        out_dir.mkdir(parents=True, exist_ok=True)
-        torch.manual_seed(SEED)
-        dev = self.device
-
-        y, c, yv, cv = (torch.from_numpy(data[k]).to(dev) for k in
-                        ("y_train", "c_train", "y_val", "c_val"))
-        net = VelocityField(y.shape[1], c.shape[1], WIDTH, DEPTH).to(dev)
-        print(f"model  width {WIDTH} depth {DEPTH}, {net.n_params():,} params")
-
-        ema = EMA(net, EMA_DECAY)
-        opt = torch.optim.AdamW(net.parameters(), lr=LR, weight_decay=1e-5)
-        sched = torch.optim.lr_scheduler.LambdaLR(       # warmup, then cosine
-            opt, lambda s: min(1.0, (s + 1) / WARMUP) *
-            0.5 * (1 + np.cos(np.pi * min(1.0, s / STEPS))))
-
-        per_epoch = max(1, y.shape[0] // BATCH)
-        print(f"train  {STEPS:,} steps at batch {BATCH:,} "
-              f"= {STEPS / per_epoch:.0f} nominal epochs\n")
-
-        gen = torch.Generator().manual_seed(SEED)
-        hist, smooth, t0 = [], None, time.time()
-        log = open(out_dir / "log.txt", "w")
-        done = 0
-
-        for step in range(1, STEPS + 1):
-            idx = torch.randint(0, y.shape[0], (BATCH,), generator=gen).to(dev)
-            loss = cfm_loss(net, y[idx], c[idx])
-            opt.zero_grad(set_to_none=True)
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(net.parameters(), 1.0)
-            opt.step()
-            sched.step()
-            ema.update(net)
-            smooth = loss.item() if smooth is None else 0.98 * smooth + 0.02 * loss.item()
-            done = step
-            capped = time.time() - t0 > time_cap
-
-            if step % VAL_EVERY == 0 or step == STEPS or capped:
-                with torch.no_grad():
-                    v = torch.randint(0, yv.shape[0], (16384,), generator=gen).to(dev)
-                    vloss = cfm_loss(ema.shadow, yv[v], cv[v]).item()
-                line = (f"step {step:6d} (ep {step / per_epoch:5.1f})  "
-                        f"train {smooth:.4f}  val(EMA) {vloss:.4f}  "
-                        f"{step * BATCH / (time.time() - t0):,.0f} samp/s")
-                print(line, flush=True)
-                log.write(line + "\n")
-                log.flush()
-                hist.append((step, smooth, vloss))
-            if capped:
-                print(f"\ntime cap of {time_cap:.0f} s reached at step {step}")
-                break
-        log.close()
-
-        self.net = ema.shadow.eval()
-        self.config = {"width": WIDTH, "depth": DEPTH, "x_dim": int(y.shape[1]),
-                       "c_dim": int(c.shape[1]), "steps": STEPS, "batch": BATCH,
-                       "lr": LR, "seed": SEED}
-
-        h = np.array(hist)
-        fig, ax = plt.subplots(figsize=(5.4, 3.8))
-        ax.plot(h[:, 0], h[:, 1], label="train")
-        ax.plot(h[:, 0], h[:, 2], label="validation (EMA)")
-        ax.set_xlabel("step"); ax.set_ylabel("CFM loss"); ax.legend()
-        fig.tight_layout()
-        fig.savefig(out_dir / "loss.png", dpi=150)
-        plt.close(fig)
-        return {"steps_done": done, "train_seconds": time.time() - t0,
-                "final_train_loss": hist[-1][1], "final_val_loss": hist[-1][2]}
+        """The shared loop (generators/training.py) with the flow-matching
+        loss.  The settings are read from this module's constants at call
+        time, so check_refactor.py can shorten a run by setting them."""
+        x_dim, c_dim = data["y_train"].shape[1], data["c_train"].shape[1]
+        print(f"cfm    width {WIDTH} depth {DEPTH}")
+        self.net, facts = fit_loop(
+            lambda: VelocityField(x_dim, c_dim, WIDTH, DEPTH), cfm_loss,
+            data, out_dir, time_cap, steps=STEPS, batch=BATCH, lr=LR,
+            warmup=WARMUP, ema_decay=EMA_DECAY, val_every=VAL_EVERY,
+            seed=self.seed, device=self.device, loss_name="CFM loss")
+        self.config = {"width": WIDTH, "depth": DEPTH, "x_dim": int(x_dim),
+                       "c_dim": int(c_dim), "steps": STEPS, "batch": BATCH,
+                       "lr": LR, "seed": self.seed}
+        return facts
 
     # ------------------------------------------------------------- drawing
     def sample(self, c, generator, cond=None):

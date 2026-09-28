@@ -59,9 +59,10 @@ def main():
     refs = {p["reference_manifest_sha256"] for _, p in data.values()}
     machines = {n: machine(p) for n, (_, p) in data.items()}
 
-    head = (f"{'model':<10} {'nfe':>4} {'params':>9} "
+    head = (f"{'model':<12} {'nfe':>4} {'params':>9} "
             + " ".join(f"{'x' + s:>7}" for s in scales)
-            + f" {'bias%':>7} {'chi2':>7} {'sliced':>7} {'C2ST%':>6} {'clamp%':>7}"
+            + f" {'bias%':>7} {'chi2max':>7} {'absorber x' + '/'.join(scales):>24}"
+            + f" {'sliced':>7} {'C2ST%':>6} {'clamp%':>7}"
             + f" {'us/cross':>9} {'speedup':>9} {'b-even':>8}")
     lines = []
     for n in order:
@@ -71,10 +72,13 @@ def main():
         sliced = np.mean([c["sliced_w1"][0] for c in cells])
         c2st = np.mean([c["c2st_model"][0] for c in cells]) * 100
         params = met["model"].get("params")
+        chi2 = max(lat[s]["cell_chi2"] for s in scales)
+        ab = met.get("absorber")         # runs before 28 Sept 2026 lack it
+        ab = "/".join(f"{ab[s]['ratio']:.2f}" for s in scales) if ab else "-"
         lines.append(
-            f"{n:<10} {met['model']['nfe']:>4} {params if params else '-':>9} "
+            f"{n:<12} {met['model']['nfe']:>4} {params if params else '-':>9} "
             + " ".join(f"{lat[s]['ratio']:>6.2f}x" for s in scales)
-            + f" {lat['1']['bias']*100:>7.3f} {lat['1']['cell_chi2']:>7.2f}"
+            + f" {lat['1']['bias']*100:>7.3f} {chi2:>7.2f} {ab:>24}"
             + f" {sliced:>7.2f} {c2st:>6.1f} {cost['clamped_frac']*100:>7.2f}"
             + f" {cost['t_per_crossing_gmc']*1e6:>9.2f} {cost['speedup']:>8.4g}x"
             + f" {cost['breakeven_scatters']:>8,.0f}")
@@ -87,6 +91,14 @@ def main():
     if len(set(machines.values())) > 1:
         warn.append("! speed columns come from different machines:")
         warn += [f"    {n:<10} {m}" for n, m in machines.items()]
+    old = [n for n, (met, _) in data.items() if "absorber" not in met]
+    if old:
+        warn.append(f"! {', '.join(old)}: scored by the pipeline before 28 Sept 2026 "
+                    f"(2 GMC solves, old chi2, no absorber test); re-run to compare")
+    budget = [n for n, (met, _) in data.items() if any("fairness budget" in w
+                                                    for w in met.get("warnings", []))]
+    if budget:
+        warn.append(f"! {', '.join(budget)}: parameter count outside the fairness budget")
     if "free" in data:
         warn.append("  free's accuracy columns are meaningless by design (it draws noise); "
                     "read only its cost columns")
@@ -97,8 +109,11 @@ def main():
         head, "-" * len(head), *lines, "-" * len(head),
         f"x<scale>  lattice error as a multiple of the Monte Carlo noise floor "
         f"(1.00 = as good as MC)",
-        "bias%    systematic error at scale 1 with the noise averaged out; "
-        "chi2 = per-cell bias test (~1 is clean)",
+        "bias%    systematic error at scale 1 with the noise averaged out",
+        "chi2max  per-cell bias test, worst scale (exact MC scores 0.3-2.3; well above "
+        "~2.5 = systematic error)",
+        "absorber weight surviving one absorber cell, model / MC, at each scale "
+        "(1.00 = right)",
         "sliced   joint exit-state distance, x the MC floor, mean over the cell shapes",
         f"C2ST%    classifier accuracy telling model from MC (50 = cannot; MC vs MC "
         f"scores {floor_c2st:.1f})",
@@ -107,7 +122,7 @@ def main():
         "b-even   scattering events one crossing must replace before GMC wins",
         *warn,
         "",
-        "runs:", *[f"  {n:<10} {runs[n]}  ({machines[n]})" for n in order],
+        "runs:", *[f"  {n:<12} {runs[n]}  ({machines[n]})" for n in order],
     ])
     (RESULTS / "comparison.txt").write_text(text + "\n")
     print(text)

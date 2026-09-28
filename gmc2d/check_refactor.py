@@ -3,8 +3,9 @@
 
 On 23 Sept 2026 the flow-matching ODE solve and training loop moved out of
 sampler.py and train.py into generators/cfm.py, behind the Generator
-interface.  That is only safe if every number the old code produced, the new
-code produces too -- not approximately, BIT FOR BIT.  This script runs the
+interface; on 28 Sept the training loop moved on again, into the shared
+generators/training.py.  Each move is only safe if every number the old code
+produced, the new code produces too -- not approximately, BIT FOR BIT.  This script runs the
 old code (read straight out of git at commit 81d8340, so it cannot drift)
 side by side with the new code on identical inputs and compares with
 np.array_equal, not a tolerance.

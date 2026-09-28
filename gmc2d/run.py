@@ -5,6 +5,8 @@
     python run.py oracle         exact Monte Carlo walks  (accuracy goalpost)
     python run.py free           a draw that costs nothing (cost goalpost)
     python run.py cfm train      retrain even if a checkpoint exists
+    python run.py cfm train seed=1   a second training seed, kept apart as
+                                 models/cfm-seed1/ and results/cfm-seed1/
 
 Every model goes through exactly the same steps, which is the point:
 
@@ -13,11 +15,16 @@ Every model goes through exactly the same steps, which is the point:
                checked on load, so a model trained on an older dataset
                cannot be silently scored as if it were current.
   2. MODEL     load models/<name>/, or train it there if it does not exist.
-  3. CELLS     exit distributions vs MC, marginals and joint (metrics.py).
+  3. CELLS     exit distributions vs MC, marginals and joint, and the
+               weight surviving one absorber cell (metrics.py).
   4. LATTICE   benchmark.N particles at every scale in benchmark.SCALES,
                scored against the frozen reference in reference/.
   5. SPEED     the same sweep evaluate.py ran, MC and GMC timed on this
                machine in this process.
+
+The rules that make a comparison between families fair (same data, same
+time cap, a parameter count near cfm's, two training seeds) are written out
+in generators/base.py.
 
 Writes results/<name>/<timestamp>/:
     metrics.json     every number; compare.py reads only this
@@ -61,25 +68,34 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MIN_TIME = 0.25                         # repeat MC until it has run this long
 # sampling-time settings per model (training settings live in the model file)
 SETTINGS = {"cfm": {"steps": 5, "solver": "heun"}}
+# fairness: every learned model's parameter count within +-20% of cfm's
+# (the shipped VelocityField, width 256, depth 5), see generators/base.py
+CFM_PARAMS = 1_676_678
+PARAM_BUDGET = (0.8 * CFM_PARAMS, 1.2 * CFM_PARAMS)
 
 
 # ------------------------------------------------------------ 1-2. model
-def get_model(name, ds, data_hash, retrain):
+def tag(name, seed):
+    """Folder name for a model at a training seed: seed 0 keeps the plain name."""
+    return name if seed == 0 else f"{name}-seed{seed}"
+
+
+def get_model(name, ds, data_hash, retrain, seed=0):
     cls = REGISTRY[name]
     info = {"checkpoint": None, "train": None, "warnings": []}
     if not cls.trainable:
         return cls(ds["ynorm"]), info
 
-    ckpt = MODELS / name
-    if (name == "cfm" and not (ckpt / "model.pt").exists()
+    ckpt = MODELS / tag(name, seed)
+    if (name == "cfm" and seed == 0 and not (ckpt / "model.pt").exists()
             and (MODELS / "model.pt").exists() and not retrain):
         ckpt = MODELS                     # written by train.py before the pipeline
         info["warnings"].append("legacy checkpoint in models/ (from train.py)")
 
     if retrain or not (ckpt / "model.pt").exists():
-        ckpt = MODELS / name
-        print(f"training {name} into {ckpt}/ (cap {TIME_CAP / 3600:.1f} h)")
-        gen = cls(device=DEVICE, **SETTINGS.get(name, {}))
+        ckpt = MODELS / tag(name, seed)
+        print(f"training {name} (seed {seed}) into {ckpt}/ (cap {TIME_CAP / 3600:.1f} h)")
+        gen = cls(device=DEVICE, seed=seed, **SETTINGS.get(name, {}))
         facts = gen.fit(ds, ckpt, TIME_CAP)
         gen.save(ckpt)
         save_norm(ckpt / "norm.json", ds["ynorm"], ds["cnorm"], gen.config)
@@ -103,6 +119,11 @@ def get_model(name, ds, data_hash, retrain):
     else:
         info["warnings"].append("no train_info.json: dataset hash not recorded at "
                                 "training time; normaliser match checked instead")
+    params = gen.describe().get("params")
+    if params and not PARAM_BUDGET[0] <= params <= PARAM_BUDGET[1]:
+        info["warnings"].append(
+            f"{params:,} parameters is outside the fairness budget "
+            f"{PARAM_BUDGET[0]:,.0f}-{PARAM_BUDGET[1]:,.0f} (cfm +-20%)")
     info["checkpoint"] = str(ckpt)
     return gen, info
 
@@ -263,7 +284,7 @@ def cost_breakdown(t_mc, m, g):
             "net_frac": g["wall_net"] / g["wall"]}
 
 
-def report(name, gen, info, cells, lattice, cost, m, g, rows, verdict, extra):
+def report(name, gen, info, cells, absorber, lattice, cost, m, g, rows, verdict, extra):
     cell_tbl = "\n".join(
         f"{c['W']:>5.1f} {c['H']:>5.1f} "
         + "  ".join(f"{c[k][0]:>5.2f}/{c[k][1]:>4.2f}" for k in ("p", "Ox", "log s"))
@@ -272,9 +293,14 @@ def report(name, gen, info, cells, lattice, cost, m, g, rows, verdict, extra):
         + f"  {c['c2st_floor'][0]*100:>5.1f} ({c['c2st_floor'][1]:>+5.1f})"
         + f"   {c['uncollided_mc']*100:>5.1f} {c['uncollided_gmc']*100:>5.1f}"
         for c in cells)
+    ab_tbl = "\n".join(
+        f"{s:>6g} {a['W']:>6.1f} "
+        + "  ".join(f"{r['mc']:.4e} {r['model']:.4e} {r['ratio']:>6.3f} {r['z']:>+6.1f}"
+                    for r in a["entries"])
+        for s, a in absorber.items())
     lat_tbl = "\n".join(
         f"{s:>6g} {a['error']*100:>8.3f} {a['floor']*100:>8.3f} {a['ratio']:>7.2f}x "
-        f"{a['bias']*100:>8.3f} {a['bias_noise_only']*100:>8.3f} {a['cell_chi2']:>9.2f} "
+        f"{a['bias']*100:>8.3f} {a['bias_noise_only']*100:>8.3f} {a['cell_chi2']:>6.2f} ({a['cell_chi2_cells']:>2}) "
         f"{a['flux_ratio']:>8.4f} {a['cell_rel_median']*100:>7.2f} {a['cell_rel_max']*100:>8.1f}"
         for s, a in lattice.items())
     sweep = "\n".join(
@@ -319,6 +345,18 @@ runs, i.e. what "indistinguishable" looks like at this sample size.
 {cell_tbl}
 
 ----------------------------------------------------------------------
+1b. ABSORBER TAIL: weight surviving one absorber cell, model vs MC
+----------------------------------------------------------------------
+solve.py multiplies the weight by exp(-{absorber[B.SCALES[0]]['sig_a_over_sig_s']:.0f} s) per absorber crossing, so
+this mean is decided by the rare SHORTEST paths, which section 1 barely
+sees.  Same cell and entry for model and MC, {M.ABSORBER_N:,} samples each.
+Ratio 1.00 = right; below 1 = the model lets too little through.
+
+                entry {M.ABSORBER_ENTRIES[0]}                       entry {M.ABSORBER_ENTRIES[1]}
+ scale      W  MC         model       ratio      z  MC         model       ratio      z
+{ab_tbl}
+
+----------------------------------------------------------------------
 2. FULL PROBLEM vs the frozen reference ({B.N:,} particles per solve)
 ----------------------------------------------------------------------
 Reference: reference/lattice_x*.npz (mc.py, {extra['ref_histories']}),
@@ -327,10 +365,12 @@ L2 difference of the 7x7 cell fluxes.  Floor = the same number for
 {extra['floor_k']} independent mc.py solves at the same particle count, i.e.
 what an exact method scores.  Ratio 1.00 = as good as Monte Carlo.
 Bias = the {len(B.GMC_SEEDS)} GMC fields averaged; "noise only" is what that
-average would score if the model were exact.  cell chi2 ~ 1 means every
-cell is right to within statistics; >> 1 means systematic error.
+average would score if the model were exact.  cell chi2: per-cell bias
+test over the cells one {B.N:,}-particle MC solve resolves to better than
+{M.CHI2_MIN_REL:.0%} (count in brackets), in units of the model runs' own spread.
+Exact Monte Carlo scores 0.3-2.3 (mean ~1); well above ~2.5 = systematic error.
 
- scale  error %  floor %   ratio   bias %  noise %  cell chi2  flux GMC/ref  med %  worst %
+ scale  error %  floor %   ratio   bias %  noise %   cell chi2  flux GMC/ref  med %  worst %
 {lat_tbl}
 
 At the published scale: floor range {a1['floor_lo']*100:.2f}-{a1['floor_hi']*100:.2f} %, \
@@ -389,22 +429,28 @@ geometry has {cost['scatters_per_crossing']:.1f} per crossing, so cells must be
 # ------------------------------------------------------------------ main
 def main():
     args = sys.argv[1:]
-    if not args or args[0] not in REGISTRY or set(args[1:]) - {"train"}:
-        sys.exit(f"usage: python run.py <{'|'.join(REGISTRY)}> [train]")
+    seeds = [a for a in args[1:] if a.startswith("seed=")]
+    usage = f"usage: python run.py <{'|'.join(REGISTRY)}> [train] [seed=K]"
+    if (not args or args[0] not in REGISTRY or set(args[1:]) - {"train"} - set(seeds)
+            or len(seeds) > 1 or (seeds and not seeds[0][5:].isdigit())):
+        sys.exit(usage)
     name, retrain = args[0], "train" in args[1:]
+    seed = int(seeds[0][5:]) if seeds else 0
+    if seed and not REGISTRY[name].trainable:
+        sys.exit(f"{name} is not trained, so it has no training seed")
 
     print(f"data  {DATA}")
     data_hash = B.sha256(DATA)
     torch.manual_seed(SPLIT_SEED)
     ds = load_dataset(DATA, VAL_FRAC, SPLIT_SEED)
-    gen, info = get_model(name, ds, data_hash, retrain)
+    gen, info = get_model(name, ds, data_hash, retrain, seed)
     sampler = CellSampler(gen, ds["ynorm"], ds["cnorm"])
     del ds
     print(f"model {json.dumps(gen.describe())}")
     for w in info["warnings"]:
         print(f"  ! {w}")
 
-    out = RESULTS / name / time.strftime("%Y-%m-%dT%H%M%S")
+    out = RESULTS / tag(name, seed) / time.strftime("%Y-%m-%dT%H%M%S")
     out.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(B.SEED)
     extra = {"notes": []}
@@ -420,6 +466,12 @@ def main():
               f"{c['log s'][1]:.2f}   sliced {c['sliced_w1'][0]:.2f}   "
               f"C2ST {c['c2st_model'][0]*100:.1f}% (floor {c['c2st_floor'][0]*100:.1f}%)",
               flush=True)
+
+    print(f"\n1b. absorber tail: weight surviving one absorber cell ({M.ABSORBER_N:,} per entry)")
+    absorber = M.absorber_transmission(sampler, B.SCALES)
+    for sc, a in absorber.items():
+        print(f"   scale {sc:>3g}  W {a['W']:>5.1f}  model/MC " + "  ".join(
+            f"{r['ratio']:.3f} (z {r['z']:+.1f})" for r in a["entries"]), flush=True)
 
     print(f"\n2. full problem vs the frozen reference ({B.N:,} particles)")
     lattice, fields, refs, g_stats = {}, {}, {}, {}
@@ -471,10 +523,10 @@ def main():
         extra["notes"].append(f"oracle ran {gen.walks:,} Monte Carlo walks in total "
                               f"(rejected uncollided walks included)")
 
-    text = report(name, gen, info, cells, lattice, cost, m_stats, g_stats[s1],
-                  rows, verdict, extra)
-    metrics = {"model": gen.describe(), "name": name, "cells": cells,
-               "lattice": lattice, "cost": cost,
+    text = report(name, gen, info, cells, absorber, lattice, cost, m_stats,
+                  g_stats[s1], rows, verdict, extra)
+    metrics = {"model": gen.describe(), "name": name, "train_seed": seed, "cells": cells,
+               "absorber": absorber, "lattice": lattice, "cost": cost,
                "mc_stats": m_stats, "gmc_stats": g_stats,
                "speed": rows, "verdict": verdict, "crossover_mfp": crossover,
                "train": info["train"], "warnings": info["warnings"],

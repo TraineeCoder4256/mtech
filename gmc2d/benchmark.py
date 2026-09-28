@@ -31,7 +31,12 @@ SCALES = [1, 4, 10, 20]      # cross-section multipliers; 1 = the published prob
 N = 20000                    # particles per solve when scoring accuracy
 SPEED_N = 4000               # particles per solve in the speed sweep
 SEED = 1
-GMC_SEEDS = (SEED + 7, SEED + 77)   # the two GMC realisations evaluate.py used
+# GMC realisations per scale.  The first two are the ones evaluate.py used,
+# so its numbers are still reproducible from the first two fields.  Two was
+# too few: the ratio error/floor then wobbles by about +-30%, and the exact
+# oracle scored 1.52x at scale 1 (1.10x with 8 solves).  Six also gives the
+# per-cell bias test in metrics.py a spread with 5 degrees of freedom.
+GMC_SEEDS = (SEED + 7, SEED + 77, SEED + 177, SEED + 277, SEED + 377, SEED + 477)
 
 REFERENCE = pathlib.Path("reference")
 

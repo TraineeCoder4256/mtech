@@ -1,6 +1,6 @@
 """Every number a model is scored by.  Shared by run.py for every model.
 
-Three levels, from one cell up to the whole problem.
+Four checks, from one cell up to the whole problem.
 
 1. CELL PHYSICS, MARGINALS -- ported unchanged from evaluate.py.  For a few
    cell shapes at fresh entry conditions, the Wasserstein-1 distance between
@@ -25,6 +25,10 @@ Three levels, from one cell up to the whole problem.
                  with its z against 50%, and with the same test run on two MC
                  samples so the classifier's own bias is visible.
 
+2b. THE ABSORBER TAIL -- new.  The weight that survives one absorber cell,
+   model vs MC.  It depends on the rare shortest paths, which the tests
+   above barely see, and it is where cfm fails as cells thicken.
+
 3. THE WHOLE PROBLEM -- scored against the frozen reference (benchmark.py),
    not against a fresh noisy MC run.  Every error is quoted beside the NOISE
    FLOOR: how far an exact method with the same particle count lands from
@@ -38,6 +42,7 @@ import mc
 CELL_SHAPES = [(1.0, 1.0), (4.0, 4.0), (4.0, 1.0), (1.0, 4.0), (8.0, 2.0)]
 CELL_N = 20000
 N_DIRS = 64
+CHI2_MIN_REL = 0.2      # chi2 scores only cells one N-particle MC solve resolves this well
 C2ST_STEPS, C2ST_WIDTH = 400, 64
 
 
@@ -133,6 +138,52 @@ def cell_check(sampler, rng):
     return rows
 
 
+# ------------------------------------------- 2b. the absorber-cell tail
+ABSORBER_N = 100000
+ABSORBER_ENTRIES = [(0.5, 1.0, 0.0), (0.3, 0.6, 0.5)]   # (xi, Omega_x, Omega_y)
+
+
+def absorber_transmission(sampler, scales):
+    """How much weight survives one crossing of an absorber cell, model vs MC.
+
+    solve.py multiplies a particle's weight by exp(-sig_a * s_cm) each time it
+    crosses an absorber cell, with s_cm = s / sig_s the path in cm.  So what
+    the lattice needs from the model in those cells is not the typical path
+    but mean(exp(-(sig_a/sig_s) * s)), and with sig_a/sig_s = 19 that mean is
+    decided by the SHORTEST paths: particles that scatter near the entry face
+    and leave again.  About 0.8% of crossings, at s ~ 0.05 mean free paths,
+    carry two thirds of it, whatever the cell size (runs/2026-09-23/FINDINGS.md).
+    The marginal and joint tests above weigh every sample equally and barely
+    see that tail; this test weighs it the way the transport does.
+
+    Same cell, same entry, model and mc.sample_cell, for each scale's absorber
+    cell (W = H = sig_s x pitch).  Returns per scale and entry: the MC and
+    model means, their ratio (1.00 = right), and z of the difference.
+    """
+    out = {}
+    for sc in scales:
+        prob = mc.lattice(sc)
+        ab = prob["sig_a"] > 0
+        ss = float(np.unique(prob["sig_s"][ab]).item())
+        kappa = float(np.unique(prob["sig_a"][ab]).item()) / ss
+        W = ss * prob["pitch"]
+        rows = []
+        for j, (xi, ox, oy) in enumerate(ABSORBER_ENTRIES):
+            a = mc.sample_cell(ABSORBER_N, W, W, xi=xi, direction=(ox, oy),
+                               seed=4_000_000 + 1000 * j + int(sc))
+            g = sampler.sample(np.full(ABSORBER_N, W), np.full(ABSORBER_N, W),
+                               np.full(ABSORBER_N, xi), np.full(ABSORBER_N, ox),
+                               np.full(ABSORBER_N, oy), seed=5_000_000 + 1000 * j + int(sc))
+            tm, tg = np.exp(-kappa * a["s"]), np.exp(-kappa * g["s"])
+            se = np.hypot(tm.std(), tg.std()) / np.sqrt(ABSORBER_N)
+            rows.append({"xi": xi, "ox": ox, "oy": oy, "mc": float(tm.mean()),
+                         "model": float(tg.mean()), "ratio": float(tg.mean() / tm.mean()),
+                         "z": float((tg.mean() - tm.mean()) / se)})
+        out[sc] = {"W": W, "sig_a_over_sig_s": kappa, "entries": rows,
+                   "ratio": float(np.mean([r["ratio"] for r in rows]))}
+    return out
+
+
 # ------------------------------------------------------- 3. whole problem
 def lattice_accuracy(gmc_cells, ref):
     """Score GMC macro-cell fields against the frozen reference.
@@ -148,11 +199,34 @@ def lattice_accuracy(gmc_cells, ref):
     errs = [rel_l2(g, R) for g in gmc_cells]
     G = np.mean(gmc_cells, 0)
 
-    # per-cell bias test: one N-particle solve scatters by the spread of the
-    # floor runs; the mean of the GMC runs by that over sqrt(#runs)
-    sd_n = floor_runs.std(0, ddof=1)
-    se = np.sqrt(sd_n ** 2 / len(gmc_cells) + ref["mc_cell_se"] ** 2)
-    z = (G - R) / np.where(se > 0, se, np.inf)
+    # per-cell bias test.  Each cell's z compares the mean of the GMC fields
+    # with the reference, in units of that mean's own standard error, taken
+    # from the SPREAD OF THE GMC RUNS THEMSELVES (a model need not scatter
+    # like Monte Carlo).
+    #
+    # Only cells that one N-particle MC solve resolves to better than
+    # CHI2_MIN_REL are scored.  That resolution is read off the 40M-history
+    # reference (its standard error scaled from its history count to N),
+    # NOT off the 6 floor runs: in a dark cell most N-particle solves score
+    # nothing and a rare one scores a lot, so 6 runs can all be zero or all
+    # alike and look perfectly resolved while the next run is off by 300%.
+    # Those cells made the old test score an EXACT method at chi2 = 101
+    # (oracle, scale 10) and 5,900 (fresh MC, scale 10).
+    #
+    # With n runs the spread has n-1 degrees of freedom, so z follows a
+    # Student t and an exact method averages z^2 = (n-1)/(n-3), not 1.  The
+    # reported chi2 divides that out.  Calibrated on 12 groups of 6 fresh
+    # exact MC solves per scale: group means 1.04, 0.84, 0.63, 1.03 at scales
+    # 1, 4, 10, 20, single groups from 0.33 to 2.28.  So ~1 is clean, and
+    # well above ~2.5 is a systematic error.
+    n = len(gmc_cells)
+    rel_n = (ref["mc_cell_se"] / np.maximum(R, 1e-300)
+             * np.sqrt(float(ref["mc_histories"]) / float(ref["floor_n"])))
+    scored = (R > 0) & (rel_n < CHI2_MIN_REL)
+    se = np.sqrt(np.var(gmc_cells, 0, ddof=1) / n + ref["mc_cell_se"] ** 2)
+    scored &= se > 0
+    z = (G - R)[scored] / se[scored]
+    t_var = (n - 1) / (n - 3) if n > 3 else np.nan
     relc = np.abs(G - R) / np.maximum(R, 1e-300)
     out = {
         "error": float(np.mean(errs)), "errors": errs,
@@ -165,7 +239,8 @@ def lattice_accuracy(gmc_cells, ref):
         "cell_rel_median": float(np.median(relc)),
         "cell_rel_p90": float(np.percentile(relc, 90)),
         "cell_rel_max": float(relc.max()),
-        "cell_chi2": float(np.mean(z ** 2)),
+        "cell_chi2": float(np.mean(z ** 2) / t_var),
+        "cell_chi2_cells": int(scored.sum()),
         "cell_max_abs_z": float(np.abs(z).max()),
     }
     if len(gmc_cells) > 1:
