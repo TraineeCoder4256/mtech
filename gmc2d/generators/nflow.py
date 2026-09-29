@@ -58,8 +58,22 @@ width 192, K = 8).  It even reuses cfm's residual block (model.FiLMBlock),
 so the two families are built from the same bricks and differ in how the
 bricks are used.
 
-TUNING TRIALS (at most base.TUNING_RUNS = 4, recorded here):
-  (filled in below once the trials are run)
+TUNING TRIALS (at most base.TUNING_RUNS = 4, recorded here).  3,000 steps
+each, seed 0, everything else as below; NLL in nats per sample, validation
+on the EMA weights, 29 Sept 2026 on 4 CPU cores:
+
+  trial  change                    params     train NLL  val NLL  time
+  1      none (8 x 192, K = 8)     1,716,648  1.46       2.93     22 min
+  2      K = 16 spline pieces      1,827,816  1.45       2.97     19 min
+  3      12 layers of width 152    1,743,612  1.44       2.88     23 min
+
+  All three are within 0.1 nats of each other while the loss was still
+  falling by ~0.2 nats every 500 steps, so at this budget the shape of the
+  flow is not what limits it; training length is.  Trial 1 kept: it ties,
+  and it has the fewest sequential steps per draw, which is what sampling
+  cost depends on.  The validation NLL sits well above the training NLL in
+  short trials because the EMA weights trail a fast-moving model.  One trial
+  is left unused.
 """
 import math
 import pathlib
