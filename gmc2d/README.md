@@ -25,6 +25,7 @@ python validate.py       # ~20 s    -> checks the MC baseline against exact resu
 python make_data.py      # ~2 s     -> data/cells.npz (65 MiB, 2.88M rows)
 python run.py cfm        # ~50 min training the first time, then ~10 min
                          #          -> models/cfm/ + results/cfm/<timestamp>/
+python run.py nflow      # the normalizing flow, the second family
 python run.py oracle     # the accuracy goalpost (exact MC walks)
 python run.py free       # the cost goalpost (a draw that costs nothing)
 python compare.py        # -> results/comparison.txt, comparison.pdf
@@ -143,7 +144,8 @@ data.py            encodings, normalisation, leak-free dataset split
 model.py           the velocity field, the CFM loss, weight averaging
 generators/        one file per model: base.py (the interface and the
                    fairness rules), training.py (the shared training loop),
-                   cfm.py, oracle.py, free.py
+                   cfm.py (flow matching), nflow.py (normalizing flow),
+                   oracle.py, free.py
 sampler.py         CellSampler: the physics around any model's draw
 solve.py           chain the sampler across a mesh
 make_data.py       the training set

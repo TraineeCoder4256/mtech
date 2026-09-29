@@ -9,11 +9,13 @@ model sits between: `oracle` has zero model error (accuracy goalpost) and
 `free` has zero model cost (cost goalpost).
 """
 from generators.cfm import CFM
+from generators.nflow import NFlow
 from generators.oracle import Oracle
 from generators.free import Free
 
 REGISTRY = {
     "cfm": CFM,
+    "nflow": NFlow,
     "oracle": Oracle,
     "free": Free,
 }
