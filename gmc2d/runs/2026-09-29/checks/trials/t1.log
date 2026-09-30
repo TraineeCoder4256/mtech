@@ -1,0 +1,11 @@
+nflow  8 layers  width 192  bins 8  jitter 0.05
+model  1,716,648 params
+train  3,000 steps at batch 4,096 = 9 nominal epochs
+
+step    500 (ep   1.4)  train 3.2529  val(EMA) 6.5699  10,712 samp/s
+step   1000 (ep   2.9)  train 2.4713  val(EMA) 5.2983  7,525 samp/s
+step   1500 (ep   4.3)  train 2.0549  val(EMA) 4.6957  8,390 samp/s
+step   2000 (ep   5.7)  train 1.8926  val(EMA) 3.9975  8,885 samp/s
+step   2500 (ep   7.1)  train 1.5526  val(EMA) 3.4122  9,200 samp/s
+step   3000 (ep   8.6)  train 1.4605  val(EMA) 2.9331  9,381 samp/s
+RESULT t1_default {"steps_done": 3000, "train_seconds": 1310.0938181877136, "final_train_loss": 1.4604791234767238, "final_val_loss": 2.9330625534057617, "seed": 0, "params": 1716648, "settings": {"LAYERS": 8, "WIDTH": 192, "BINS": 8, "LR": 0.002, "JITTER": 0.05, "STEPS": 3000}}

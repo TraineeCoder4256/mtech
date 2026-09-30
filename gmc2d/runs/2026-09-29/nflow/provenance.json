@@ -1,0 +1,107 @@
+{
+ "model": {
+  "name": "nflow",
+  "nfe": 1,
+  "train_config": {
+   "layers": 8,
+   "width": 192,
+   "bins": 8,
+   "emb": 128,
+   "bound": 5.0,
+   "jitter": 0.05,
+   "x_dim": 6,
+   "c_dim": 5,
+   "steps": 20000,
+   "batch": 4096,
+   "lr": 0.002,
+   "seed": 0
+  },
+  "params": 1716648,
+  "layers": 8
+ },
+ "command": "run.py nflow",
+ "git_commit": "505a97415e4f0f21565afef309ff8fda35cf10a9",
+ "git_dirty": false,
+ "data_sha256": "c92233ce06e91662db2332e25b1536779fcd8f2d2ccd2f6e8c0c41cb5643ad23",
+ "checkpoint": "models/nflow",
+ "train": {
+  "steps_done": 20000,
+  "train_seconds": 7356.352362394333,
+  "final_train_loss": 0.7125668334641713,
+  "final_val_loss": 0.7643946409225464,
+  "seed": 0,
+  "params": 1716648,
+  "data_sha256": "c92233ce06e91662db2332e25b1536779fcd8f2d2ccd2f6e8c0c41cb5643ad23",
+  "config": {
+   "layers": 8,
+   "width": 192,
+   "bins": 8,
+   "emb": 128,
+   "bound": 5.0,
+   "jitter": 0.05,
+   "x_dim": 6,
+   "c_dim": 5,
+   "steps": 20000,
+   "batch": 4096,
+   "lr": 0.002,
+   "seed": 0
+  }
+ },
+ "warnings": [],
+ "reference_manifest_sha256": "22b2a2e10e6d1299ac21c6753fe54fefd4aa55fa6fa2186a32864974bbea3dde",
+ "protocol": {
+  "scales": [
+   1,
+   4,
+   10,
+   20
+  ],
+  "N": 20000,
+  "speed_n": 4000,
+  "seed": 1,
+  "gmc_seeds": [
+   8,
+   78,
+   178,
+   278,
+   378,
+   478
+  ],
+  "cell_n": 20000,
+  "cell_shapes": [
+   [
+    1.0,
+    1.0
+   ],
+   [
+    4.0,
+    4.0
+   ],
+   [
+    4.0,
+    1.0
+   ],
+   [
+    1.0,
+    4.0
+   ],
+   [
+    8.0,
+    2.0
+   ]
+  ]
+ },
+ "hardware": {
+  "cpu": "Intel(R) Xeon(R) Processor @ 2.80GHz",
+  "cores": 4,
+  "device": "cpu",
+  "torch_threads": 4,
+  "gpu": null
+ },
+ "versions": {
+  "python": "3.12.14",
+  "numpy": "2.5.3",
+  "numba": "0.67.0",
+  "torch": "2.14.0+cu130"
+ }
+}

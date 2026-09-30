@@ -1,0 +1,24 @@
+MODEL COMPARISON  (latest run of each; accuracy vs the frozen reference)
+========================================================================================================================================================
+model         nfe    params      x1      x4     x10     x20   bias% chi2max      absorber x1/4/10/20  sliced  C2ST%  clamp%  us/cross   speedup   b-even
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+oracle          0         -   1.22x   0.83x   1.01x   0.97x   0.503    1.79      0.97/0.99/1.00/0.98    1.00   50.0    0.00      1.43   0.1869x        5
+free            0         -  31.07x  23.55x  18.18x  40.59x  30.361 3167.51      0.92/0.08/0.01/0.00   22.68   81.2   38.92      2.03   0.1049x        8
+cfm            10   1676678   1.16x   1.34x   1.32x   3.74x   0.387   56.21      0.90/0.56/0.32/0.17    2.21   51.3    5.38     72.97 0.002703x      330
+nflow           1   1716648   1.55x   1.24x   3.31x   3.78x   1.036   41.47      1.08/0.98/0.90/0.78    1.56   50.8    0.62     21.00  0.01261x       71
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+x<scale>  lattice error as a multiple of the Monte Carlo noise floor (1.00 = as good as MC)
+bias%    systematic error at scale 1 with the noise averaged out
+chi2max  per-cell bias test, worst scale (exact MC scores 0.3-2.3; well above ~2.5 = systematic error)
+absorber weight surviving one absorber cell, model / MC, at each scale (1.00 = right)
+sliced   joint exit-state distance, x the MC floor, mean over the cell shapes
+C2ST%    classifier accuracy telling model from MC (50 = cannot; MC vs MC scores 50.0)
+us/cross time per macro-cell crossing at scale 1; speedup = MC time / GMC time at scale 1
+b-even   scattering events one crossing must replace before GMC wins
+  free's accuracy columns are meaningless by design (it draws noise); read only its cost columns
+
+runs:
+  oracle       results/oracle/2026-09-28T050509  (Intel(R) Xeon(R) Processor @ 2.80GHz x4 cpu)
+  free         results/free/2026-09-28T050430  (Intel(R) Xeon(R) Processor @ 2.80GHz x4 cpu)
+  cfm          results/cfm/2026-09-28T050543  (Intel(R) Xeon(R) Processor @ 2.80GHz x4 cpu)
+  nflow        results/nflow/2026-09-29T120409  (Intel(R) Xeon(R) Processor @ 2.80GHz x4 cpu)
