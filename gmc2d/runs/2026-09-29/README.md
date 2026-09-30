@@ -51,5 +51,28 @@ was still falling at the last step (0.84 at step 19,500, 0.76 at 20,000).
   equal at scales 4 and 20. Both families lose 4.5% of the flux at scale 20,
   even though the flow's absorber number is much better. So the scale-20 loss
   is not only the absorber tail. This is an observation, not yet a diagnosis.
-- One training seed is not a ranking. Seed 1 is training now (fairness rule,
-  `generators/base.py`).
+
+## Seed 1 (added 30 Sept)
+
+`nflow-seed1/`: `python run.py nflow train seed=1`, the same code and settings
+with training seed 1. It ran on a different machine (Xeon @ 2.10 GHz x4, after
+a container restart; seed 0 and all of 28 Sept ran on a Xeon @ 2.80 GHz x4),
+so its absolute times are not comparable with the rows above. Its speed ratio
+against Monte Carlo is measured on its own machine and is comparable.
+
+| | scale 1 | scale 4 | scale 10 | scale 20 |
+|---|---|---|---|---|
+| bias %, cfm | 0.39 | 0.82 | 1.17 | 3.70 |
+| bias %, nflow seed 0 | 1.04 | 0.63 | 3.37 | 3.71 |
+| bias %, nflow seed 1 | 1.25 | 0.50 | 2.92 | 3.13 |
+| total flux / reference, nflow seed 0 | 1.012 | 0.992 | 0.961 | 0.955 |
+| total flux / reference, nflow seed 1 | 1.012 | 0.994 | 0.965 | 0.962 |
+| absorber model/MC, nflow seed 1 | 1.01 | 0.95 | 0.87 | 0.76 |
+
+Training: 20,000 steps in 82.4 min, validation NLL 0.74 (seed 0: 0.76).
+Speed against MC at scale 1: 70x slower (seed 0: 79x, same code, other machine).
+
+The second seed confirms the first. The flow puts 1.2% too much flux through
+the scale-1 lattice at both seeds, is clearly worse than cfm at scale 10, and
+equal or slightly better at scale 20. The pattern is the family's, not one
+seed's. cfm itself still has only one training seed.

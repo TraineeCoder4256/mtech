@@ -1,0 +1,192 @@
+data  data/cells.npz
+training nflow (seed 1) into models/nflow-seed1/ (cap 3.0 h)
+nflow  8 layers  width 192  bins 8  jitter 0.05
+model  1,716,648 params
+train  20,000 steps at batch 4,096 = 57 nominal epochs
+
+step    500 (ep   1.4)  train 3.1960  val(EMA) 6.5167  16,189 samp/s
+step   1000 (ep   2.9)  train 2.4661  val(EMA) 5.1940  16,381 samp/s
+step   1500 (ep   4.3)  train 2.3242  val(EMA) 4.5467  16,406 samp/s
+step   2000 (ep   5.7)  train 2.1562  val(EMA) 3.8556  16,401 samp/s
+step   2500 (ep   7.1)  train 2.0864  val(EMA) 3.2440  16,394 samp/s
+step   3000 (ep   8.6)  train 1.8931  val(EMA) 2.7641  16,435 samp/s
+step   3500 (ep  10.0)  train 1.9566  val(EMA) 2.4107  16,513 samp/s
+step   4000 (ep  11.4)  train 1.8723  val(EMA) 2.1439  16,540 samp/s
+step   4500 (ep  12.9)  train 1.7921  val(EMA) 1.9276  16,513 samp/s
+step   5000 (ep  14.3)  train 1.7866  val(EMA) 1.7862  16,490 samp/s
+step   5500 (ep  15.7)  train 1.8326  val(EMA) 1.6802  16,511 samp/s
+step   6000 (ep  17.1)  train 1.6488  val(EMA) 1.6020  16,526 samp/s
+step   6500 (ep  18.6)  train 1.5809  val(EMA) 1.5027  16,547 samp/s
+step   7000 (ep  20.0)  train 1.5388  val(EMA) 1.4753  16,577 samp/s
+step   7500 (ep  21.4)  train 1.5504  val(EMA) 1.4501  16,568 samp/s
+step   8000 (ep  22.9)  train 1.5898  val(EMA) 1.3995  16,582 samp/s
+step   8500 (ep  24.3)  train 1.5628  val(EMA) 1.3855  16,595 samp/s
+step   9000 (ep  25.7)  train 1.5037  val(EMA) 1.3475  16,586 samp/s
+step   9500 (ep  27.1)  train 1.3985  val(EMA) 1.2903  16,600 samp/s
+step  10000 (ep  28.6)  train 1.4060  val(EMA) 1.2444  16,601 samp/s
+step  10500 (ep  30.0)  train 1.2728  val(EMA) 1.2296  16,608 samp/s
+step  11000 (ep  31.4)  train 1.3815  val(EMA) 1.2063  16,616 samp/s
+step  11500 (ep  32.9)  train 1.2131  val(EMA) 1.1552  16,607 samp/s
+step  12000 (ep  34.3)  train 1.2201  val(EMA) 1.1386  16,611 samp/s
+step  12500 (ep  35.7)  train 1.1073  val(EMA) 1.1224  16,607 samp/s
+step  13000 (ep  37.1)  train 1.0815  val(EMA) 1.0604  16,609 samp/s
+step  13500 (ep  38.6)  train 1.1532  val(EMA) 1.0403  16,608 samp/s
+step  14000 (ep  40.0)  train 1.0024  val(EMA) 1.0293  16,611 samp/s
+step  14500 (ep  41.4)  train 0.9620  val(EMA) 0.9738  16,614 samp/s
+step  15000 (ep  42.9)  train 0.9302  val(EMA) 0.9567  16,614 samp/s
+step  15500 (ep  44.3)  train 1.0878  val(EMA) 0.8695  16,620 samp/s
+step  16000 (ep  45.7)  train 0.9344  val(EMA) 0.9151  16,622 samp/s
+step  16500 (ep  47.1)  train 0.8896  val(EMA) 0.8365  16,628 samp/s
+step  17000 (ep  48.6)  train 0.8373  val(EMA) 0.8518  16,626 samp/s
+step  17500 (ep  50.0)  train 0.7907  val(EMA) 0.8169  16,618 samp/s
+step  18000 (ep  51.4)  train 0.7786  val(EMA) 0.7828  16,608 samp/s
+step  18500 (ep  52.9)  train 0.7407  val(EMA) 0.7954  16,604 samp/s
+step  19000 (ep  54.3)  train 0.7370  val(EMA) 0.7683  16,593 samp/s
+step  19500 (ep  55.7)  train 0.7143  val(EMA) 0.8022  16,585 samp/s
+step  20000 (ep  57.1)  train 0.7135  val(EMA) 0.7379  16,574 samp/s
+model {"name": "nflow", "nfe": 1, "train_config": {"layers": 8, "width": 192, "bins": 8, "emb": 128, "bound": 5.0, "jitter": 0.05, "x_dim": 6, "c_dim": 5, "steps": 20000, "batch": 4096, "lr": 0.002, "seed": 1}, "params": 1716648, "layers": 8}
+
+1. cell physics (marginals and joint)
+    1.0 x 1.0   p 0.01/0.01   Ox 0.02/0.01   log s 0.04/0.01   sliced 1.89   C2ST 50.9% (floor 49.5%)
+    4.0 x 4.0   p 0.01/0.02   Ox 0.01/0.01   log s 0.02/0.02   sliced 1.16   C2ST 50.9% (floor 50.5%)
+    4.0 x 1.0   p 0.02/0.00   Ox 0.02/0.01   log s 0.03/0.01   sliced 2.22   C2ST 51.6% (floor 49.4%)
+    1.0 x 4.0   p 0.01/0.01   Ox 0.01/0.00   log s 0.02/0.02   sliced 1.36   C2ST 50.7% (floor 50.1%)
+    8.0 x 2.0   p 0.04/0.01   Ox 0.03/0.02   log s 0.02/0.02   sliced 1.15   C2ST 50.7% (floor 50.3%)
+
+1b. absorber tail: weight surviving one absorber cell (100,000 per entry)
+   scale   1  W   0.5  model/MC 1.053 (z +1.5)  0.961 (z -1.3)
+   scale   4  W   2.0  model/MC 0.936 (z -1.9)  0.963 (z -1.2)
+   scale  10  W   5.0  model/MC 0.872 (z -3.9)  0.869 (z -4.6)
+   scale  20  W  10.0  model/MC 0.737 (z -8.4)  0.778 (z -8.1)
+
+2. full problem vs the frozen reference (20,000 particles)
+   scale   1  error   1.476 %  floor  0.979 %  ratio   1.51x  bias  1.253 %  cell chi2    3.06
+   scale   4  error   1.097 %  floor  0.930 %  ratio   1.18x  bias  0.499 %  cell chi2    6.43
+   scale  10  error   2.996 %  floor  1.040 %  ratio   2.88x  bias  2.924 %  cell chi2   13.95
+   scale  20  error   3.177 %  floor  1.000 %  ratio   3.18x  bias  3.131 %  cell chi2   26.70
+
+3. cost at the published scale (20,000 particles)
+   MC 0.0324 s   GMC 2.256 s   speedup 0.01436x   break-even 62 scatters per crossing
+
+4. speed sweep (4,000 particles per point)
+   scale   1  MC   0.0096s  GMC    0.61s  speedup  0.01579x
+   scale   4  MC   0.0094s  GMC    0.82s  speedup  0.01139x
+   scale  10  MC   0.0193s  GMC    1.24s  speedup  0.01551x
+   scale  20  MC   0.0468s  GMC    1.95s  speedup  0.02393x
+
+======================================================================
+NFLOW -- RAW NUMBERS
+======================================================================
+model       {"name": "nflow", "nfe": 1, "train_config": {"layers": 8, "width": 192, "bins": 8, "emb": 128, "bound": 5.0, "jitter": 0.05, "x_dim": 6, "c_dim": 5, "steps": 20000, "batch": 4096, "lr": 0.002, "seed": 1}, "params": 1716648, "layers": 8}
+trained     20000 steps in 82.4 min
+device      cpu
+cost class  1 network evaluations per collided sample
+
+
+----------------------------------------------------------------------
+1. CELL PHYSICS: sampled exit distributions vs Monte Carlo
+----------------------------------------------------------------------
+Marginals: Wasserstein-1 in units of the quantity's own spread, as
+model / MC-vs-MC floor (the same numbers evaluate.py prints).
+Joint: sliced W1 over 64 random directions of the whole exit state
+(position, direction, log path length), as a ratio to the MC floor, so
+1.00 = as close to MC as another MC run.  C2ST: a small classifier's
+held-out accuracy at telling model from MC (50% = cannot tell), with its
+z-score against 50%; the MC-vs-MC column is the same test between two MC
+runs, i.e. what "indistinguishable" looks like at this sample size.
+
+    W     H   p model/floor  Ox model/floor  log s m/f   sliced   C2ST model (z)  MC-vs-MC (z)   unc% MC GMC
+  1.0   1.0  0.01/0.01   0.02/0.01   0.04/0.01    1.89    50.9 ( +2.6)   49.5 ( -1.3)    42.6  43.5
+  4.0   4.0  0.01/0.02   0.01/0.01   0.02/0.02    1.16    50.9 ( +2.4)   50.5 ( +1.4)     0.1   0.1
+  4.0   1.0  0.02/0.00   0.02/0.01   0.03/0.01    2.22    51.6 ( +4.6)   49.4 ( -1.8)     1.6   1.5
+  1.0   4.0  0.01/0.01   0.01/0.00   0.02/0.02    1.36    50.7 ( +2.0)   50.1 ( +0.2)    29.9  30.1
+  8.0   2.0  0.04/0.01   0.03/0.02   0.02/0.02    1.15    50.7 ( +2.1)   50.3 ( +0.9)     9.7   9.7
+
+----------------------------------------------------------------------
+1b. ABSORBER TAIL: weight surviving one absorber cell, model vs MC
+----------------------------------------------------------------------
+solve.py multiplies the weight by exp(-19 s) per absorber crossing, so
+this mean is decided by the rare SHORTEST paths, which section 1 barely
+sees.  Same cell and entry for model and MC, 100,000 samples each.
+Ratio 1.00 = right; below 1 = the model lets too little through.
+
+                entry (0.5, 1.0, 0.0)                       entry (0.3, 0.6, 0.5)
+ scale      W  MC         model       ratio      z  MC         model       ratio      z
+     1    0.5 8.0254e-03 8.4542e-03  1.053   +1.5  1.0992e-02 1.0565e-02  0.961   -1.3
+     4    2.0 8.2432e-03 7.7120e-03  0.936   -1.9  1.1067e-02 1.0663e-02  0.963   -1.2
+    10    5.0 7.9833e-03 6.9588e-03  0.872   -3.9  1.0710e-02 9.3046e-03  0.869   -4.6
+    20   10.0 7.9426e-03 5.8574e-03  0.737   -8.4  1.0833e-02 8.4324e-03  0.778   -8.1
+
+----------------------------------------------------------------------
+2. FULL PROBLEM vs the frozen reference (20,000 particles per solve)
+----------------------------------------------------------------------
+Reference: reference/lattice_x*.npz (mc.py, 40,000,000 histories at scale 1),
+checked against OpenMC.  Error = mean over 6 GMC solves of the relative
+L2 difference of the 7x7 cell fluxes.  Floor = the same number for
+6 independent mc.py solves at the same particle count, i.e.
+what an exact method scores.  Ratio 1.00 = as good as Monte Carlo.
+Bias = the 6 GMC fields averaged; "noise only" is what that
+average would score if the model were exact.  cell chi2: per-cell bias
+test over the cells one 20,000-particle MC solve resolves to better than
+20% (count in brackets), in units of the model runs' own spread.
+Exact Monte Carlo scores 0.3-2.3 (mean ~1); well above ~2.5 = systematic error.
+
+ scale  error %  floor %   ratio   bias %  noise %   cell chi2  flux GMC/ref  med %  worst %
+     1    1.476    0.979    1.51x    1.253    0.400   3.06 (36)   1.0115    2.75     21.1
+     4    1.097    0.930    1.18x    0.499    0.380   6.43 (20)   0.9944   11.76    577.5
+    10    2.996    1.040    2.88x    2.924    0.425  13.95 (18)   0.9654   27.85   1116.9
+    20    3.177    1.000    3.18x    3.131    0.408  26.70 (16)   0.9624   55.97   7314.6
+
+At the published scale: floor range 0.81-1.10 %, GMC-vs-GMC 1.198 %
+(vs MC-vs-MC 1.307 %: equal = neither over- nor under-dispersed).
+Path lengths clamped to the straight-line minimum: 0.67 %
+
+----------------------------------------------------------------------
+3. COST AT THE PUBLISHED SCALE (same particle count, this machine)
+----------------------------------------------------------------------
+MONTE CARLO
+  wall time                         0.0324 s   (mean of repeated runs)
+  scattering events                148,398
+  scatters per particle               7.42
+  time per scattering event          218.2 ns
+
+GMC
+  wall time                         2.2556 s
+  macro-cell crossings             167,874
+  crossings per particle              8.39
+  batched sampler calls                400
+  crossings reaching the model      84,003   (50.0 %; the rest were uncollided)
+  network evaluations               84,003
+  time per macro-cell crossing       13.44 us
+  where the wall time goes
+    model                           2.1134 s  ( 93.7 %)
+    analog MC in the birth cell     0.0018 s  (  0.1 %)
+    geometry / tallies (NumPy)      0.1405 s  (  6.2 %)
+
+SPEEDUP                            0.01436 x
+
+----------------------------------------------------------------------
+4. BREAK-EVEN
+----------------------------------------------------------------------
+  MC   0.88 scatters x 218.2 ns = 0.19 us per crossing
+  GMC  13.44 us per crossing
+
+One GMC crossing costs as much as 62 scattering events, and this
+geometry has 0.9 per crossing, so cells must be
+~70x optically thicker before GMC wins.
+
+----------------------------------------------------------------------
+5. SPEED SWEEP (4,000 particles per point)
+----------------------------------------------------------------------
+ scale    W_bg    MC (s)   GMC (s)   speedup  scat/part  scat/cross  model%
+--------------------------------------------------------------------------
+     1     1.0     0.010      0.61   0.01579x        7.4         0.9   96.6%
+     4     4.0     0.009      0.82   0.01139x       22.1         3.6   91.8%
+    10    10.0     0.019      1.24   0.01551x       85.6        10.4   94.0%
+    20    20.0     0.047      1.95   0.02393x      275.7        23.5   97.5%
+
+GMC is SLOWER at every scale tested (up to 20 mfp).
+Best 0.0239x at 20 mfp; extrapolate with the break-even figure in section 4.
+======================================================================
+
+wrote results/nflow-seed1/2026-09-30T061730/
