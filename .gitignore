@@ -16,3 +16,6 @@ results/
 # loss curve and the log are all run artefacts, not source
 models/*
 docs/gmc_paper_src.html
+
+# gmc3d: generated cross-section libraries, ball datasets, OpenMC run folders
+gmc3d/data/
