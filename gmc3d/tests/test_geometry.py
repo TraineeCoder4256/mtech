@@ -15,7 +15,8 @@ from problems import PROBLEMS
 
 BOXES = {"sphere": [(-10, 10)] * 3, "slab": [(0, 60), (-100, 100), (-100, 100)],
          "lattice3d": [(0, 7), (0, 7), (-0.5, 0.5)],
-         "curved": [(-35, 35)] * 3, "nested": [(-10, 10)] * 3}
+         "curved": [(-35, 35)] * 3, "nested": [(-10, 10)] * 3,
+         "cask": [(-62, 100), (-40, 40), (-40, 40)]}     # inside r = 120
 
 
 def random_points(name, n, seed=0):

@@ -1,0 +1,120 @@
+
+== sphere: 4,000,000 histories per contender, 100,000 per batch
+  contender                         seconds vs OpenMC        FOM x (leakage)     FOM x (total flux)
+  OpenMC analog                        8.38     1.00x                  1.00x                  1.00x
+  OpenMC implicit                     14.45     0.58x                  1.33x                  3.27x
+  ours, plain MC                      14.22     0.59x                  1.23x                  2.57x
+  ours + exact walk (R* = 2)           5.11     1.64x                  2.01x                636.05x
+  ours + network (R* = 3)             22.88     0.37x                  0.46x                130.54x
+  ours + network (R* = 10)            13.87     0.60x                  1.26x                  2.64x
+  ours + table (R* = 2)                2.72     3.08x                  3.20x               1143.31x
+  answers (z against OpenMC analog):
+    OpenMC analog                    leakage 0.0314987 +- 8.6e-05 (z +0.0); total flux 9.67808 +- 0.0046 (z +0.0)
+    OpenMC implicit                  leakage 0.0317149 +- 5.7e-05 (z +2.1); total flux 9.6828 +- 0.0019 (z +0.9)
+    ours, plain MC                   leakage 0.0317291 +- 6e-05 (z +2.2); total flux 9.68423 +- 0.0022 (z +1.2)
+    ours + exact walk (R* = 2)       leakage 0.0318466 +- 7.8e-05 (z +3.0); total flux 9.68305 +- 0.00023 (z +1.1)
+    ours + network (R* = 3)          leakage 0.0316697 +- 7.7e-05 (z +1.5); total flux 9.68313 +- 0.00024 (z +1.1)
+    ours + network (R* = 10)         leakage 0.0317291 +- 6e-05 (z +2.2); total flux 9.68423 +- 0.0022 (z +1.2)
+    ours + table (R* = 2)            leakage 0.0315847 +- 8.4e-05 (z +0.7); total flux 9.6837 +- 0.00024 (z +1.2)
+  ours: flights / balls per history, backend seconds: plain MC 18.6 / 0.00, 0.00 s; exact walk (R* = 2) 0.0 / 1.00, 2.68 s; network (R* = 3) 0.0 / 1.00, 19.95 s; network (R* = 10) 18.6 / 0.00, 0.00 s; table (R* = 2) 0.0 / 1.00, 0.09 s
+  one-off costs: OpenMC start-up 0.1 s, our compile 0.3 s
+
+== slab: 4,000,000 histories per contender, 100,000 per batch
+  contender                         seconds vs OpenMC        FOM x (leakage)     FOM x (total flux)
+  OpenMC analog                        9.68     1.00x                  1.00x                  1.00x
+  OpenMC implicit                     13.12     0.74x                  1.43x                  1.03x
+  ours, plain MC                      18.42     0.53x                  1.18x                  0.79x
+  ours + exact walk (R* = 2)          10.37     0.93x                  2.87x                  2.22x
+  ours + network (R* = 3)             23.64     0.41x                  1.05x                  0.58x
+  ours + network (R* = 10)            20.27     0.48x                  0.95x                  0.64x
+  ours + table (R* = 2)                9.40     1.03x                  2.42x                  1.51x
+  answers (z against OpenMC analog):
+    OpenMC analog                    leakage 0.860771 +- 0.00019 (z +0.0); total flux 27.8695 +- 0.033 (z +0.0)
+    OpenMC implicit                  leakage 0.860239 +- 0.00014 (z -2.3); total flux 27.9497 +- 0.028 (z +1.9)
+    ours, plain MC                   leakage 0.860626 +- 0.00013 (z -0.6); total flux 27.8574 +- 0.027 (z -0.3)
+    ours + exact walk (R* = 2)       leakage 0.860677 +- 0.00011 (z -0.4); total flux 27.8636 +- 0.021 (z -0.2)
+    ours + network (R* = 3)          leakage 0.860707 +- 0.00012 (z -0.3); total flux 27.8531 +- 0.027 (z -0.4)
+    ours + network (R* = 10)         leakage 0.860642 +- 0.00013 (z -0.6); total flux 27.862 +- 0.028 (z -0.2)
+    ours + table (R* = 2)            leakage 0.860567 +- 0.00012 (z -0.9); total flux 27.9029 +- 0.027 (z +0.8)
+  ours: flights / balls per history, backend seconds: plain MC 22.7 / 0.00, 0.00 s; exact walk (R* = 2) 7.4 / 1.07, 1.28 s; network (R* = 3) 9.0 / 0.73, 11.58 s; network (R* = 10) 17.9 / 0.09, 2.38 s; table (R* = 2) 7.4 / 1.07, 0.39 s
+  one-off costs: OpenMC start-up 0.0 s, our compile 0.0 s
+
+== curved: 4,000,000 histories per contender, 100,000 per batch
+  contender                         seconds vs OpenMC        FOM x (leakage)     FOM x (total flux)
+  OpenMC analog                       35.16     1.00x                  1.00x                  1.00x
+  OpenMC implicit                     55.13     0.64x                  2.12x                  1.43x
+  ours, plain MC                      74.41     0.47x                  2.01x                  1.74x
+  ours + exact walk (R* = 2)          52.95     0.66x                  1.88x                  1.71x
+  ours + network (R* = 3)             99.36     0.35x                  0.99x                  1.13x
+  ours + network (R* = 10)            80.40     0.44x                  1.86x                  1.61x
+  ours + table (R* = 2)               52.11     0.67x                  3.08x                  3.24x
+  answers (z against OpenMC analog):
+    OpenMC analog                    leakage 0.580589 +- 0.00025 (z +0.0); total flux 104.482 +- 0.046 (z +0.0)
+    OpenMC implicit                  leakage 0.580598 +- 0.00014 (z +0.0); total flux 104.494 +- 0.031 (z +0.2)
+    ours, plain MC                   leakage 0.580631 +- 0.00012 (z +0.2); total flux 104.477 +- 0.024 (z -0.1)
+    ours + exact walk (R* = 2)       leakage 0.5807 +- 0.00015 (z +0.4); total flux 104.467 +- 0.029 (z -0.3)
+    ours + network (R* = 3)          leakage 0.580803 +- 0.00015 (z +0.7); total flux 104.457 +- 0.026 (z -0.5)
+    ours + network (R* = 10)         leakage 0.580631 +- 0.00012 (z +0.2); total flux 104.477 +- 0.024 (z -0.1)
+    ours + table (R* = 2)            leakage 0.580622 +- 0.00012 (z +0.1); total flux 104.5 +- 0.021 (z +0.3)
+  ours: flights / balls per history, backend seconds: plain MC 60.9 / 0.00, 0.00 s; exact walk (R* = 2) 31.6 / 3.92, 2.42 s; network (R* = 3) 40.0 / 2.16, 36.18 s; network (R* = 10) 60.9 / 0.00, 0.00 s; table (R* = 2) 31.6 / 3.92, 0.75 s
+  one-off costs: OpenMC start-up 0.0 s, our compile 0.0 s
+
+== nested: 4,000,000 histories per contender, 100,000 per batch
+  contender                         seconds vs OpenMC        FOM x (leakage)     FOM x (total flux)
+  OpenMC analog                       24.43     1.00x                  1.00x                  1.00x
+  OpenMC implicit                     33.33     0.73x                  0.73x                  0.70x
+  ours, plain MC                      51.41     0.48x                  0.66x                  0.75x
+  ours + exact walk (R* = 2)          55.27     0.44x                  0.77x                  0.69x
+  ours + network (R* = 3)             56.99     0.43x                  0.61x                  0.70x
+  ours + network (R* = 10)            56.69     0.43x                  0.60x                  0.68x
+  ours + table (R* = 2)               55.13     0.44x                  0.77x                  0.81x
+  answers (z against OpenMC analog):
+    OpenMC analog                    leakage 0.203943 +- 0.0002 (z +0.0); total flux 17.4796 +- 0.012 (z +0.0)
+    OpenMC implicit                  leakage 0.203632 +- 0.0002 (z -1.1); total flux 17.4668 +- 0.013 (z -0.7)
+    ours, plain MC                   leakage 0.203348 +- 0.00017 (z -2.3); total flux 17.4605 +- 0.0098 (z -1.2)
+    ours + exact walk (R* = 2)       leakage 0.203342 +- 0.00015 (z -2.4); total flux 17.4526 +- 0.0099 (z -1.7)
+    ours + network (R* = 3)          leakage 0.203352 +- 0.00016 (z -2.3); total flux 17.4601 +- 0.0097 (z -1.2)
+    ours + network (R* = 10)         leakage 0.203348 +- 0.00017 (z -2.3); total flux 17.4605 +- 0.0098 (z -1.2)
+    ours + table (R* = 2)            leakage 0.203375 +- 0.00015 (z -2.3); total flux 17.4525 +- 0.0091 (z -1.8)
+  ours: flights / balls per history, backend seconds: plain MC 44.1 / 0.00, 0.00 s; exact walk (R* = 2) 42.7 / 0.27, 0.23 s; network (R* = 3) 44.0 / 0.00, 0.48 s; network (R* = 10) 44.1 / 0.00, 0.00 s; table (R* = 2) 42.7 / 0.27, 0.13 s
+  one-off costs: OpenMC start-up 0.0 s, our compile 0.0 s
+
+== lattice3d: 4,000,000 histories per contender, 100,000 per batch
+  contender                         seconds vs OpenMC        FOM x (leakage)     FOM x (total flux)
+  OpenMC analog                        7.59     1.00x                  1.00x                  1.00x
+  OpenMC implicit                      7.19     1.06x                  0.99x                  0.92x
+  ours, plain MC                       8.88     0.85x                  0.58x                  0.79x
+  ours + exact walk (R* = 2)           9.54     0.80x                  0.54x                  0.74x
+  ours + network (R* = 3)              9.73     0.78x                  0.53x                  0.72x
+  ours + network (R* = 10)             9.45     0.80x                  0.54x                  0.74x
+  ours + table (R* = 2)                9.56     0.79x                  0.54x                  0.74x
+  answers (z against OpenMC analog):
+    OpenMC analog                    leakage 0.0333393 +- 8.3e-05 (z +0.0); total flux 2.67984 +- 0.001 (z +0.0)
+    OpenMC implicit                  leakage 0.0334175 +- 8.6e-05 (z +0.7); total flux 2.67974 +- 0.0011 (z -0.1)
+    ours, plain MC                   leakage 0.0333013 +- 0.0001 (z -0.3); total flux 2.67898 +- 0.0011 (z -0.6)
+    ours + exact walk (R* = 2)       leakage 0.0333013 +- 0.0001 (z -0.3); total flux 2.67898 +- 0.0011 (z -0.6)
+    ours + network (R* = 3)          leakage 0.0333013 +- 0.0001 (z -0.3); total flux 2.67898 +- 0.0011 (z -0.6)
+    ours + network (R* = 10)         leakage 0.0333013 +- 0.0001 (z -0.3); total flux 2.67898 +- 0.0011 (z -0.6)
+    ours + table (R* = 2)            leakage 0.0333013 +- 0.0001 (z -0.3); total flux 2.67898 +- 0.0011 (z -0.6)
+  ours: flights / balls per history, backend seconds: plain MC 8.2 / 0.00, 0.00 s; exact walk (R* = 2) 8.2 / 0.00, 0.00 s; network (R* = 3) 8.2 / 0.00, 0.00 s; network (R* = 10) 8.2 / 0.00, 0.00 s; table (R* = 2) 8.2 / 0.00, 0.00 s
+  one-off costs: OpenMC start-up 0.0 s, our compile 0.0 s
+
+== cask: 4,000,000 histories per contender, 100,000 per batch
+  contender                         seconds vs OpenMC        FOM x (leakage)     FOM x (total flux)  FOM x (detector flux)
+  OpenMC analog                       14.89     1.00x                  1.00x                  1.00x                  1.00x
+  OpenMC implicit                     27.99     0.53x                  0.58x                  0.95x                  2.16x
+  ours, plain MC                      31.31     0.48x                  0.79x                  1.44x                  0.94x
+  ours + exact walk (R* = 2)          16.18     0.92x                  1.70x                  2.29x                  2.52x
+  ours + network (R* = 3)             46.43     0.32x                  0.39x                  1.08x                  0.88x
+  ours + network (R* = 10)            32.56     0.46x                  0.69x                  1.21x                  0.92x
+  ours + table (R* = 2)               15.31     0.97x                  1.62x                  2.60x                  2.10x
+  answers (z against OpenMC analog):
+    OpenMC analog                    leakage 0.0023605 +- 2.3e-05 (z +0.0); total flux 34.7315 +- 0.022 (z +0.0); detector flux 0.000513369 +- 5.8e-05 (z +0.0)
+    OpenMC implicit                  leakage 0.00238086 +- 2.2e-05 (z +0.6); total flux 34.7282 +- 0.017 (z -0.1); detector flux 0.00061 +- 3.4e-05 (z +1.4)
+    ours, plain MC                   leakage 0.00238608 +- 1.8e-05 (z +0.9); total flux 34.7458 +- 0.013 (z +0.6); detector flux 0.000601609 +- 4.8e-05 (z +1.2)
+    ours + exact walk (R* = 2)       leakage 0.00237082 +- 1.7e-05 (z +0.4); total flux 34.7154 +- 0.014 (z -0.6); detector flux 0.000541837 +- 3.7e-05 (z +0.4)
+    ours + network (R* = 3)          leakage 0.00239018 +- 2.1e-05 (z +1.0); total flux 34.7245 +- 0.012 (z -0.3); detector flux 0.000582408 +- 3.9e-05 (z +1.0)
+    ours + network (R* = 10)         leakage 0.00238422 +- 1.9e-05 (z +0.8); total flux 34.7437 +- 0.014 (z +0.5); detector flux 0.00059387 +- 4.7e-05 (z +1.1)
+    ours + table (R* = 2)            leakage 0.0023588 +- 1.8e-05 (z -0.1); total flux 34.7093 +- 0.014 (z -0.9); detector flux 0.000619811 +- 4.7e-05 (z +1.4)
+  ours: flights / balls per history, backend seconds: plain MC 40.1 / 0.00, 0.00 s; exact walk (R* = 2) 10.1 / 2.18, 2.41 s; network (R* = 3) 11.9 / 1.80, 29.25 s; network (R* = 10) 35.2 / 0.19, 2.31 s; table (R* = 2) 10.2 / 2.18, 0.50 s
+  one-off costs: OpenMC start-up 0.0 s, our compile 0.0 s

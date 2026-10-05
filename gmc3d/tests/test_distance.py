@@ -1,10 +1,10 @@
 """The distance field never overestimates (SRS S1-DF-1, S1-DF-2).
 
-The acceptance test of the whole method: at 10^6 random points (200,000
-per problem), take the ball the distance field allows and probe it -- 32
-points on its surface and 32 inside.  Every probe must land in the same
-cell as the centre.  A single miss means a ball could cross a boundary and
-the ball step would give a wrong answer.
+The acceptance test of the whole method: at 200,000 random points per
+problem (1.2 x 10^6 in all), take the ball the distance field allows and
+probe it -- 32 points on its surface and 32 inside.  Every probe must land
+in the same cell as the centre.  A single miss means a ball could cross a
+boundary and the ball step would give a wrong answer.
 
 The test also reports how tight the field is (ball radius over the true
 distance, estimated by rays), since a field that is safe but tiny would
@@ -50,4 +50,4 @@ def test_never_overestimates():
         bad = _violations(prob.geom, pts, dirs, frac)
         total += pts.shape[0]
         assert bad.sum() == 0, f"{name}: {int((bad > 0).sum())} balls leak"
-    assert total == 1_000_000
+    assert total == 200_000 * len(PROBLEMS)

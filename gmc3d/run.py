@@ -7,6 +7,7 @@
     python run.py train                            train the network
     python run.py ballcheck                        backends vs exact walk
     python run.py measure                          speed study, all problems
+    python run.py race                             OpenMC vs ours, head to head
 
 Backends: mc (no balls), oracle (exact walk), table, network.
 Every command writes its output into runs/<today>/ (text log + JSON, and
@@ -27,7 +28,7 @@ sys.path.insert(0, str(HERE))
 from ball import network, table                              # noqa: E402
 from ball.oracle import Oracle                                # noqa: E402
 from checks import ball_metrics, compare, measure, openmc_ref  # noqa: E402
-from checks import validate                                   # noqa: E402
+from checks import race, validate                             # noqa: E402
 from core import openmc_import, output, transport             # noqa: E402
 from problems import PROBLEMS                                 # noqa: E402
 
@@ -152,6 +153,16 @@ def cmd_measure(args, log):
     return "measure"
 
 
+def cmd_race(args, log):
+    bes = {b: backend(b) for b in args.backends}
+    res = race.race(args.problems or list(validate.PROBLEM_ORDER) + ["cask"],
+                    bes, particles=args.particles, batches=args.batches,
+                    seed=args.seed, workdir=DATA / "openmc", log=log)
+    (out_dir(args) / "race.json").write_text(
+        json.dumps(output._plain(res), indent=1))
+    return "race"
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawTextHelpFormatter)
@@ -195,6 +206,12 @@ def main():
     s.add_argument("--r-stars", nargs="+", type=float,
                    default=[2.0, 3.0, 5.0, 10.0])
     common(s, batches=10)
+
+    s = sub.add_parser("race")
+    s.add_argument("problems", nargs="*")
+    s.add_argument("--backends", nargs="+",
+                   default=["oracle", "network", "table"])
+    common(s, batches=40)
 
     args = p.parse_args()
     log = Log()

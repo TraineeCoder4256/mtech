@@ -32,6 +32,7 @@ Numba and PyTorch):
     python run.py train                         # train the network
     python run.py ballcheck                     # backends vs the exact walk
     python run.py measure                       # speed study
+    python run.py race                          # OpenMC vs ours, head to head
     python -m pytest -q tests                   # unit tests
 
 ## File map
@@ -46,6 +47,7 @@ problems/            THE INPUTS: each file builds an openmc.Model
   lattice3d.py         gmc2d's checkerboard in 3D (balls can't help)
   curved.py            cylinder, sphere, cone and a void gap
   nested.py            3D lattice, rotated/translated universe
+  cask.py              storage cask with a duct: a template for your own
 
 core/                THE SOLVER
   surfaces.py          planes, spheres, cylinders, cones: value, ray
@@ -73,9 +75,10 @@ checks/              IS IT RIGHT, AND IS IT FAST
   validate.py          the Stage 1 suite (all problems, OpenMC, exact balls)
   ball_metrics.py      one radius at a time: backend vs exact walk
   measure.py           cost per flight, big-ball share, cost per draw, R*
+  race.py              OpenMC vs our plain MC vs ball runs, timed
 
 tests/               pytest: surfaces, geometry vs OpenMC, distance-field
-                     safety (10^6 balls), solver, backends
+                     safety (1.2 x 10^6 balls), solver, backends
 run.py               the command line above
 runs/<date>/         logs and JSON of each run (kept in git; VTK files are
                      not, rerun `solve` to get them)

@@ -195,7 +195,28 @@ time per draw was measured:
    - For the network as built, no R* pays on these problems.
    - The default in `run.py` stays 3 until you choose.
 
-## 8. Reproduce
+## 8. Head to head with OpenMC (`race.log`), added later on 5 Oct
+
+Every contender solved the same model with 4M histories on the same 4
+cores. OpenMC ran in its default analog mode and with survival biasing
+("implicit", the same weight game as ours). Seconds of transport:
+
+| problem | OpenMC analog | OpenMC implicit | ours plain | + network (R* = 3) | + exact walk (R* = 2) | + table (R* = 2) |
+|---|---|---|---|---|---|---|
+| slab | 9.7 | 13.1 | 18.4 | 23.6 | 10.4 | 9.4 |
+| sphere | 8.4 | 14.5 | 14.2 | 22.9 | 5.1 | 2.7 |
+| curved | 35.2 | 55.1 | 74.4 | 99.4 | 53.0 | 52.1 |
+| cask | 14.9 | 28.0 | 31.3 | 46.4 | 16.2 | 15.3 |
+| nested | 24.4 | 33.3 | 51.4 | 57.0 | 55.3 | 55.1 |
+| lattice3d | 7.6 | 7.2 | 8.9 | 9.7 | 9.5 | 9.6 |
+
+Time to reach OpenMC analog's leakage error bar (FOM ratio, about +-30%):
+exact-walk balls 2.87x (slab), 2.01x (sphere), 1.88x (curved), 1.70x
+(cask), 0.77x (nested), 0.54x (lattice3d); the network 1.05x, 0.46x, 0.99x,
+0.39x, 0.61x, 0.53x. `cask` is a new problem written as a template for
+user geometry (`problems/cask.py`).
+
+## 9. Reproduce
 
 From `gmc3d/`, with `/opt/mm/root/envs/gmc/bin/python`:
 
@@ -204,4 +225,5 @@ From `gmc3d/`, with `/opt/mm/root/envs/gmc/bin/python`:
     python run.py train         # the network (6.5 min)
     python run.py ballcheck --backends table network oracle   # section 3
     python run.py measure       # section 4 (about 25 min)
-    python -m pytest -q tests   # 36 unit tests
+    python run.py race          # section 8 (about 20 min)
+    python -m pytest -q tests   # 37 unit tests
