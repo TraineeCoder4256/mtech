@@ -1,0 +1,113 @@
+== analytic checks
+  pure absorber leakage        0.36787944   expected 0.36787944   se 0   rel err 1.1e-14
+  pure absorber flux           6.3212056   expected 6.3212056   se 0   rel err 1.3e-14
+  infinite medium flux         9.9988444   expected 10   se 0.0072   z -0.16
+  infinite medium absorption   0.99988444   expected 1   se 0.00072   z -0.16
+  infinite medium leakage      0   expected 0   se 0   rel err 0.0e+00
+   ... the same with exact ball steps (R* = 1)
+  pure absorber leakage        0.36787944   expected 0.36787944   se 0   rel err 1.1e-14
+  pure absorber flux           6.3212056   expected 6.3212056   se 0   rel err 1.3e-14
+  infinite medium flux         9.9979935   expected 10   se 0.0089   z -0.22
+  infinite medium absorption   0.99979935   expected 1   se 0.00089   z -0.22
+  infinite medium leakage      0   expected 0   se 0   rel err 0.0e+00
+
+== sphere: 2,000,000 histories each
+   time: OpenMC 6.7 s (incl. start-up), plain MC 6.6 s, exact balls 2.3 s
+   exact balls: 1,999,915 balls, 114,724,211 scatters inside them; lost particles 0 / 0
+   plain MC vs OpenMC
+  leakage           ours 0.0316763 +- 9.6e-05   ref 0.0314355 +- 0.00012   z +1.53
+  total/flux        ours 9.68466 +- 0.0034   ref 9.67804 +- 0.0051   z +1.08
+  total/absorption  ours 0.968466 +- 0.00034   ref 0.967804 +- 0.00051   z +1.08
+  cell/flux         ours 9.68466 +- 0.0034   ref 9.67804 +- 0.0051   z +1.08
+  cell/absorption   ours 0.968466 +- 0.00034   ref 0.967804 +- 0.00051   z +1.08
+  mesh/flux           5101 bins   chi2/dof 1.054   max|z| 4.84   |z|>3 0.37%
+  mesh/absorption     5101 bins   chi2/dof 1.054   max|z| 4.84   |z|>3 0.37%
+   exact balls vs OpenMC
+  leakage           ours 0.0318587 +- 0.0001   ref 0.0314355 +- 0.00012   z +2.64
+  total/flux        ours 9.68333 +- 0.00032   ref 9.67804 +- 0.0051   z +1.03
+  total/absorption  ours 0.968333 +- 3.2e-05   ref 0.967804 +- 0.00051   z +1.03
+  cell/flux         ours 9.68333 +- 0.00032   ref 9.67804 +- 0.0051   z +1.03
+  cell/absorption   ours 0.968333 +- 3.2e-05   ref 0.967804 +- 0.00051   z +1.03
+  mesh/flux           5061 bins   chi2/dof 73815.699   max|z| 18897.28   |z|>3 96.31%
+  mesh/absorption     5061 bins   chi2/dof 73815.700   max|z| 18897.28   |z|>3 96.31%
+   conservation: plain MC 1.000143, exact balls 1.000191
+
+== slab: 2,000,000 histories each
+   time: OpenMC 4.9 s (incl. start-up), plain MC 9.5 s, exact balls 4.8 s
+   exact balls: 3,208,143 balls, 37,058,280 scatters inside them; lost particles 0 / 0
+   plain MC vs OpenMC
+  leakage           ours 0.86058 +- 0.0002   ref 0.860782 +- 0.00025   z -0.63
+  total/flux        ours 27.8859 +- 0.04   ref 27.9253 +- 0.045   z -0.65
+  total/absorption  ours 0.13943 +- 0.0002   ref 0.139626 +- 0.00023   z -0.65
+  depth/flux            60 bins   chi2/dof 0.980   max|z| 2.63   |z|>3 0.00%
+  depth/absorption      60 bins   chi2/dof 0.980   max|z| 2.63   |z|>3 0.00%
+   exact balls vs OpenMC
+  leakage           ours 0.860376 +- 0.00015   ref 0.860782 +- 0.00025   z -1.38
+  total/flux        ours 27.9226 +- 0.03   ref 27.9253 +- 0.045   z -0.05
+  total/absorption  ours 0.139613 +- 0.00015   ref 0.139626 +- 0.00023   z -0.05
+  depth/flux            60 bins   chi2/dof 538.201   max|z| 148.48   |z|>3 93.33%
+  depth/absorption      60 bins   chi2/dof 538.201   max|z| 148.48   |z|>3 93.33%
+   conservation: plain MC 1.000009, exact balls 0.999989
+
+== curved: 2,000,000 histories each
+   time: OpenMC 15.4 s (incl. start-up), plain MC 36.3 s, exact balls 23.5 s
+   exact balls: 13,335,881 balls, 74,135,276 scatters inside them; lost particles 0 / 0
+   plain MC vs OpenMC
+  leakage           ours 0.580391 +- 0.00014   ref 0.580511 +- 0.00026   z -0.40
+  total/flux        ours 104.52 +- 0.022   ref 104.505 +- 0.081   z +0.18
+  total/absorption  ours 0.419529 +- 0.00011   ref 0.419408 +- 0.00037   z +0.31
+  cell/flux              4 bins   chi2/dof 0.284   max|z| 0.84   |z|>3 0.00%
+  cell/absorption        3 bins   chi2/dof 0.143   max|z| 0.61   |z|>3 0.00%
+  mesh/flux           2744 bins   chi2/dof 1.020   max|z| 4.13   |z|>3 0.33%
+  mesh/absorption     1584 bins   chi2/dof 0.987   max|z| 3.94   |z|>3 0.38%
+   exact balls vs OpenMC
+  leakage           ours 0.580863 +- 0.00023   ref 0.580511 +- 0.00026   z +1.00
+  total/flux        ours 104.495 +- 0.036   ref 104.505 +- 0.081   z -0.11
+  total/absorption  ours 0.419338 +- 0.00022   ref 0.419408 +- 0.00037   z -0.16
+  cell/flux              4 bins   chi2/dof 0.302   max|z| 0.85   |z|>3 0.00%
+  cell/absorption        3 bins   chi2/dof 0.299   max|z| 0.85   |z|>3 0.00%
+  mesh/flux           2744 bins   chi2/dof 2200.274   max|z| 1849.80   |z|>3 34.73%
+  mesh/absorption     1584 bins   chi2/dof 3813.962   max|z| 1849.80   |z|>3 59.85%
+   conservation: plain MC 0.999920, exact balls 1.000201
+
+== nested: 2,000,000 histories each
+   time: OpenMC 12.0 s (incl. start-up), plain MC 25.3 s, exact balls 26.4 s
+   exact balls: 2,996,684 balls, 9,368,279 scatters inside them; lost particles 0 / 0
+   plain MC vs OpenMC
+  leakage           ours 0.203054 +- 0.00015   ref 0.204161 +- 0.00024   z -3.92
+  total/flux        ours 17.4505 +- 0.011   ref 17.4858 +- 0.018   z -1.65
+  total/absorption  ours 0.796512 +- 0.00026   ref 0.796257 +- 0.00045   z +0.49
+  material/flux          3 bins   chi2/dof 1.463   max|z| 1.75   |z|>3 0.00%
+  material/absorption      3 bins   chi2/dof 1.463   max|z| 1.75   |z|>3 0.00%
+  mesh/flux           1000 bins   chi2/dof 0.963   max|z| 4.10   |z|>3 0.70%
+  mesh/absorption     1000 bins   chi2/dof 0.980   max|z| 4.10   |z|>3 0.60%
+   exact balls vs OpenMC
+  leakage           ours 0.203083 +- 0.0002   ref 0.204161 +- 0.00024   z -3.47
+  total/flux        ours 17.4422 +- 0.013   ref 17.4858 +- 0.018   z -1.91
+  total/absorption  ours 0.79638 +- 0.00021   ref 0.796257 +- 0.00045   z +0.25
+  material/flux          3 bins   chi2/dof 1.728   max|z| 2.09   |z|>3 0.00%
+  material/absorption      3 bins   chi2/dof 1.728   max|z| 2.09   |z|>3 0.00%
+  mesh/flux           1000 bins   chi2/dof 21.490   max|z| 29.75   |z|>3 29.90%
+  mesh/absorption     1000 bins   chi2/dof 21.081   max|z| 29.75   |z|>3 28.70%
+   conservation: plain MC 0.999566, exact balls 0.999463
+
+== lattice3d: 2,000,000 histories each
+   time: OpenMC 3.5 s (incl. start-up), plain MC 4.2 s, exact balls 4.7 s
+   exact balls: 0 balls, 0 scatters inside them; lost particles 0 / 0
+   plain MC vs OpenMC
+  leakage           ours 0.0333184 +- 0.00016   ref 0.0333625 +- 0.00012   z -0.22
+  total/flux        ours 2.68039 +- 0.0017   ref 2.6813 +- 0.0018   z -0.37
+  total/absorption  ours 0.966626 +- 0.00019   ref 0.966873 +- 0.00055   z -0.42
+  material/flux          2 bins   chi2/dof 0.154   max|z| 0.42   |z|>3 0.00%
+  material/absorption      1 bins   chi2/dof 0.180   max|z| 0.42   |z|>3 0.00%
+  mesh/flux             49 bins   chi2/dof 0.902   max|z| 2.17   |z|>3 0.00%
+  mesh/absorption       11 bins   chi2/dof 1.591   max|z| 2.17   |z|>3 0.00%
+   exact balls vs OpenMC
+  leakage           ours 0.0333184 +- 0.00016   ref 0.0333625 +- 0.00012   z -0.22
+  total/flux        ours 2.68039 +- 0.0017   ref 2.6813 +- 0.0018   z -0.37
+  total/absorption  ours 0.966626 +- 0.00019   ref 0.966873 +- 0.00055   z -0.42
+  material/flux          2 bins   chi2/dof 0.154   max|z| 0.42   |z|>3 0.00%
+  material/absorption      1 bins   chi2/dof 0.180   max|z| 0.42   |z|>3 0.00%
+  mesh/flux             49 bins   chi2/dof 0.902   max|z| 2.17   |z|>3 0.00%
+  mesh/absorption       11 bins   chi2/dof 1.591   max|z| 2.17   |z|>3 0.00%
+   conservation: plain MC 0.999944, exact balls 0.999944

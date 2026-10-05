@@ -1,7 +1,8 @@
 # gmc3d: ball-step GMC for any 3D CSG geometry
 
 Status: **Stage 1 built** (any CSG geometry, one energy group, isotropic
-scattering, fixed source). Results are in `runs/<date>/`.
+scattering, fixed source). Results and the open research decisions are in
+`runs/2026-10-05/STAGE1.md`.
 
 The method: right after a scatter, a distance field gives the biggest
 one-material ball around the particle. If the ball is big enough, one call

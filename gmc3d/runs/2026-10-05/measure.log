@@ -1,0 +1,107 @@
+k(R), mean scatters inside a collided ball walk:
+  R=1: 2.2  R=1.5: 3.1  R=2: 4.2  R=3: 7.3  R=5: 16.5  R=7: 29.8  R=10: 57.3  R=15: 123.7  R=20: 214.9  R=30: 469.9
+
+== sphere
+  plain MC: 18,595,300 flights in 3.26 s = 175 ns per flight; 18.5 scatters per history
+  share of all scatters inside balls with R >= X (the most a free backend could remove):
+    X=1: 309.8%  X=1.5: 309.8%  X=2: 309.8%  X=3: 309.8%  X=5: 309.8%  X=7: 309.8%  X=10: 0.0%  X=15: 0.0%  X=20: 0.0%  X=30: 0.0%
+  mean requests per backend call: 99996
+  oracle: 196 ns per draw = 1.12 flights -> break-even R* about 1
+    R* =    2:   1.29 s vs plain 3.26 s (speed-up 2.53x, leakage FOM x1.18); 1.00 balls per history; backend 0.66 s; leakage z -1.67, total flux z -1.35
+    R* =    3:   1.17 s vs plain 3.26 s (speed-up 2.80x, leakage FOM x1.31); 1.00 balls per history; backend 0.63 s; leakage z -1.67, total flux z -1.35
+    R* =    5:   1.29 s vs plain 3.26 s (speed-up 2.52x, leakage FOM x1.18); 1.00 balls per history; backend 0.66 s; leakage z -1.67, total flux z -1.35
+    R* =   10:   3.63 s vs plain 3.26 s (speed-up 0.90x, leakage FOM x1.69); 0.00 balls per history; backend 0.00 s; leakage z +0.48, total flux z -0.83
+  table: 7 ns per draw = 0.04 flights -> break-even R* about 1
+    R* =    2:   0.64 s vs plain 3.26 s (speed-up 5.13x, leakage FOM x7.84); 1.00 balls per history; backend 0.02 s; leakage z -3.54, total flux z -1.08
+    R* =    3:   0.54 s vs plain 3.26 s (speed-up 5.99x, leakage FOM x9.16); 1.00 balls per history; backend 0.02 s; leakage z -3.54, total flux z -1.08
+    R* =    5:   0.58 s vs plain 3.26 s (speed-up 5.59x, leakage FOM x8.55); 1.00 balls per history; backend 0.02 s; leakage z -3.54, total flux z -1.08
+    R* =   10:   3.50 s vs plain 3.26 s (speed-up 0.93x, leakage FOM x1.76); 0.00 balls per history; backend 0.00 s; leakage z +0.48, total flux z -0.83
+  network: 4186 ns per draw = 23.89 flights -> break-even R* about 7
+    R* =    2:   6.19 s vs plain 3.26 s (speed-up 0.53x, leakage FOM x0.25); 1.00 balls per history; backend 5.58 s; leakage z -2.19, total flux z -1.37
+    R* =    3:   6.25 s vs plain 3.26 s (speed-up 0.52x, leakage FOM x0.39); 1.00 balls per history; backend 5.16 s; leakage z -1.45, total flux z -1.42
+    R* =    5:   6.12 s vs plain 3.26 s (speed-up 0.53x, leakage FOM x0.27); 1.00 balls per history; backend 5.49 s; leakage z -0.23, total flux z -1.36
+    R* =   10:   3.82 s vs plain 3.26 s (speed-up 0.85x, leakage FOM x1.61); 0.00 balls per history; backend 0.00 s; leakage z +0.48, total flux z -0.83
+
+== slab
+  plain MC: 22,719,973 flights in 4.61 s = 203 ns per flight; 21.6 scatters per history
+  share of all scatters inside balls with R >= X (the most a free backend could remove):
+    X=1: 86.0%  X=1.5: 81.5%  X=2: 77.3%  X=3: 68.3%  X=5: 51.1%  X=7: 36.5%  X=10: 19.5%  X=15: 0.0%  X=20: 0.0%  X=30: 0.0%
+  mean requests per backend call: 2697
+  oracle: 223 ns per draw = 1.10 flights -> break-even R* about 1
+    R* =    2:   2.91 s vs plain 4.61 s (speed-up 1.58x, leakage FOM x1.28); 1.07 balls per history; backend 0.36 s; leakage z +0.11, total flux z +0.10
+    R* =    3:   2.79 s vs plain 4.61 s (speed-up 1.66x, leakage FOM x1.66); 0.73 balls per history; backend 0.27 s; leakage z +0.56, total flux z -0.48
+    R* =    5:   3.16 s vs plain 4.61 s (speed-up 1.46x, leakage FOM x1.28); 0.37 balls per history; backend 0.19 s; leakage z +0.63, total flux z -0.75
+    R* =   10:   4.19 s vs plain 4.61 s (speed-up 1.10x, leakage FOM x0.73); 0.09 balls per history; backend 0.10 s; leakage z +0.82, total flux z -0.55
+  table: 13 ns per draw = 0.06 flights -> break-even R* about 1
+    R* =    2:   2.39 s vs plain 4.61 s (speed-up 1.93x, leakage FOM x3.96); 1.07 balls per history; backend 0.10 s; leakage z +0.59, total flux z +0.56
+    R* =    3:   2.51 s vs plain 4.61 s (speed-up 1.84x, leakage FOM x1.71); 0.73 balls per history; backend 0.07 s; leakage z +0.29, total flux z -0.30
+    R* =    5:   3.45 s vs plain 4.61 s (speed-up 1.34x, leakage FOM x0.99); 0.37 balls per history; backend 0.05 s; leakage z +0.47, total flux z -0.33
+    R* =   10:   4.27 s vs plain 4.61 s (speed-up 1.08x, leakage FOM x0.65); 0.09 balls per history; backend 0.02 s; leakage z +0.79, total flux z -0.35
+  network: 4107 ns per draw = 20.23 flights -> break-even R* about 7
+    R* =    2:   7.63 s vs plain 4.61 s (speed-up 0.60x, leakage FOM x0.82); 1.07 balls per history; backend 4.62 s; leakage z +0.42, total flux z -0.57
+    R* =    3:   5.71 s vs plain 4.61 s (speed-up 0.81x, leakage FOM x0.84); 0.73 balls per history; backend 2.85 s; leakage z +0.63, total flux z -0.18
+    R* =    5:   5.06 s vs plain 4.61 s (speed-up 0.91x, leakage FOM x0.59); 0.37 balls per history; backend 1.73 s; leakage z +0.98, total flux z -0.61
+    R* =   10:   5.00 s vs plain 4.61 s (speed-up 0.92x, leakage FOM x0.57); 0.09 balls per history; backend 0.57 s; leakage z +0.75, total flux z -0.27
+
+== curved
+  plain MC: 60,938,868 flights in 18.65 s = 306 ns per flight; 56.0 scatters per history
+  share of all scatters inside balls with R >= X (the most a free backend could remove):
+    X=1: 66.2%  X=1.5: 57.7%  X=2: 49.0%  X=3: 32.3%  X=5: 0.3%  X=7: 0.0%  X=10: 0.0%  X=15: 0.0%  X=20: 0.0%  X=30: 0.0%
+  mean requests per backend call: 12744
+  oracle: 214 ns per draw = 0.70 flights -> break-even R* about 1
+    R* =    2:  13.21 s vs plain 18.65 s (speed-up 1.41x, leakage FOM x1.26); 3.92 balls per history; backend 0.62 s; leakage z +1.56, total flux z -0.73
+    R* =    3:  14.40 s vs plain 18.65 s (speed-up 1.29x, leakage FOM x2.45); 2.16 balls per history; backend 0.37 s; leakage z -0.05, total flux z +0.23
+    R* =    5:  19.46 s vs plain 18.65 s (speed-up 0.96x, leakage FOM x0.20); 0.04 balls per history; backend 0.02 s; leakage z +0.31, total flux z +0.64
+    R* =   10:  19.93 s vs plain 18.65 s (speed-up 0.94x, leakage FOM x0.21); 0.00 balls per history; backend 0.00 s; leakage z +0.12, total flux z +0.67
+  table: 8 ns per draw = 0.03 flights -> break-even R* about 1
+    R* =    2:  12.67 s vs plain 18.65 s (speed-up 1.47x, leakage FOM x0.58); 3.92 balls per history; backend 0.19 s; leakage z +0.16, total flux z +0.42
+    R* =    3:  14.85 s vs plain 18.65 s (speed-up 1.26x, leakage FOM x0.69); 2.16 balls per history; backend 0.10 s; leakage z +0.74, total flux z +0.07
+    R* =    5:  19.09 s vs plain 18.65 s (speed-up 0.98x, leakage FOM x0.25); 0.04 balls per history; backend 0.01 s; leakage z +0.08, total flux z +0.55
+    R* =   10:  19.94 s vs plain 18.65 s (speed-up 0.93x, leakage FOM x0.21); 0.00 balls per history; backend 0.00 s; leakage z +0.12, total flux z +0.67
+  network: 2554 ns per draw = 8.35 flights -> break-even R* about 5
+    R* =    2:  30.25 s vs plain 18.65 s (speed-up 0.62x, leakage FOM x0.37); 3.92 balls per history; backend 15.57 s; leakage z +0.15, total flux z +0.38
+    R* =    3:  24.62 s vs plain 18.65 s (speed-up 0.76x, leakage FOM x0.52); 2.16 balls per history; backend 8.81 s; leakage z +0.39, total flux z +0.97
+    R* =    5:  19.42 s vs plain 18.65 s (speed-up 0.96x, leakage FOM x0.19); 0.04 balls per history; backend 0.33 s; leakage z -0.01, total flux z +0.48
+    R* =   10:  19.68 s vs plain 18.65 s (speed-up 0.95x, leakage FOM x0.21); 0.00 balls per history; backend 0.00 s; leakage z +0.12, total flux z +0.67
+
+== nested
+  plain MC: 44,080,188 flights in 13.02 s = 295 ns per flight; 29.4 scatters per history
+  share of all scatters inside balls with R >= X (the most a free backend could remove):
+    X=1: 16.0%  X=1.5: 7.9%  X=2: 3.0%  X=3: 0.0%  X=5: 0.0%  X=7: 0.0%  X=10: 0.0%  X=15: 0.0%  X=20: 0.0%  X=30: 0.0%
+  mean requests per backend call: 4954
+  oracle: 209 ns per draw = 0.71 flights -> break-even R* about 1
+    R* =    2:  13.97 s vs plain 13.02 s (speed-up 0.93x, leakage FOM x0.65); 0.27 balls per history; backend 0.06 s; leakage z +1.44, total flux z -0.22
+    R* =    3:  13.68 s vs plain 13.02 s (speed-up 0.95x, leakage FOM x0.69); 0.00 balls per history; backend 0.01 s; leakage z +2.56, total flux z -0.41
+    R* =    5:  14.90 s vs plain 13.02 s (speed-up 0.87x, leakage FOM x0.63); 0.00 balls per history; backend 0.00 s; leakage z +2.56, total flux z -0.41
+    R* =   10:  13.80 s vs plain 13.02 s (speed-up 0.94x, leakage FOM x0.68); 0.00 balls per history; backend 0.00 s; leakage z +2.56, total flux z -0.41
+  table: 10 ns per draw = 0.03 flights -> break-even R* about 1
+    R* =    2:  13.51 s vs plain 13.02 s (speed-up 0.96x, leakage FOM x0.56); 0.27 balls per history; backend 0.03 s; leakage z +1.35, total flux z +0.26
+    R* =    3:  14.37 s vs plain 13.02 s (speed-up 0.91x, leakage FOM x0.61); 0.00 balls per history; backend 0.01 s; leakage z +2.47, total flux z -0.40
+    R* =    5:  13.71 s vs plain 13.02 s (speed-up 0.95x, leakage FOM x0.68); 0.00 balls per history; backend 0.00 s; leakage z +2.56, total flux z -0.41
+    R* =   10:  13.45 s vs plain 13.02 s (speed-up 0.97x, leakage FOM x0.70); 0.00 balls per history; backend 0.00 s; leakage z +2.56, total flux z -0.41
+  network: 2707 ns per draw = 9.16 flights -> break-even R* about 5
+    R* =    2:  15.19 s vs plain 13.02 s (speed-up 0.86x, leakage FOM x0.59); 0.27 balls per history; backend 1.06 s; leakage z +2.00, total flux z -0.63
+    R* =    3:  14.41 s vs plain 13.02 s (speed-up 0.90x, leakage FOM x0.70); 0.00 balls per history; backend 0.13 s; leakage z +2.52, total flux z -0.41
+    R* =    5:  13.63 s vs plain 13.02 s (speed-up 0.96x, leakage FOM x0.69); 0.00 balls per history; backend 0.00 s; leakage z +2.56, total flux z -0.41
+    R* =   10:  14.02 s vs plain 13.02 s (speed-up 0.93x, leakage FOM x0.67); 0.00 balls per history; backend 0.00 s; leakage z +2.56, total flux z -0.41
+
+== lattice3d
+  plain MC: 8,170,398 flights in 2.44 s = 299 ns per flight; 3.0 scatters per history
+  share of all scatters inside balls with R >= X (the most a free backend could remove):
+    X=1: 0.0%  X=1.5: 0.0%  X=2: 0.0%  X=3: 0.0%  X=5: 0.0%  X=7: 0.0%  X=10: 0.0%  X=15: 0.0%  X=20: 0.0%  X=30: 0.0%
+  mean requests per backend call: 0
+  oracle: 42620 ns per draw = 142.53 flights -> break-even R* about 20
+    R* =    2:   2.35 s vs plain 2.44 s (speed-up 1.04x, leakage FOM x0.40); 0.00 balls per history; backend 0.00 s; leakage z -0.01, total flux z +0.48
+    R* =    3:   2.45 s vs plain 2.44 s (speed-up 1.00x, leakage FOM x0.39); 0.00 balls per history; backend 0.00 s; leakage z -0.01, total flux z +0.48
+    R* =    5:   2.45 s vs plain 2.44 s (speed-up 1.00x, leakage FOM x0.39); 0.00 balls per history; backend 0.00 s; leakage z -0.01, total flux z +0.48
+    R* =   10:   2.47 s vs plain 2.44 s (speed-up 0.99x, leakage FOM x0.38); 0.00 balls per history; backend 0.00 s; leakage z -0.01, total flux z +0.48
+  table: 13064 ns per draw = 43.69 flights -> break-even R* about 10
+    R* =    2:   2.42 s vs plain 2.44 s (speed-up 1.01x, leakage FOM x0.39); 0.00 balls per history; backend 0.00 s; leakage z -0.01, total flux z +0.48
+    R* =    3:   2.39 s vs plain 2.44 s (speed-up 1.02x, leakage FOM x0.40); 0.00 balls per history; backend 0.00 s; leakage z -0.01, total flux z +0.48
+    R* =    5:   2.66 s vs plain 2.44 s (speed-up 0.92x, leakage FOM x0.36); 0.00 balls per history; backend 0.00 s; leakage z -0.01, total flux z +0.48
+    R* =   10:   2.51 s vs plain 2.44 s (speed-up 0.97x, leakage FOM x0.38); 0.00 balls per history; backend 0.00 s; leakage z -0.01, total flux z +0.48
+  network: 1942587 ns per draw = 6496.25 flights -> break-even R* about inf
+    R* =    2:   2.30 s vs plain 2.44 s (speed-up 1.06x, leakage FOM x0.41); 0.00 balls per history; backend 0.00 s; leakage z -0.01, total flux z +0.48
+    R* =    3:   2.26 s vs plain 2.44 s (speed-up 1.08x, leakage FOM x0.42); 0.00 balls per history; backend 0.00 s; leakage z -0.01, total flux z +0.48
+    R* =    5:   2.42 s vs plain 2.44 s (speed-up 1.01x, leakage FOM x0.39); 0.00 balls per history; backend 0.00 s; leakage z -0.01, total flux z +0.48
+    R* =   10:   2.39 s vs plain 2.44 s (speed-up 1.02x, leakage FOM x0.40); 0.00 balls per history; backend 0.00 s; leakage z -0.01, total flux z +0.48

@@ -10,10 +10,13 @@ Four measurements per problem, each answering one question:
 
  2. BIG-BALL SHARE.  Run with the exact walk (oracle) as the backend and
     the smallest threshold, R* = 1.  The oracle counts, for every range of
-    R, the balls it was asked for and the scatters inside them.  The share
-    of ALL the problem's scatters that happened inside balls of R >= X is
-    the most work a free backend could remove at threshold X.  If it is
-    small, no backend can make the problem fast.
+    R, the balls it was asked for and the scatters inside them, printed
+    relative to plain Monte Carlo's scatters.  CAVEAT: inside a ball the
+    walk always runs to the edge, while plain Monte Carlo often stops a
+    low-weight walk early by Russian roulette, so in absorbing media this
+    ratio overstates the work saved and can pass 100% (the sphere: 310%).
+    The honest measure of work removed is the drop in flights per history
+    in the timed runs below, which `study` prints for each R*.
 
  3. COST OF A DRAW.  Seconds per (mu, s) draw for each backend, at the
     batch size the run actually produced (requests per backend call).
@@ -117,8 +120,8 @@ def study(names, backends, r_stars=(2.0, 3.0, 5.0, 10.0), particles=100_000,
             f"{mc.timing['transport_s']:.2f} s = {1e9 * t_fl:.0f} ns per "
             f"flight; {mc.counters['scatters'] / (particles * batches):.1f}"
             f" scatters per history")
-        log("  share of all scatters inside balls with R >= X "
-            "(the most a free backend could remove):")
+        log("  scatters inside balls with R >= X, relative to plain MC's "
+            "scatters (see caveat in measure.py):")
         log("    " + "  ".join(
             f"X={e:g}: {100 * f:.1f}%" for e, f in
             zip(share["edges"], share["share_of_scatters"])
@@ -150,7 +153,10 @@ def study(names, backends, r_stars=(2.0, 3.0, 5.0, 10.0), particles=100_000,
                     f"{mc.timing['transport_s'] / wall:.2f}x, leakage FOM "
                     f"x{fom:.2f}); "
                     f"{r.counters['balls'] / (particles * batches):.2f} "
-                    f"balls per history; backend {r.timing['backend_s']:.2f}"
+                    f"balls and {r.counters['flights'] / (particles * batches):.1f}"
+                    f" flights per history (plain "
+                    f"{mc.counters['flights'] / (particles * batches):.1f}); "
+                    f"backend {r.timing['backend_s']:.2f}"
                     f" s; leakage z {cmp['leakage']['z']:+.2f}, total flux "
                     f"z {z_tot:+.2f}")
                 rows[b]["runs"].append({"r_star": rs, "wall_s": wall,
