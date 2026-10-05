@@ -241,6 +241,13 @@ def _tallies(model, cell_index, mat_index):
             if isinstance(f, openmc.CellFilter):
                 tl.filter = "cell"
                 tl.bin_ids = [int(b) for b in f.bins]
+                all_cells = model.geometry.get_all_cells()
+                for cid in tl.bin_ids:
+                    if all_cells[cid].fill_type not in ("material", "void"):
+                        raise Unsupported(
+                            f"tally {t.id} filters on cell {cid}, which "
+                            f"holds a universe or lattice; stage 1 scores "
+                            f"material and void cells only")
                 tl.bins = np.array([cell_index[b] for b in tl.bin_ids])
             elif isinstance(f, openmc.MaterialFilter):
                 tl.filter = "material"

@@ -19,3 +19,4 @@ docs/gmc_paper_src.html
 
 # gmc3d: generated cross-section libraries, ball datasets, OpenMC run folders
 gmc3d/data/
+gmc3d/runs/**/*.vtk
