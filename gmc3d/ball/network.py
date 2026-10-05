@@ -252,35 +252,42 @@ def train(out_dir=None, steps=STEPS, seed=SEED, r_min=R_MIN, r_max=R_MAX,
 
 # -------------------------------------------------------------- the backend
 class Network:
+    """The backend.  `device` is where the network runs: "cpu" (default)
+    or "cuda" for a GPU.  The transport loop stays on the CPU either way;
+    each backend call sends the batch of radii over and gets (mu, s) back.
+    """
     name = "network"
 
-    def __init__(self, net, cnorm, ynorm, info, seed=12345):
-        self.net = net.eval()
+    def __init__(self, net, cnorm, ynorm, info, seed=12345, device="cpu"):
+        self.device = torch.device(device)
+        self.net = net.to(self.device).eval()
         self.cnorm, self.ynorm, self.info = cnorm, ynorm, info
         self.r_min, self.r_max = info["r_min"], info["r_max"]
-        self.gen = torch.Generator().manual_seed(seed)
+        self.gen = torch.Generator(device=self.device).manual_seed(seed)
         self.draws = 0
 
     @classmethod
-    def load(cls, out_dir, seed=12345):
+    def load(cls, out_dir, seed=12345, device="cpu"):
         st = torch.load(Path(out_dir) / "model.pt", map_location="cpu",
                         weights_only=False)
         i = st["info"]
         net = SplineFlow(i["layers"], i["width"], i["bins"], i["emb"])
         net.load_state_dict(st["ema"])
-        return cls(net, D.Norm(*st["cnorm"]), D.Norm(*st["ynorm"]), i, seed)
+        return cls(net, D.Norm(*st["cnorm"]), D.Norm(*st["ynorm"]), i, seed,
+                   device)
 
     @torch.no_grad()
     def sample(self, R, seeds=None, idx=None):
         """(mu, s) for each R.  Uses its own seeded torch generator (the
-        particle streams are not needed), so a run is still reproducible."""
+        particle streams are not needed), so a run is still reproducible
+        on a given device (CPU and GPU draw different noise)."""
         R = np.asarray(R, np.float64)
         c = torch.from_numpy(self.cnorm(np.log(R)[:, None]).astype(
-            np.float32))
-        z = torch.randn(R.size, 2, generator=self.gen)
-        y = self.ynorm.undo(self.net.sample(z, c).numpy().astype(np.float64))
+            np.float32)).to(self.device)
+        z = torch.randn(R.size, 2, generator=self.gen, device=self.device)
+        y = self.net.sample(z, c).cpu().numpy().astype(np.float64)
         self.draws += R.size
-        return D.decode(R, y)
+        return D.decode(R, self.ynorm.undo(y))
 
     def describe(self):
         return {"name": self.name, **{k: v for k, v in self.info.items()

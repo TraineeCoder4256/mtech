@@ -33,6 +33,8 @@ Numba and PyTorch):
     python run.py ballcheck                     # backends vs the exact walk
     python run.py measure                       # speed study
     python run.py race                          # OpenMC vs ours, head to head
+    python run.py race --device cuda            # ... with the network on a GPU
+    python -m checks.gpu_bench --device cuda    # GPU cost per draw only
     python -m pytest -q tests                   # unit tests
 
 ## File map
@@ -76,6 +78,8 @@ checks/              IS IT RIGHT, AND IS IT FAST
   ball_metrics.py      one radius at a time: backend vs exact walk
   measure.py           cost per flight, big-ball share, cost per draw, R*
   race.py              OpenMC vs our plain MC vs ball runs, timed
+  gpu_bench.py         the network's cost per draw on a GPU, and what it
+                       would do to the race (needs no OpenMC)
 
 tests/               pytest: surfaces, geometry vs OpenMC, distance-field
                      safety (1.2 x 10^6 balls), solver, backends

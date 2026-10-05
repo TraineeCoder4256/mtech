@@ -146,6 +146,11 @@ time per draw was measured:
      is PyTorch's per-operation overhead on many small spline operations, not
      arithmetic. The table, at about 10 ns, is 40-400x cheaper for the same
      job.
+   - CORRECTION (later on 5 Oct): for the network as trained, that is wrong.
+     One call is 1,249 operations moving about 100 kB per draw, and on 4 CPU
+     cores the cost stays at 4-7 us per draw for batches from 3,000 to
+     1,000,000 (torch.compile: about 3 us). It is arithmetic and memory
+     traffic, which a GPU accelerates; see section 10.
    - This is the gmc2d speed finding again, but with a twist: with ONE input,
      a table is a strong competitor.
 
@@ -227,3 +232,27 @@ From `gmc3d/`, with `/opt/mm/root/envs/gmc/bin/python`:
     python run.py measure       # section 4 (about 25 min)
     python run.py race          # section 8 (about 20 min)
     python -m pytest -q tests   # 37 unit tests
+
+## 10. What a GPU would change (projection, no GPU here)
+
+Phani pointed out that every timing above is CPU-only. Estimated network
+cost per draw on a GPU, from the operation count and traffic above: about
+0.7 us with PyTorch as written at ~10k requests per call (launch-bound),
+about 0.2 us at 100k+ requests per call, about 0.05 us with the flow fused
+into one kernel. Projected onto the race (exact-walk runs at R* = 2, their
+transport time and error bars kept), time to OpenMC analog's leakage error
+bar becomes:
+
+| problem | network on CPU (measured) | GPU 0.7 us | 0.2 us | 0.05 us | free network |
+|---|---|---|---|---|---|
+| sphere | 0.46x | 2.0x | 3.2x | 3.9x | 4.2x |
+| slab | 1.05x | 2.5x | 3.0x | 3.2x | 3.3x |
+| curved | 0.99x | 1.6x | 1.9x | 1.9x | 2.0x |
+| cask | 0.39x | 1.4x | 1.8x | 1.9x | 2.0x |
+| nested | 0.61x | 0.76x | 0.77x | 0.77x | 0.77x |
+| lattice3d | 0.53x | 0.54x | 0.54x | 0.54x | 0.54x |
+
+The ceiling is the transport loop on the CPU. `python -m checks.gpu_bench
+--device cuda` measures the real cost per draw on a GPU and prints this
+table; `python run.py race --device cuda` runs the race with the network
+on the GPU.

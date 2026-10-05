@@ -10,6 +10,8 @@
     python run.py race                             OpenMC vs ours, head to head
 
 Backends: mc (no balls), oracle (exact walk), table, network.
+--device cuda runs the network on a GPU (the transport stays on the CPU);
+checks/gpu_bench.py measures that without OpenMC.
 Every command writes its output into runs/<today>/ (text log + JSON, and
 VTK files for mesh tallies from `solve`).  Generated data (cross-section
 libraries, walk data, the table, trained networks, OpenMC run folders) goes
@@ -37,7 +39,7 @@ TABLE_FILE = DATA / "ball" / "table.npz"
 NETWORK_DIR = network.MODEL_DIR / "flow_seed0"
 
 
-def backend(name):
+def backend(name, device="cpu"):
     if name == "mc":
         return None
     if name == "oracle":
@@ -50,7 +52,7 @@ def backend(name):
     if name == "network":
         if not (NETWORK_DIR / "model.pt").exists():
             sys.exit("no trained network: run  python run.py train  first")
-        return network.Network.load(NETWORK_DIR)
+        return network.Network.load(NETWORK_DIR, device=device)
     sys.exit(f"unknown backend {name!r}")
 
 
@@ -80,7 +82,7 @@ def out_dir(args):
 def cmd_solve(args, log):
     model = PROBLEMS[args.problem]()
     pr = openmc_import.load(model)
-    be = backend(args.backend)
+    be = backend(args.backend, args.device)
     r = transport.run(pr, args.particles, args.batches, seed=args.seed,
                       backend=be, r_star=args.r_star,
                       mesh_rule=args.mesh_rule, verbose=True)
@@ -136,7 +138,7 @@ def cmd_train(args, log):
 def cmd_ballcheck(args, log):
     rows = {}
     for b in args.backends:
-        rows[b] = ball_metrics.score(backend(b))
+        rows[b] = ball_metrics.score(backend(b, args.device))
         log(ball_metrics.report(rows[b], f"\n{b} vs the exact walk"))
     (out_dir(args) / "ballcheck.json").write_text(
         json.dumps(output._plain(rows), indent=1))
@@ -144,7 +146,7 @@ def cmd_ballcheck(args, log):
 
 
 def cmd_measure(args, log):
-    bes = {b: backend(b) for b in args.backends}
+    bes = {b: backend(b, args.device) for b in args.backends}
     res = measure.study(args.problems or list(validate.PROBLEM_ORDER), bes,
                         r_stars=args.r_stars, particles=args.particles,
                         batches=args.batches, seed=args.seed, log=log)
@@ -154,7 +156,7 @@ def cmd_measure(args, log):
 
 
 def cmd_race(args, log):
-    bes = {b: backend(b) for b in args.backends}
+    bes = {b: backend(b, args.device) for b in args.backends}
     res = race.race(args.problems or list(validate.PROBLEM_ORDER) + ["cask"],
                     bes, particles=args.particles, batches=args.batches,
                     seed=args.seed, workdir=DATA / "openmc", log=log)
@@ -173,6 +175,8 @@ def main():
         sp.add_argument("--batches", type=int, default=batches)
         sp.add_argument("--seed", type=int, default=1)
         sp.add_argument("--out", default=None, help="output folder")
+        sp.add_argument("--device", default="cpu",
+                        help="where the network runs: cpu or cuda")
 
     s = sub.add_parser("solve")
     s.add_argument("problem", choices=sorted(PROBLEMS))

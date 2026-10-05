@@ -6,4 +6,7 @@
     validate.py     the Stage 1 validation suite (all problems, all backends)
     ball_metrics.py backend vs exact walk, one ball at a time
     measure.py      how much time balls can save (big-ball share, R*)
+    race.py         OpenMC vs our plain MC vs ball runs, timed
+    gpu_bench.py    the network's cost per draw on a GPU, projected onto
+                    the race
 """
