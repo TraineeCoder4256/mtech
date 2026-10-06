@@ -1,0 +1,37 @@
+cost curve: runs/2026-10-06/t4_eager.json (Colab T4, eager)
+  requests per call ->  ns per draw: 1,000: 16000, 3,000: 6342, 10,000: 2300, 30,000: 1575, 100,000: 1040
+
+== slab, R* = 2, 2,000,000 histories; plain MC 9.61 s, ceiling 5.06 s
+    in flight  per call  ns/draw   run s  x plain MC  x ceiling  FOM x OpenMC
+      100,000     2,733     6859   19.76       0.49x      3.90x         0.64x
+      400,000     9,740     2352    9.91       0.97x      2.03x         1.28x
+    1,000,000    22,320     1744    8.43       1.14x      1.80x         1.50x
+  for reference: a free backend would be 2.50x OpenMC analog, and plain MC 2.61x
+
+== sphere, R* = 2, 2,000,000 histories; plain MC 6.98 s, ceiling 1.24 s
+    in flight  per call  ns/draw   run s  x plain MC  x ceiling  FOM x OpenMC
+      100,000    99,996     1040    3.32       2.10x      2.67x         1.04x
+      400,000   399,982     1040    3.18       2.19x      2.89x         1.09x
+    1,000,000   999,956     1040    3.45       2.02x      2.52x         1.00x
+  for reference: a free backend would be 2.79x OpenMC analog, and plain MC 2.69x
+
+== cask, R* = 2, 2,000,000 histories; plain MC 15.42 s, ceiling 7.99 s
+    in flight  per call  ns/draw   run s  x plain MC  x ceiling  FOM x OpenMC
+      100,000     6,907     3141   21.71       0.71x      2.72x         0.58x
+      400,000    25,231     1672   14.61       1.06x      2.00x         0.86x
+    1,000,000    58,986     1248   12.38       1.25x      1.79x         1.02x
+  for reference: a free backend would be 1.58x OpenMC analog, and plain MC 0.61x
+
+== curved, R* = 2, 2,000,000 histories; plain MC 35.01 s, ceiling 25.19 s
+    in flight  per call  ns/draw   run s  x plain MC  x ceiling  FOM x OpenMC
+      100,000    12,853     2109   41.73       0.84x      1.66x         1.97x
+      400,000    47,806     1341   32.87       1.07x      1.47x         2.51x
+    1,000,000   112,004     1040   32.44       1.08x      1.34x         2.54x
+  for reference: a free backend would be 3.27x OpenMC analog, and plain MC 1.61x
+
+== nested, R* = 2, 2,000,000 histories; plain MC 23.95 s, ceiling 25.91 s
+    in flight  per call  ns/draw   run s  x plain MC  x ceiling  FOM x OpenMC
+      100,000     3,170     6054   29.19       0.82x      1.13x         0.59x
+      400,000    11,533     2190   26.26       0.91x      1.05x         0.66x
+    1,000,000    28,528     1602   25.57       0.94x      1.04x         0.68x
+  for reference: a free backend would be 0.67x OpenMC analog, and plain MC 0.64x

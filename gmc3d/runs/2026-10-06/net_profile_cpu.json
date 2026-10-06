@@ -1,0 +1,248 @@
+{
+ "device": "CPU, 4 threads",
+ "torch": "2.13.0",
+ "inventory": {
+  "mac_per_draw": 142368,
+  "linear_weights": 145018,
+  "all_weights": 146554,
+  "n_linear": 32,
+  "layers": [
+   [
+    "embed.0",
+    1,
+    32
+   ],
+   [
+    "embed.2",
+    32,
+    32
+   ],
+   [
+    "steps.0.proj_in",
+    1,
+    64
+   ],
+   [
+    "steps.0.block.fc1",
+    64,
+    128
+   ],
+   [
+    "steps.0.block.fc2",
+    128,
+    64
+   ],
+   [
+    "steps.0.block.film",
+    32,
+    128
+   ],
+   [
+    "steps.0.proj_out",
+    64,
+    47
+   ],
+   [
+    "steps.1.proj_in",
+    1,
+    64
+   ],
+   [
+    "steps.1.block.fc1",
+    64,
+    128
+   ],
+   [
+    "steps.1.block.fc2",
+    128,
+    64
+   ],
+   [
+    "steps.1.block.film",
+    32,
+    128
+   ],
+   [
+    "steps.1.proj_out",
+    64,
+    47
+   ],
+   [
+    "steps.2.proj_in",
+    1,
+    64
+   ],
+   [
+    "steps.2.block.fc1",
+    64,
+    128
+   ],
+   [
+    "steps.2.block.fc2",
+    128,
+    64
+   ],
+   [
+    "steps.2.block.film",
+    32,
+    128
+   ],
+   [
+    "steps.2.proj_out",
+    64,
+    47
+   ],
+   [
+    "steps.3.proj_in",
+    1,
+    64
+   ],
+   [
+    "steps.3.block.fc1",
+    64,
+    128
+   ],
+   [
+    "steps.3.block.fc2",
+    128,
+    64
+   ],
+   [
+    "steps.3.block.film",
+    32,
+    128
+   ],
+   [
+    "steps.3.proj_out",
+    64,
+    47
+   ],
+   [
+    "steps.4.proj_in",
+    1,
+    64
+   ],
+   [
+    "steps.4.block.fc1",
+    64,
+    128
+   ],
+   [
+    "steps.4.block.fc2",
+    128,
+    64
+   ],
+   [
+    "steps.4.block.film",
+    32,
+    128
+   ],
+   [
+    "steps.4.proj_out",
+    64,
+    47
+   ],
+   [
+    "steps.5.proj_in",
+    1,
+    64
+   ],
+   [
+    "steps.5.block.fc1",
+    64,
+    128
+   ],
+   [
+    "steps.5.block.fc2",
+    128,
+    64
+   ],
+   [
+    "steps.5.block.film",
+    32,
+    128
+   ],
+   [
+    "steps.5.proj_out",
+    64,
+    47
+   ]
+  ],
+  "ops_per_call": 772,
+  "ops_by_kind": [
+   [
+    "mul",
+    180
+   ],
+   [
+    "__getitem__",
+    108
+   ],
+   [
+    "add",
+    90
+   ],
+   [
+    "sub",
+    78
+   ],
+   [
+    "gather",
+    36
+   ],
+   [
+    "linear",
+    32
+   ],
+   [
+    "__setitem__",
+    30
+   ],
+   [
+    "pad",
+    18
+   ],
+   [
+    "neg",
+    18
+   ],
+   [
+    "layer_norm",
+    12
+   ],
+   [
+    "ge",
+    12
+   ],
+   [
+    "__get__",
+    12
+   ]
+  ],
+  "bytes_written_per_draw": 40124.0
+ },
+ "stages": {
+  "host encode": 2.2316900003716e-09,
+  "copy to device": 7.59000158723211e-12,
+  "noise": 6.556810001256963e-09,
+  "the flow": 6.532609459998184e-06,
+  "copy back": 8.4250000099928e-10,
+  "host decode": 1.619685000150639e-08
+ },
+ "whole_call": 6.320378830000663e-06,
+ "by_batch": {
+  "1000": 7.709098000077575e-06,
+  "3000": 5.0842910000028496e-06,
+  "10000": 3.41321760001847e-06,
+  "30000": 4.283440766668415e-06,
+  "100000": 6.317713309999817e-06,
+  "300000": 7.468939853333723e-06,
+  "1000000": 8.618198217999861e-06
+ },
+ "variants": {
+  "float32": 6.0651526600008764e-06,
+  "float16": 3.5562814600007185e-06,
+  "bfloat16": 3.006519200000639e-06,
+  "float32, no splines": 5.308103090001168e-06
+ }
+}

@@ -1,0 +1,54 @@
+device: CPU, 4 threads; torch 2.13.0; trained
+
+1. INVENTORY per draw
+  weights          146,554 (32 Linear layers)
+  multiply-adds    142,368 = 285 kFLOP
+  torch operations 772 per call
+  tensor bytes written 40,124 (reads are at least as much again)
+  the operations, by how often: mul x180, __getitem__ x108, add x90, sub x78, gather x36, linear x32, __setitem__ x30, pad x18
+
+2. STAGES of one backend call, ns per draw (batch 100,000)
+  host encode           2.2  ( 0.0%)
+  copy to device        0.0  ( 0.0%)
+  noise                 6.6  ( 0.1%)
+  the flow           6532.6  (103.4%)
+  copy back             0.8  ( 0.0%)
+  host decode          16.2  ( 0.3%)
+  WHOLE CALL         6320.4
+  -> host NumPy work is 18 ns per draw: the floor a faster device cannot pass
+  -> the flow runs at 21.8 GMAC/s and writes 6.1 GB/s
+
+3. OPERATIONS the profiler sees (batch 100,000, ms)
+USDT:2026-10-06 05:23:36 2683:2683 SyncActivityProfilerHandler.cpp:52] profiler_start
+USDT:2026-10-06 05:23:36 2683:2683 SyncActivityProfilerHandler.cpp:59] profiler_stop
+  operation                      count       ms   share
+  aten::copy_                      248   155.90   25.5%
+  aten::addmm                       32   134.09   21.9%
+  aten::add                         90    85.10   13.9%
+  aten::silu                         8    68.67   11.2%
+  aten::native_layer_norm           12    52.25    8.5%
+  aten::mul                        180    44.65    7.3%
+  aten::_softmax                    12    14.93    2.4%
+  aten::gather                      36     8.68    1.4%
+  aten::sub                         90     7.48    1.2%
+  aten::fill_                       54     6.84    1.1%
+  aten::softplus                     6     6.03    1.0%
+  aten::cumsum                      12     5.92    1.0%
+  total 611.25 ms over 2343 recorded calls
+
+4. COST PER DRAW by batch size, ns
+  batch     1,000:     7709
+  batch     3,000:     5084
+  batch    10,000:     3413
+  batch    30,000:     4283
+  batch   100,000:     6318
+  batch   300,000:     7469
+  batch 1,000,000:     8618
+
+5. VARIANTS at batch 100,000, ns per draw
+  float32                    6065
+  float16                    3556
+  bfloat16                   3007
+  float32, no splines        5308
+
+written to runs/2026-10-06/net_profile_cpu.json

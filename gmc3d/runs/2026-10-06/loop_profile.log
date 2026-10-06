@@ -1,0 +1,67 @@
+
+== slab: 2,000,000 histories, R* = 2
+  plain MC (no balls): 9.61 s, 22.8 flights per history
+                   split balls/hist   calls  per call  waves/batch  transport  backend   leakage    +- se
+  many small (20 x 100,000)       1.07     784     2,733         39.2      5.06s    0.33s   0.86015  0.00016
+  fewer, bigger (5 x 400,000)       1.07     220     9,740         44.0      4.87s    0.34s   0.86015  0.00017
+     two (2 x 1,000,000)       1.07      96    22,320         48.0      4.69s    0.39s   0.86015  0.00012
+  CEILING: with a free backend this problem runs in 5.06 s (1.90x plain MC). To land within 10% of it the backend has 236 ns per draw.
+  OVERLAP: transport 5.06 s + backend 0.33 s; if they ran at the same time the run would be max() = 5.06 s. 784 calls = 784 syncs.
+  PROJECTION at the measured cost curve:
+     20 x   100,000:    2,733 per call ->   5267 ns per draw ->   16.35 s ( 0.59x plain MC, 3.23x the ceiling)
+      5 x   400,000:    9,740 per call ->   3443 ns per draw ->   12.25 s ( 0.78x plain MC, 2.51x the ceiling)
+      2 x 1,000,000:   22,320 per call ->   4029 ns per draw ->   13.32 s ( 0.72x plain MC, 2.84x the ceiling)
+
+== sphere: 2,000,000 histories, R* = 2
+  plain MC (no balls): 6.98 s, 18.6 flights per history
+                   split balls/hist   calls  per call  waves/batch  transport  backend   leakage    +- se
+  many small (20 x 100,000)       1.00      20    99,996          1.0      1.24s    0.07s   0.03176  0.00013
+  fewer, bigger (5 x 400,000)       1.00       5   399,982          1.0      1.10s    0.07s   0.03176  0.00016
+     two (2 x 1,000,000)       1.00       2   999,956          1.0      1.37s    0.20s   0.03176  0.00013
+  CEILING: with a free backend this problem runs in 1.24 s (5.62x plain MC). To land within 10% of it the backend has 62 ns per draw.
+  OVERLAP: transport 1.24 s + backend 0.07 s; if they ran at the same time the run would be max() = 1.24 s. 20 calls = 20 syncs.
+  PROJECTION at the measured cost curve:
+     20 x   100,000:   99,996 per call ->   6318 ns per draw ->   13.88 s ( 0.50x plain MC, 11.16x the ceiling)
+      5 x   400,000:  399,982 per call ->   7729 ns per draw ->   16.56 s ( 0.42x plain MC, 15.02x the ceiling)
+      2 x 1,000,000:  999,956 per call ->   8618 ns per draw ->   18.61 s ( 0.38x plain MC, 13.56x the ceiling)
+
+== cask: 2,000,000 histories, R* = 2
+  plain MC (no balls): 15.42 s, 40.1 flights per history
+                   split balls/hist   calls  per call  waves/batch  transport  backend   leakage    +- se
+  many small (20 x 100,000)       2.18     632     6,907         31.6      7.99s    0.46s   0.00239  0.00003
+  fewer, bigger (5 x 400,000)       2.18     173    25,231         34.6      7.31s    0.43s   0.00239  0.00002
+     two (2 x 1,000,000)       2.18      74    58,986         37.0      6.93s    0.44s   0.00239  0.00001
+  CEILING: with a free backend this problem runs in 7.99 s (1.93x plain MC). To land within 10% of it the backend has 183 ns per draw.
+  OVERLAP: transport 7.99 s + backend 0.46 s; if they ran at the same time the run would be max() = 7.99 s. 632 calls = 632 syncs.
+  PROJECTION at the measured cost curve:
+     20 x   100,000:    6,907 per call ->   3858 ns per draw ->   24.84 s ( 0.62x plain MC, 3.11x the ceiling)
+      5 x   400,000:   25,231 per call ->   4133 ns per draw ->   25.35 s ( 0.61x plain MC, 3.47x the ceiling)
+      2 x 1,000,000:   58,986 per call ->   5328 ns per draw ->   30.19 s ( 0.51x plain MC, 4.36x the ceiling)
+
+== curved: 2,000,000 histories, R* = 2
+  plain MC (no balls): 35.01 s, 60.9 flights per history
+                   split balls/hist   calls  per call  waves/batch  transport  backend   leakage    +- se
+  many small (20 x 100,000)       3.92     610    12,853         30.5     25.19s    0.60s   0.58049  0.00016
+  fewer, bigger (5 x 400,000)       3.92     164    47,806         32.8     22.35s    0.49s   0.58049  0.00024
+     two (2 x 1,000,000)       3.92      70   112,004         35.0     24.29s    0.58s   0.58049  0.00007
+  CEILING: with a free backend this problem runs in 25.19 s (1.39x plain MC). To land within 10% of it the backend has 321 ns per draw.
+  OVERLAP: transport 25.19 s + backend 0.60 s; if they ran at the same time the run would be max() = 25.19 s. 610 calls = 610 syncs.
+  PROJECTION at the measured cost curve:
+     20 x   100,000:   12,853 per call ->   3595 ns per draw ->   53.38 s ( 0.66x plain MC, 2.12x the ceiling)
+      5 x   400,000:   47,806 per call ->   4979 ns per draw ->   61.38 s ( 0.57x plain MC, 2.75x the ceiling)
+      2 x 1,000,000:  112,004 per call ->   6428 ns per draw ->   74.68 s ( 0.47x plain MC, 3.08x the ceiling)
+
+== nested: 2,000,000 histories, R* = 2
+  plain MC (no balls): 23.95 s, 44.1 flights per history
+                   split balls/hist   calls  per call  waves/batch  transport  backend   leakage    +- se
+  many small (20 x 100,000)       0.27     171     3,170          8.6     25.91s    0.10s   0.20364  0.00023
+  fewer, bigger (5 x 400,000)       0.27      47    11,533          9.4     25.08s    0.09s   0.20364  0.00028
+     two (2 x 1,000,000)       0.27      19    28,528          9.5     24.71s    0.20s   0.20364  0.00007
+  CEILING: with a free backend this problem runs in 25.91 s (0.92x plain MC). To land within 10% of it the backend has 4780 ns per draw.
+  OVERLAP: transport 25.91 s + backend 0.10 s; if they ran at the same time the run would be max() = 25.91 s. 171 calls = 171 syncs.
+  PROJECTION at the measured cost curve:
+     20 x   100,000:    3,170 per call ->   4992 ns per draw ->   28.62 s ( 0.84x plain MC, 1.10x the ceiling)
+      5 x   400,000:   11,533 per call ->   3515 ns per draw ->   26.98 s ( 0.89x plain MC, 1.08x the ceiling)
+      2 x 1,000,000:   28,528 per call ->   4239 ns per draw ->   27.00 s ( 0.89x plain MC, 1.09x the ceiling)
+
+written to runs/2026-10-06/loop_profile.json

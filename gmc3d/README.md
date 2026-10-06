@@ -11,6 +11,9 @@ the particle to the ball's edge, replacing every scatter inside. Otherwise
 ordinary Monte Carlo takes one flight. The geometry lives only in the
 distance field, so one small model serves any shape.
 
+The speed study and the ranked list of GPU optimisations are in
+`runs/2026-10-06/SPEED.md`.
+
 The requirements, in five stages, are in the SRS document
 ("3D GMC: Software Requirements Specification"):
 
@@ -80,6 +83,16 @@ checks/              IS IT RIGHT, AND IS IT FAST
   race.py              OpenMC vs our plain MC vs ball runs, timed
   gpu_bench.py         the network's cost per draw on a GPU, and what it
                        would do to the race (needs no OpenMC)
+  net_profile.py       what one draw is MADE of: weights, flops, torch
+                       operations, bytes, and the call stage by stage
+  net_variants.py      candidate rewrites of the sampling path (columns,
+                       compiled, CUDA graphs, float16), each checked
+                       against the original before it is timed
+  precision_check.py   what float16 and bfloat16 cost in accuracy,
+                       ball by ball
+  loop_profile.py      how big the backend's batches are and what sets
+                       them; what a free backend would cost
+  gpu_project.py       what a measured cost per draw does to a whole run
 
 tests/               pytest: surfaces, geometry vs OpenMC, distance-field
                      safety (1.2 x 10^6 balls), solver, backends

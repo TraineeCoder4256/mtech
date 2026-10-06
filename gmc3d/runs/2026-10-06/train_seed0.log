@@ -1,0 +1,19 @@
+data   4,000,000 + 500,000 walks, R in [1, 30], mean 72.6 scatters each, 7.4 s
+model  6 couplings, width 64, 16 spline bins, 146,554 weights
+step    500  train NLL 2.2249  val NLL (EMA) 2.6178  37 s
+step   1000  train NLL 2.2020  val NLL (EMA) 2.4229  75 s
+step   1500  train NLL 2.1935  val NLL (EMA) 2.3128  162 s
+step   2000  train NLL 2.1960  val NLL (EMA) 2.2415  331 s
+step   2500  train NLL 2.1939  val NLL (EMA) 2.2219  368 s
+step   3000  train NLL 2.1882  val NLL (EMA) 2.2083  406 s
+step   3500  train NLL 2.1922  val NLL (EMA) 2.2065  442 s
+step   4000  train NLL 2.1908  val NLL (EMA) 2.1939  478 s
+step   4500  train NLL 2.1880  val NLL (EMA) 2.1884  513 s
+step   5000  train NLL 2.1904  val NLL (EMA) 2.1870  548 s
+step   5500  train NLL 2.1903  val NLL (EMA) 2.1818  583 s
+step   6000  train NLL 2.1902  val NLL (EMA) 2.1970  618 s
+step   6500  train NLL 2.1893  val NLL (EMA) 2.1915  654 s
+step   7000  train NLL 2.1914  val NLL (EMA) 2.1922  689 s
+step   7500  train NLL 2.1860  val NLL (EMA) 2.1898  724 s
+step   8000  train NLL 2.1889  val NLL (EMA) 2.1831  760 s
+saved; {'name': 'network', 'steps': 8000, 'seed': 0, 'params': 146554, 'train_seconds': 759.9574868679047, 'layers': 6, 'width': 64, 'bins': 16, 'emb': 32, 'r_min': 1.0, 'r_max': 30.0, 'n_train': 4000000}
