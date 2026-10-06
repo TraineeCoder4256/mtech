@@ -1,0 +1,30 @@
+
+== slab: 30 runs of 20 x 20,000 histories; the error bar now comes from 640 chunk groups, the old one from 20 batches
+  leakage 0.860409; the spread of the 30 run means is 0.000305 (itself +-13%)
+  estimator             average    bias  stability  coverage
+  chunks (new)         0.000419   1.37x       2.8%      100%
+  batches (old)        0.000415   1.36x      13.9%      100%
+  expected stability: 2.8% from 640 groups, 16.2% from 20 (a rare tally does worse: its groups are not Gaussian)
+
+== sphere: 30 runs of 20 x 20,000 histories; the error bar now comes from 640 chunk groups, the old one from 20 batches
+  leakage 0.0317474; the spread of the 30 run means is 0.000149 (itself +-13%)
+  estimator             average    bias  stability  coverage
+  chunks (new)         0.000193   1.30x       3.2%       97%
+  batches (old)        0.000185   1.25x      17.7%       97%
+  expected stability: 2.8% from 640 groups, 16.2% from 20 (a rare tally does worse: its groups are not Gaussian)
+
+== cask: 30 runs of 20 x 20,000 histories; the error bar now comes from 640 chunk groups, the old one from 20 batches
+  leakage 0.00236872; the spread of the 30 run means is 6.72e-05 (itself +-13%)
+  estimator             average    bias  stability  coverage
+  chunks (new)         5.69e-05   0.85x       3.1%       97%
+  batches (old)        5.71e-05   0.85x      15.8%       90%
+  expected stability: 2.8% from 640 groups, 16.2% from 20 (a rare tally does worse: its groups are not Gaussian)
+
+== curved: 30 runs of 20 x 20,000 histories; the error bar now comes from 640 chunk groups, the old one from 20 batches
+  leakage 0.580785; the spread of the 30 run means is 0.000411 (itself +-13%)
+  estimator             average    bias  stability  coverage
+  chunks (new)         0.000421   1.03x       2.8%       97%
+  batches (old)        0.000425   1.03x      14.7%       93%
+  expected stability: 2.8% from 640 groups, 16.2% from 20 (a rare tally does worse: its groups are not Gaussian)
+
+written to runs/2026-10-06/error_bars.json

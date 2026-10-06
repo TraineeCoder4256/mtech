@@ -30,10 +30,38 @@ track-length estimator OpenMC uses by default.
 Layout.  Every tally bin holds two numbers, flux then absorption, in one
 flat array; entry 0 is the leakage (weight leaving through vacuum
 boundaries).  Each thread chunk has its own row (`acc[chunk]`), so threads
-never write the same memory and sums come out in a fixed order.  After each
-batch the rows are summed and divided by the number of source particles, as
-OpenMC's tallies are (per source particle); the error bar is the standard
-error of the batch means.
+never write the same memory and sums come out in a fixed order.  Means are
+per source particle, as OpenMC's tallies are.
+
+ERROR BARS, and why they are taken per CHUNK rather than per batch.  The
+mean of a run uses every history, but an error bar is only as good as the
+number of independent groups it is estimated from: a standard deviation
+from G groups is itself uncertain by about 1 / sqrt(2 (G - 1)), and a figure
+of merit, which goes as one over its square, by about sqrt(2 / G).  With the
+40 batches a race uses that is 11% on the error bar and 24% on the figure of
+merit, so two honest runs of the same thing can disagree by a factor of two
+-- measured, 5 and 6 October 2026, on the slab.
+
+The chunks inside a batch are disjoint sets of histories with independent
+random streams, so each is an independent estimate in its own right.  Using
+them as the groups turns 40 groups into nchunk x batches (1,280 at the
+defaults) at no cost: the error bar's own uncertainty falls to 2% and the
+figure of merit's to 4%.  The MEAN is unchanged to the last bit, since it is
+still the total over the total number of histories.
+
+With groups of unequal size (the last chunk of a batch can be short) the
+per-history variance is estimated as
+
+    sigma^2 = sum_g n_g (x_g - X)^2 / (G - 1),   SE(X) = sqrt(sigma^2 / N)
+
+where x_g is group g's mean, n_g its size, N the total and X the overall
+mean.  For equal groups this is exactly the standard error of the group
+means, SD(x_g) / sqrt(G).  Only running sums are kept, so memory does not
+grow with G.
+
+`mean_se_batches` still gives the old batch-mean estimate, and
+`checks/error_bars.py` compares the two against the spread of many
+independent runs.
 
 Mesh bins are numbered with x fastest, then y, then z -- OpenMC's order.
 """
@@ -260,6 +288,12 @@ class Results:
                              (bins, 2): column 0 flux, column 1 absorption
     counters                 work done (flights, balls, ...); see transport
     timing                   seconds spent in transport and in the backend
+    leakage_se_batches       the same error bar estimated the old way, from
+                             the batch means alone: kept so the two can be
+                             compared, never used for an answer.  0.0 for a
+                             reference code that reports only its own.
+    groups                   how many independent groups the error bar came
+                             from (chunks x batches; 0 if not ours)
     """
     leakage: float
     leakage_se: float
@@ -267,24 +301,77 @@ class Results:
     counters: dict
     timing: dict
     settings: dict
+    leakage_se_batches: float = 0.0
+    groups: int = 0
+
+
+def chunk_sizes(n, nchunk):
+    """How many of n histories each of nchunk thread chunks gets.
+
+    This MUST match the split `_advance` and `_birth` use in transport.py
+    (`per = ceil(n / nchunk)`, then chunk c takes [c*per, min(n, (c+1)*per))),
+    because the error bar treats each chunk as an independent group.  A
+    trailing chunk can be short or empty.
+    """
+    per = (n + nchunk - 1) // nchunk
+    lo = np.minimum(np.arange(nchunk) * per, n)
+    hi = np.minimum(lo + per, n)
+    return hi - lo
 
 
 class Accumulator:
-    """Batch-by-batch sums of the per-source-particle tallies."""
+    """Running sums of the per-source-particle tallies.
+
+    Two error bars are kept: one from the thread chunks (what `mean_se`
+    returns, and what every answer uses) and one from the batch means (the
+    old estimate, for comparison only).  See this file's docstring.
+    """
 
     def __init__(self, layout):
         self.layout = layout
-        self.s1 = np.zeros(layout.n_entries)
-        self.s2 = np.zeros(layout.n_entries)
+        n = layout.n_entries
+        self.s1 = np.zeros(n)             # batch-level, for the comparison
+        self.s2 = np.zeros(n)
         self.batches = 0
+        self.g_sum = np.zeros(n)          # sum_g n_g x_g  (= all the totals)
+        self.g_sq = np.zeros(n)           # sum_g n_g x_g^2
+        self.g_n = 0                      # N, histories so far
+        self.groups = 0                   # G, non-empty chunks so far
 
     def add_batch(self, acc, n_particles):
+        acc = np.asarray(acc)
         x = acc.sum(axis=0) / n_particles
         self.s1 += x
         self.s2 += x * x
         self.batches += 1
 
+        sizes = chunk_sizes(n_particles, acc.shape[0])
+        if sizes.sum() != n_particles:
+            raise AssertionError("chunk sizes do not add up to the batch; "
+                                 "tallies.chunk_sizes has drifted from "
+                                 "transport.py's split")
+        live = sizes > 0
+        n_g = sizes[live, None]
+        totals = acc[live]                         # n_g x_g, per group
+        self.g_sum += totals.sum(axis=0)
+        self.g_sq += (totals * totals / n_g).sum(axis=0)
+        self.g_n += int(n_particles)
+        self.groups += int(live.sum())
+
     def mean_se(self):
+        """Mean per source particle, and its standard error from the chunk
+        groups.  The mean is the total over the total histories, so it does
+        not depend on how the histories were grouped."""
+        mean = self.g_sum / self.g_n
+        if self.groups < 2:
+            return mean, np.full_like(mean, np.inf)
+        var = np.maximum(self.g_sq - self.g_n * mean * mean, 0.0) \
+            / (self.groups - 1)
+        return mean, np.sqrt(var / self.g_n)
+
+    def mean_se_batches(self):
+        """The old estimate: the standard error of the batch means.  Kept
+        only so `checks/error_bars.py` can compare the two."""
         b = self.batches
         mean = self.s1 / b
         var = np.maximum(self.s2 / b - mean * mean, 0.0) / max(b - 1, 1)
@@ -303,5 +390,7 @@ class Accumulator:
                 "mesh": tl.mesh, "scores": tl.scores,
                 "mean": mean[a:a + 2 * nb].reshape(nb, 2),
                 "se": se[a:a + 2 * nb].reshape(nb, 2)}
+        _, se_b = self.mean_se_batches()
         return Results(float(mean[LEAKAGE]), float(se[LEAKAGE]), out,
-                       counters, timing, settings)
+                       counters, timing, settings,
+                       float(se_b[LEAKAGE]), int(self.groups))

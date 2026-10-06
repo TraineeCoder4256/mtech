@@ -161,11 +161,15 @@ def main():
               f"{rows[0]['particles'] * rows[0]['batches']:,} histories; "
               f"plain MC {plain['transport_s']:.2f} s, ceiling "
               f"{rows[0]['transport_s']:.2f} s")
-        # the relative error of the ANSWER does not depend on how the
+        # The relative error of the ANSWER does not depend on how the
         # histories are split into batches (loop_profile.log shows the same
-        # leakage to five figures), but its ESTIMATE from 2 or 5 batches is
-        # far too noisy to divide by.  So every row uses the error measured
-        # on the 20-batch row.
+        # leakage to five figures), and since core/tallies.py takes its
+        # error bar from the thread chunks, every row now has hundreds of
+        # groups behind it and can be used as it stands.  JSON written
+        # before that change has only `batches` groups, which is far too
+        # noisy on a 2- or 5-batch row, so there the 20-batch row's error is
+        # used for every row instead.
+        fine = all(r.get("groups", 0) >= 64 for r in rows)
         rel20 = rows[0]["leakage_se"] / rows[0]["leakage"]
         head = (f"  {'in flight':>11s} {'per call':>9s} {'ns/draw':>8s} "
                 f"{'run s':>7s} {'x plain MC':>11s} {'x ceiling':>10s}")
@@ -183,7 +187,8 @@ def main():
                     f"{plain['transport_s'] / tot:>10.2f}x "
                     f"{tot / r['transport_s']:>9.2f}x")
             if om:
-                fom = 1.0 / (rel20 ** 2 * tot)
+                rel = r["leakage_se"] / r["leakage"] if fine else rel20
+                fom = 1.0 / (rel ** 2 * tot)
                 line += f" {fom / om[0]:>12.2f}x"
             if a.overlap:
                 ov = max(r["transport_s"], draw)

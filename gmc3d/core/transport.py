@@ -299,7 +299,13 @@ def _track(i, g, ph, L, P, row, cnt):
 
 @njit(cache=True, parallel=True)
 def _advance(g, ph, L, P, acc, cnt, nchunk):
-    """Run every live particle until it dies or waits for a ball."""
+    """Run every live particle until it dies or waits for a ball.
+
+    Chunk c takes particles [c*per, min(n, (c+1)*per)).  Each chunk is a
+    disjoint set of histories with independent random streams, which is why
+    tallies.py can use the chunks as the groups its error bar comes from;
+    tallies.chunk_sizes must keep matching the split below.
+    """
     n = P.x.size
     per = (n + nchunk - 1) // nchunk
     for c in prange(nchunk):

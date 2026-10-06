@@ -22,6 +22,13 @@ The raw logs and JSON are beside this file. New analysis scripts live in
 | `checks/precision_check.py` | what float16 and bfloat16 cost in accuracy, ball by ball |
 | `checks/loop_profile.py` | how big the backend's batches are, what sets that, and what a free backend would cost |
 | `checks/gpu_project.py` | what a measured cost per draw does to a whole run |
+| `checks/error_bars.py` | whether a reported error bar is the real spread of repeated runs |
+
+**Read section 9 first if you are about to quote a number from this file.**
+Sections 1-8 were written before the error-bar estimator was fixed, and
+their "x OpenMC" figures divide our 6 October timings by 5 October OpenMC
+timings taken on a different machine. Section 9 has the corrected,
+same-session figures and the evidence.
 
 ## 1. The result in one paragraph
 
@@ -325,16 +332,16 @@ unknown -- none of them has been trained.
   `reduce-overhead` has nothing to capture. `checks/net_variants.py
   --device cuda` and `checks/precision_check.py --device cuda` run on Colab
   with no OpenMC needed.
-- **OpenMC was not rerun.** The container was rebuilt, so the OpenMC rows in
-  section 2 come from the 5 October race rather than from today. Our own
-  plain-MC timings today (slab 9.61 s for 2M histories) are within 5% of the
-  race's (18.42 s for 4M), so the two machines are close, but the FOM table
-  mixes 5 October OpenMC with 6 October measurements of ours.
-- **Error bars from 20 batches are noisy.** The error on an error bar is
-  about sqrt(2/N), so 32% at 20 batches. Where the variance mattered
-  (section 2's FOM table) the 5 October race's 40 batches were used instead;
-  the three-way split in section 4 is shown for the batch sizes, and its
-  error-bar column should not be read as a measurement.
+- **The multipliers in sections 1, 2 and 5 mix two machines, and should
+  not be quoted.** They divide 6 October measurements of ours by 5 October
+  OpenMC rows, and OpenMC turns out to run 32-50% slower on this container
+  than on that one. Section 9 has the evidence and the corrected,
+  same-session figures. The ranking of the GPU options is unaffected, since
+  it depends only on our own side.
+- **Error bars from 20 or 40 groups are noisy.** This was fixed on
+  6 October, after the rest of this file was written; section 9 describes
+  the fix and what it was worth. The error-bar column of the three-way
+  split in section 4 predates it and should not be read as a measurement.
 - **The top of the network's trained range is unreliable, in any
   precision.** At R = 29 (trained to 30), the surviving weight is +1.4% high
   at absorption 0.01 per mean free path and +74% high at 0.1, in float32;
@@ -346,7 +353,129 @@ unknown -- none of them has been trained.
   spread by about 8%, so none of the 1.0x-1.2x differences above are
   meaningful on their own.
 
-## 9. Reproduce
+## 9. The error bars under all of this, and what two machines did to them
+
+Written after sections 1-8, and it corrects them. Everything here is in
+`runs/2026-10-06/error_bars.{log,json}`, `ref_batches.log`,
+`race_repeat.{log,json}` and `race_fixed.{log,json}`, with the scripts that
+produced them beside those files.
+
+### The defect
+
+A figure of merit is `1 / (relative error^2 x seconds)`, so it depends on
+the SQUARE of an error bar. An error bar estimated from G independent
+groups is itself uncertain by about `1 / sqrt(2 (G - 1))`, and a FOM by
+`sqrt(2 / G)`. `core/tallies.py` estimated ours from the 40 statistical
+batch means: 11% on the error bar, 24% on the FOM. The reference side was
+worse, because `checks/race.py` ran OpenMC at the same 40 batches.
+
+That is not a rounding detail. The slab's free-backend FOM read 2.53x on
+5 October and 1.29x on the first 6 October race, and the whole difference
+was OpenMC's own reported error bar moving from 0.0219% to 0.0153% on the
+same problem with the same number of histories.
+
+### The fix
+
+Our solver already splits every batch across 32 thread chunks, each of
+which is an independent sample of the same distribution. Taking the groups
+from the chunks instead of the batches gives 32 x 40 = 1,280 groups instead
+of 40, for free, from numbers the run already had. Unequal chunks are
+handled with the weighted form, `sigma^2 = sum n_g (x_g - X)^2 / (G - 1)`
+and `SE = sqrt(sigma^2 / N)`, accumulated from running sums so nothing is
+stored per group. The MEAN is untouched, and
+`tests/test_error_bars.py::test_mean_does_not_depend_on_the_grouping`
+pins that. The old estimate is still computed and reported as
+`leakage_se_batches` so the two can always be compared.
+
+Validated by brute force in `checks/error_bars.py`: R independent runs,
+seeds 1,000 apart, comparing each estimator against the actual spread of
+the R run means.
+
+| problem | truth (SD of run means) | new estimate | old | new stability | old stability |
+|---|---|---|---|---|---|
+| slab | 0.000305 | 0.000419 | 0.000415 | **2.8%** | 13.9% |
+| sphere | 0.000149 | 0.000193 | 0.000185 | **3.2%** | 17.7% |
+| cask | 6.72e-05 | 5.69e-05 | 5.71e-05 | **3.1%** | 15.8% |
+| curved | 0.000411 | 0.000421 | 0.000425 | **2.8%** | 14.7% |
+
+Stability is the run-to-run spread of the error bar itself; theory says 2.8%
+from 1,280 groups and 16.2% from 40, and both columns land on it. The
+apparent 1.37x bias on the slab at 30 runs was itself noise: at 150 runs it
+is 0.92x with the truth known to only +-6%, and coverage of the 95%
+interval is 94% against 91% for the old estimator.
+
+### The reference side needed the same thing, and it is free
+
+Splitting OpenMC's 4M histories into 1,000 batches instead of 40 changes its
+answer in the sixth figure and its time not at all: sphere 13.02 / 12.13 /
+12.43 s at 40 / 200 / 1,000 batches, slab 12.05 / 12.94 / 13.12, cask
+21.58 / 19.98 / 22.68. `checks/race.py` now sets `REF_BATCHES = 1000`.
+
+### What is left, and it is the timing
+
+With both sides fixed, the same race was run at three seeds. Each seed is an
+independent realisation of both codes and an independent timing.
+
+| problem | contender | FOM x OpenMC analog, 3 seeds | spread | rel err, 3 seeds | spread |
+|---|---|---|---|---|---|
+| sphere | OpenMC implicit | 0.93 / 0.99 / 1.03 | 9.9% | 0.2013 / 0.2073 / 0.2054% | 3.0% |
+| sphere | ours, plain MC | 1.74 / 1.97 / 1.84 | 12.5% | 0.1937 / 0.1959 / 0.1855% | 5.4% |
+| sphere | ours + table, R* = 2 | 5.26 / 5.79 / 4.64 | 22.0% | 0.2581 / 0.2700 / 0.2726% | 5.5% |
+| sphere | ours + network, R* = 2 | 0.40 / 0.45 / 0.37 | 18.4% | 0.2683 / 0.2677 / 0.2742% | 2.4% |
+| slab | OpenMC implicit | 1.20 / 1.27 / 1.13 | 12.3% | 0.0156 / 0.0151 / 0.0158% | 4.5% |
+| slab | ours, plain MC | 1.29 / 1.23 / 1.27 | 5.0% | 0.0157 / 0.0154 / 0.0149% | 5.2% |
+| slab | ours + table, R* = 2 | 2.43 / 2.40 / 2.07 | 15.5% | 0.0156 / 0.0156 / 0.0157% | 0.6% |
+| slab | ours + network, R* = 2 | 0.60 / 0.58 / 0.57 | 6.1% | 0.0160 / 0.0156 / 0.0154% | 3.9% |
+
+The relative errors now repeat to 0.6-5.5%, which is the fix working. The
+FOMs still move 5-22%, and the reason is the other factor: the seconds
+spread 3.8-18.7% on this shared container. **Statistics is no longer the
+limit on a multiplier; wall-clock noise is.** A published multiplier
+therefore needs the median of at least three repeats, and 15% should be
+quoted on it.
+
+### The thing that invalidates every cross-day number
+
+`openmc_transport_s` is OpenMC's own internal transport timer out of the
+statepoint, not a wall clock. By that timer, on the same 4M histories, the
+same OpenMC 0.16.0 (commit 617d35a5) and the same models:
+
+| problem | 5 Oct container | 6 Oct container |
+|---|---|---|
+| sphere | 8.38 s | 11.90 - 12.71 s |
+| slab | 9.68 s | 12.21 - 14.11 s |
+| cask | 14.89 s | 19.98 - 22.68 s |
+| curved | 35.16 s | 45.45 - 55.49 s |
+
+Our own rows did not move over the same rebuild: sphere plain MC 14.22 s
+then and 12.66-14.02 s now, slab table 9.40 s then and 9.10-10.45 s now. So
+this is not the container being generally slower; it is OpenMC's
+branch-heavy CSG transport meeting a different host, while our tight numba
+kernel does not care.
+
+One suspect ruled out: conda-forge now prefers the DAGMC variant, so the
+rebuilt environment may not hold the build the 5 October runs used. Timed
+on the sphere's own input at 4 threads, the DAGMC build runs at 327-337k
+particles/s and the plain `nodagmc` build at 264-289k, so what we have is
+the faster of the two, and neither reaches the 477k/s the 5 October timing
+implies. The variant is not the explanation, and nothing in the container
+recorded the 5 October CPU, so there is no way to say which machine is
+representative.
+
+**So compare only rows measured in the same session.** The sphere
+lookup-table run is 3.20x OpenMC analog on the 5 October machine and
+4.6-5.8x on this one. Both are honest; mixing them is not. Corrected
+same-session figures, median of three seeds, FOM against OpenMC analog:
+
+| problem | OpenMC implicit | ours plain MC | ours + table (free backend) | ours + network (CPU) |
+|---|---|---|---|---|
+| sphere | 0.99x | 1.84x | **5.26x** | 0.40x |
+| slab | 1.20x | 1.27x | **2.40x** | 0.58x |
+
+Against OpenMC implicit, the like-for-like algorithm, the free backend is
+5.3x on the sphere and 2.0x on the slab.
+
+## 10. Reproduce
 
 From `gmc3d/`, with `/opt/mm/root/envs/gmc/bin/python` (the environment is
 rebuilt with `micromamba create -p /opt/mm/root/envs/gmc -c conda-forge
@@ -360,6 +489,11 @@ python=3.12 openmc numba pytorch-cpu numpy`):
     python -m checks.loop_profile --r-star 2 --histories 2000000 \
         --json runs/2026-10-06/loop_profile.json       # about 7 min
     python -m checks.gpu_project --costs runs/2026-10-06/t4_compiled.json --from-race
+    python -m checks.error_bars --runs 30                # about 12 min
+    python runs/2026-10-06/ref_batches.py                # about 3 min
+    python runs/2026-10-06/race_rstar.py                 # the fixed race
+    python runs/2026-10-06/race_repeat.py                # 3 seeds, 10 min
+    python -m pytest tests -q                            # 41 tests
 
 On a machine with a GPU, the three that matter and need no OpenMC:
 

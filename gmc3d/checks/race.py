@@ -21,8 +21,17 @@ Faster per history is not the whole story: the two OpenMC modes and ours
 have different noise per history.  So each row also gets a figure of merit
 (FOM) = 1 / (relative error^2 x seconds).  Higher is better, and the FOM
 ratio is how many times faster a contender reaches the same error bar.
-With N batches the error bar on a FOM is about sqrt(2 / N), so 40 batches
-give roughly +-22%; timings themselves repeat to about 10%.
+
+A FOM is only as good as the error bar under it, and an error bar estimated
+from G independent groups carries about sqrt(2 / G) of its own -- 22% at 40
+groups, which is how two honest races on 5 and 6 October 2026 came to
+disagree by a factor of two on the slab.  Both sides are now split finely:
+ours takes its groups from the thread chunks (nchunk x batches, 1,280 here;
+see core/tallies.py), and OpenMC runs the same histories in REF_BATCHES
+batches instead of `batches`, which costs no time and does not move its
+answer at all (see checks/openmc_ref.py).  That puts both error bars at
+about 2%, so a FOM ratio is good to a few per cent rather than a factor.
+Timings themselves still repeat to only about 10%.
 
 Ball runs use the 'centre' mesh rule (balls kept full-size; mesh tallies
 smeared, research item R4), as in measure.py.  The answers checked are
@@ -48,6 +57,10 @@ CONTENDERS = (("ours, plain MC", None, None),
 # the quantity a user of each problem would care about, beyond leakage
 DETECTORS = {"cask": ("cell", 5, "detector flux")}
 
+# batches for the OpenMC reference runs: the same histories, split finely so
+# its error bar is as well determined as ours (see the docstring)
+REF_BATCHES = 1000
+
 
 def _quantities(name, r):
     """{label: (mean, se)} of the answers compared in every row."""
@@ -67,7 +80,9 @@ def _row(label, name, r, seconds, extra=None):
     fom = {k: (1.0 / ((se / m) ** 2 * seconds) if m and se else float("nan"))
            for k, (m, se) in q.items()}
     row = {"label": label, "seconds": seconds, "quantities": q, "fom": fom,
-           "counters": r.counters, "timing": r.timing}
+           "counters": r.counters, "timing": r.timing,
+           "groups": getattr(r, "groups", 0),
+           "leakage_se_batches": getattr(r, "leakage_se_batches", 0.0)}
     row.update(extra or {})
     return row
 
@@ -88,8 +103,9 @@ def race(names, backends, particles=100_000, batches=40, seed=11,
             if sb:
                 model.settings.cutoff = {"weight": 0.25, "weight_avg": 1.0}
             tag = "implicit" if sb else "analog"
+            ref_b = max(REF_BATCHES, batches)
             ref = openmc_ref.run(model, f"{workdir}/race_{name}_{tag}",
-                                 particles, batches, seed=seed + 100,
+                                 max(n // ref_b, 1), ref_b, seed=seed + 100,
                                  reuse=False)
             rows.append(_row(f"OpenMC {tag}", name, ref,
                              ref.timing["openmc_transport_s"],
@@ -145,5 +161,7 @@ def _report(rows, log):
         f"{r['label'].replace('ours', '').strip(' ,+')} "
         f"{r['flights_per_history']:.1f} / {r['balls_per_history']:.2f}, "
         f"{r['backend_s']:.2f} s" for r in extra))
+    log(f"  error bars: ours from {extra[0].get('groups', 0):,} chunk groups, "
+        f"OpenMC's from {REF_BATCHES:,} batches" if extra else "")
     log(f"  one-off costs: OpenMC start-up {rows[0]['startup_s']:.1f} s, "
         f"our compile {extra[0]['compile_s']:.1f} s" if extra else "")

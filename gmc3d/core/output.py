@@ -38,6 +38,8 @@ def save_json(results, path, extra=None):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     data = {"leakage": results.leakage, "leakage_se": results.leakage_se,
+            "leakage_se_batches": results.leakage_se_batches,
+            "error_bar_groups": results.groups,
             "tallies": {}, "counters": results.counters,
             "timing": results.timing, "settings": results.settings}
     for name, t in results.tallies.items():

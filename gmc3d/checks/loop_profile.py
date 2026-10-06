@@ -31,10 +31,10 @@ This file measures that, for each problem:
  1. IN-FLIGHT SWEEP.  The same number of histories split as few big
     batches or many small ones.  Prints balls, calls, requests per call,
     waves per batch, and the time, so the proportionality can be checked
-    rather than assumed.  CAVEAT: the error BAR is estimated from the
-    scatter between batches, so fewer batches means a noisier estimate of
-    the error (not a worse answer).  The printed leakage and its error show
-    what that costs.
+    rather than assumed.  The printed leakage and its error bar say what
+    the split costs in accuracy: nothing, since core/tallies.py now takes
+    its error from the thread chunks (nchunk x batches of them), so even
+    the two-batch row still has 64 groups behind its error bar.
 
  2. THE CEILING.  The lookup table costs about 10 ns per draw, so a table
     run is what a FREE backend would do, with the right physics.  Its time

@@ -1,0 +1,12 @@
+sphere     40 x  100,000  transport   13.02 s  wall   13.21 s  leakage 0.0314987 +- 8.57e-05 (rel 0.2720%)
+sphere    200 x   20,000  transport   12.13 s  wall   12.20 s  leakage 0.0314987 +- 8.69e-05 (rel 0.2760%)
+sphere   1000 x    4,000  transport   12.43 s  wall   12.55 s  leakage 0.0314988 +- 8.93e-05 (rel 0.2835%)
+
+slab       40 x  100,000  transport   12.05 s  wall   12.08 s  leakage 0.860771 +- 0.000189 (rel 0.0219%)
+slab      200 x   20,000  transport   12.94 s  wall   13.00 s  leakage 0.86077 +- 0.000176 (rel 0.0205%)
+slab     1000 x    4,000  transport   13.12 s  wall   13.27 s  leakage 0.860771 +- 0.00018 (rel 0.0209%)
+
+cask       40 x  100,000  transport   21.58 s  wall   21.62 s  leakage 0.0023605 +- 2.27e-05 (rel 0.9633%)
+cask      200 x   20,000  transport   19.98 s  wall   20.04 s  leakage 0.0023605 +- 2.35e-05 (rel 0.9955%)
+cask     1000 x    4,000  transport   22.68 s  wall   22.94 s  leakage 0.0023605 +- 2.4e-05 (rel 1.0175%)
+
