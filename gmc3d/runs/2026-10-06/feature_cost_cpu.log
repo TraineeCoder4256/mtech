@@ -1,0 +1,34 @@
+
+device cpu, compile False; nanoseconds per draw and the ratio to the first row of each block.
+The absolute level drifts on a shared CPU (the same shape measured in four
+blocks spread 1.6x), so read the RATIOS, which are taken inside one block.
+
+== more CONDITIONS (inputs), targets and depth held at today's
+  variant                                weights      12853 req     100000 req
+  1 cond, 2 targets, 6 steps   <- today   146,554     5820  1.00x     6406  1.00x
+  2 cond, 2 targets, 6 steps             146,586     3267  0.56x     6411  1.00x
+  5 cond, 2 targets, 6 steps             146,682     3281  0.56x     6036  0.94x
+  10 cond, 2 targets, 6 steps            146,842     3092  0.53x     6450  1.01x
+  20 cond, 2 targets, 6 steps            147,162     3781  0.65x     6585  1.03x
+
+== more TARGETS (outputs), conditions and depth held
+  variant                                weights      12853 req     100000 req
+  1 cond, 2 targets, 6 steps    <- today   146,554     3698  1.00x     6296  1.00x
+  1 cond, 4 targets, 6 steps             165,268     4173  1.13x     7563  1.20x
+  1 cond, 8 targets, 6 steps             202,696     6876  1.86x    10396  1.65x
+  1 cond, 16 targets, 6 steps            277,552    14365  3.88x    16307  2.59x
+  1 cond, 24 targets, 6 steps            352,408    22913  6.20x    20207  3.21x
+
+== more DEPTH (couplings), width unchanged
+  variant                                weights      12853 req     100000 req
+  1 cond, 2 targets, 6 steps   <- today   146,554     3366  1.00x     5179  1.00x
+  1 cond, 2 targets, 8 steps             195,032     4079  1.21x     6929  1.34x
+  1 cond, 2 targets, 12 steps            291,988     6486  1.93x    11261  2.17x
+  1 cond, 2 targets, 16 steps            388,944     9041  2.69x    13967  2.70x
+  1 cond, 2 targets, 24 steps            582,856    12736  3.78x    23441  4.53x
+
+== the two realistic Stage 2+ shapes, against today
+  variant                                weights      12853 req     100000 req
+  today: 1 cond, 2 targets, 6            146,554     3366  1.00x     5822  1.00x
+  anisotropic: 2 cond, 4 targets, 8      220,016     6377  1.89x     8919  1.53x
+  energy, 20 groups: 5 cond, 24 t, 16    938,016    57708 17.15x    53501  9.19x
