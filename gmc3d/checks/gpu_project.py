@@ -58,7 +58,8 @@ def curve(path):
         * scale
 
 
-def from_race(race, cost_at, multipliers, label, log=print):
+def from_race(race, cost_at, multipliers, label, ceiling="ours + table",
+              log=print):
     """Project onto the 5 Oct race, whose 40 batches give trustworthy error
     bars (ours here give only 20, and the error on an error bar is about
     sqrt(2/N)).  The lookup-table row stands in for a free backend: it has
@@ -68,8 +69,8 @@ def from_race(race, cost_at, multipliers, label, log=print):
     batch than the race's 100,000; the backend's batch grows with it while
     the answer does not (see checks/loop_profile.py).
     """
-    log(f"\nProjected onto the 5 Oct race (4M histories, 4 CPU cores, "
-        f"R* = 2), network cost from {label}.")
+    log(f"\nProjected onto the race, network cost from {label}; the "
+        f"ceiling row is {ceiling!r}.")
     log("Figure of merit = 1 / (relative error^2 x seconds), as a multiple "
         "of OpenMC analog's.")
     log(f"  {'problem':10s} {'OpenMC':>7s} {'ours MC':>8s} "
@@ -79,7 +80,7 @@ def from_race(race, cost_at, multipliers, label, log=print):
     for name, rows in race.items():
         om = rows[0]["fom"]["leakage"]
         mc = next(r for r in rows if r["label"] == "ours, plain MC")
-        tab = next((r for r in rows if r["label"].startswith("ours + table")),
+        tab = next((r for r in rows if r["label"].startswith(ceiling)),
                    None)
         if tab is None or not tab["counters"]["balls"]:
             log(f"  {name:10s} {1.0:6.2f}x {mc['fom']['leakage'] / om:7.2f}x"
@@ -131,6 +132,9 @@ def main():
                    help="project onto the 5 Oct race instead (better error "
                         "bars); --flight sets the in-flight multipliers")
     p.add_argument("--flight", type=int, nargs="*", default=[1, 4, 10, 40])
+    p.add_argument("--ceiling", default="ours + table",
+                   help="label prefix of the row that stands in for a free "
+                        "backend (a race with several R* has one per R*)")
     a = p.parse_args()
 
     cost_at = curve(a.costs)
@@ -143,7 +147,7 @@ def main():
         for n in (1_000, 3_000, 10_000, 30_000, 100_000)))
 
     if a.from_race:
-        from_race(race, cost_at, a.flight, a.label)
+        from_race(race, cost_at, a.flight, a.label, a.ceiling)
         return
 
     for name, d in loop.items():

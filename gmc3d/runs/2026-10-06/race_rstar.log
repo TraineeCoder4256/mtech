@@ -70,4 +70,3 @@
     ours + network (R* = 2)          leakage 0.580558 +- 9.6e-05 (z +0.3); total flux 104.511 +- 0.022 (z +2.1)
   ours: flights / balls per history, backend seconds: plain MC 60.9 / 0.00, 0.00 s; table (R* = 1.5) 27.5 / 5.18, 1.56 s; table (R* = 2) 31.7 / 3.92, 1.13 s; network (R* = 2) 31.6 / 3.92, 94.17 s
   one-off costs: OpenMC start-up 0.0 s, our compile 0.0 s
-written
