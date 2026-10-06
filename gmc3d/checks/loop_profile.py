@@ -160,12 +160,18 @@ def main():
     p.add_argument("--problems", nargs="*", default=None)
     p.add_argument("--r-star", type=float, default=2.0)
     p.add_argument("--histories", type=int, default=HISTORIES)
+    p.add_argument("--splits", type=int, nargs="*", default=None,
+                   help="batch counts to try (default 20 5 2); one value "
+                        "gives a single run, which is what an R* sweep "
+                        "wants")
     p.add_argument("--gpu-costs", default=None,
                    help="JSON from checks/net_profile.py --json")
     p.add_argument("--json", default=None)
     a = p.parse_args()
+    splits = SPLITS if a.splits is None else \
+        tuple((b, f"{b} batches") for b in a.splits)
     res = study(a.problems or list(PROBLEMS), a.r_star, a.histories,
-                gpu_costs=a.gpu_costs)
+                splits=splits, gpu_costs=a.gpu_costs)
     if a.json:
         Path(a.json).write_text(json.dumps(res, indent=1, default=float))
         print(f"\nwritten to {a.json}")

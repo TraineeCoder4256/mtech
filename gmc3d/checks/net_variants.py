@@ -28,13 +28,19 @@ variants:
                  the end: no clone, no column write, no strided slice
     knots        + the spline's bin edges built with one cumulative sum
                  and a narrow instead of a pad and two subtractions
-    compiled     + torch.compile (fuses the small elementwise chains)
+    compiled     + torch.compile (fuses the small elementwise chains).  On
+                 a T4 this is the big one: 4-5x, far more than the rewrites
+                 buy on their own
     graphs       + torch.compile(mode="reduce-overhead"), which on a GPU
                  captures the call as a CUDA graph.  Needs a FIXED batch
                  size, so the batch is padded up to the next power of two
                  (the padding is thrown away; the waste is under 2x, and
                  under 1.5x with the sqrt(2) buckets `--buckets fine`)
-    half         + float16 weights and activations
+    half         + float16 weights and activations, eager
+    compiled half  + float16 AND torch.compile, which is what puts the
+                 matrix multiplies on a GPU's tensor cores.  Eager float16
+                 on a T4 buys almost nothing (0.78-1.34x), so this is the
+                 combination that decides whether float16 is worth it
     bfloat16     + bfloat16
 
 Everything prints cost per draw at each batch size, and the largest
@@ -175,16 +181,20 @@ def build(net, device, which, fine=False):
                                                       _knots_narrow),
                           mode="reduce-overhead", dynamic=False)
         out["graphs (padded)"] = padded(f, fine)
-    for name in ("half", "bfloat16"):
-        if name in which:
-            cl = N.SplineFlow(len(net.steps),
-                              net.steps[0].proj_in.out_features,
-                              net.steps[0].bins,
-                              net.embed[0].out_features)
-            cl.load_state_dict(net.state_dict())
-            cl = cl.to(device).to(dt[name]).eval()
-            out[name] = (lambda m, d: lambda z, c: sample_columns(
-                m, z.to(d), c.to(d), _knots_narrow).float())(cl, dt[name])
+    for name in ("half", "bfloat16", "compiled half"):
+        if name not in which:
+            continue
+        d = dt["half" if name == "compiled half" else name]
+        cl = N.SplineFlow(len(net.steps),
+                          net.steps[0].proj_in.out_features,
+                          net.steps[0].bins,
+                          net.embed[0].out_features)
+        cl.load_state_dict(net.state_dict())
+        cl = cl.to(device).to(d).eval()
+        fn = (lambda m, q: lambda z, c: sample_columns(
+            m, z.to(q), c.to(q), _knots_narrow).float())(cl, d)
+        out[name] = torch.compile(fn, dynamic=True) \
+            if name == "compiled half" else fn
     return out
 
 
@@ -196,7 +206,7 @@ def main():
     p.add_argument("--batches", type=int, nargs="*", default=list(BATCHES))
     p.add_argument("--which", nargs="*",
                    default=["columns", "knots", "compiled", "graphs",
-                            "half", "bfloat16"])
+                            "half", "compiled half", "bfloat16"])
     p.add_argument("--buckets", choices=("coarse", "fine"), default="coarse")
     p.add_argument("--json", default=None)
     a = p.parse_args()
