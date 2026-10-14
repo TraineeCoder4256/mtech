@@ -1,0 +1,120 @@
+
+== slab, backend table, R* = 2, 100,000 x 10 = 1,000,000 histories
+
+  answer check: ours 0.860324433, transport.run 0.860324433; flights 7,426,815 vs 7,426,815 -> IDENTICAL
+
+-- Part A: where the wall time goes
+  allocate      0.154 s    4.3%
+  birth         0.344 s    9.6%
+  advance       2.943 s   81.7%
+  gather        0.078 s    2.2%
+  backend       0.078 s    2.2%
+  reduce        0.001 s    0.0%
+  (other)       0.002 s    0.1%
+  WALL          3.600 s
+
+  what a race calls `seconds` is transport_s + backend_s, which for this run is
+  3.443 s against a 3.600 s wall: 4.4% low, all of it the per-batch
+  particle allocation. transport.run reported 3.385 s for its own
+  execution of the same thing, so run-to-run noise is larger than the gap.
+
+-- Part B: the two kernels inside one flight
+  measured on 20,000 real scatter sites from the run above, single-threaded, nanoseconds per call
+  _descend, want_near=False             978
+  _descend, want_near=True             1085   <- what a ball step needs
+    the ball tax (the difference)       107    1.11x
+  score_segment                         325
+  rand + isotropic                       33
+
+  7,426,815 flights took 2.943 s of _advance, 396 ns each on 4 threads.
+  one _descend(False) + score_segment + rng is 1337 ns, of which geometry is 73%.
+  that accounts for 84% of the 4-thread budget (assuming perfect scaling, so read it as a lower
+  bound on geometry's share).
+
+  every flight pays a full root-down _descend, and every birth pays one too:
+  1,000,000 births + 7,426,815 flights. Of those flights 6,275,671 ended in a scatter
+  (85%) and 1,151,144 in a surface crossing (15%).
+  A scatter does not change the cell, so a cached cell would let 85% of
+  the descends start where the particle already is instead of at the root.
+
+  written runs/2026-10-14/loop_breakdown_slab.json
+
+== sphere, backend table, R* = 2, 100,000 x 10 = 1,000,000 histories
+
+  answer check: ours 0.031571518, transport.run 0.031571518; flights 36,107 vs 36,107 -> IDENTICAL
+
+-- Part A: where the wall time goes
+  allocate      0.149 s   14.3%
+  birth         0.303 s   29.1%
+  advance       0.480 s   46.0%
+  gather        0.016 s    1.5%
+  backend       0.018 s    1.8%
+  reduce        0.075 s    7.2%
+  (other)       0.001 s    0.1%
+  WALL          1.043 s
+
+  what a race calls `seconds` is transport_s + backend_s, which for this run is
+  0.818 s against a 1.043 s wall: 21.6% low, all of it the per-batch
+  particle allocation. transport.run reported 0.829 s for its own
+  execution of the same thing, so run-to-run noise is larger than the gap.
+
+-- Part B: the two kernels inside one flight
+  measured on 20,000 real scatter sites from the run above, single-threaded, nanoseconds per call
+  _descend, want_near=False             766
+  _descend, want_near=True              780   <- what a ball step needs
+    the ball tax (the difference)        14    1.02x
+  score_segment                         316
+  rand + isotropic                       34
+
+  36,107 flights took 0.480 s of _advance, 13300 ns each on 4 threads.
+  one _descend(False) + score_segment + rng is 1116 ns, of which geometry is 69%.
+  that accounts for 2% of the 4-thread budget (assuming perfect scaling, so read it as a lower
+  bound on geometry's share).
+
+  every flight pays a full root-down _descend, and every birth pays one too:
+  1,000,000 births + 36,107 flights. Of those flights 0 ended in a scatter
+  (0%) and 36,107 in a surface crossing (100%).
+  A scatter does not change the cell, so a cached cell would let 0% of
+  the descends start where the particle already is instead of at the root.
+
+  written runs/2026-10-14/loop_breakdown_sphere.json
+
+== cask, backend table, R* = 2, 100,000 x 10 = 1,000,000 histories
+
+  answer check: ours 0.002371112, transport.run 0.002371112; flights 10,161,858 vs 10,161,858 -> IDENTICAL
+
+-- Part A: where the wall time goes
+  allocate      0.150 s    3.0%
+  birth         0.299 s    6.0%
+  advance       4.317 s   86.7%
+  gather        0.075 s    1.5%
+  backend       0.119 s    2.4%
+  reduce        0.014 s    0.3%
+  (other)       0.002 s    0.0%
+  WALL          4.976 s
+
+  what a race calls `seconds` is transport_s + backend_s, which for this run is
+  4.810 s against a 4.976 s wall: 3.3% low, all of it the per-batch
+  particle allocation. transport.run reported 4.991 s for its own
+  execution of the same thing, so run-to-run noise is larger than the gap.
+
+-- Part B: the two kernels inside one flight
+  measured on 20,000 real scatter sites from the run above, single-threaded, nanoseconds per call
+  _descend, want_near=False             846
+  _descend, want_near=True              884   <- what a ball step needs
+    the ball tax (the difference)        39    1.05x
+  score_segment                         335
+  rand + isotropic                       34
+
+  10,161,858 flights took 4.317 s of _advance, 425 ns each on 4 threads.
+  one _descend(False) + score_segment + rng is 1214 ns, of which geometry is 70%.
+  that accounts for 71% of the 4-thread budget (assuming perfect scaling, so read it as a lower
+  bound on geometry's share).
+
+  every flight pays a full root-down _descend, and every birth pays one too:
+  1,000,000 births + 10,161,858 flights. Of those flights 8,949,968 ended in a scatter
+  (88%) and 1,211,890 in a surface crossing (12%).
+  A scatter does not change the cell, so a cached cell would let 88% of
+  the descends start where the particle already is instead of at the root.
+
+  written runs/2026-10-14/loop_breakdown_cask.json

@@ -1,0 +1,35 @@
+{
+ "problem": "cask",
+ "backend": "table",
+ "r_star": 2.0,
+ "phases": {
+  "allocate": 0.15028404799994632,
+  "birth": 0.2986928970000804,
+  "advance": 4.316637553000078,
+  "gather": 0.07546623700000055,
+  "backend": 0.11936076200026946,
+  "reduce": 0.013708430000065164
+ },
+ "wall_s": 4.9760232289999635,
+ "reported_seconds": 4.810157449000428,
+ "counters": {
+  "histories": 1000000,
+  "flights": 10161858,
+  "scatters": 8949968,
+  "crossings": 1211890,
+  "balls": 2180805,
+  "ball_skipped": 70038,
+  "roulette_killed": 995001,
+  "lost": 0,
+  "rescued": 0,
+  "backend_calls": 333
+ },
+ "ns_per_call": {
+  "descend_far": 845.7709274999559,
+  "descend_near": 884.4290300000068,
+  "score_segment": 334.61407249987474,
+  "rng": 33.61017999992555
+ },
+ "advance_s": 4.316637553000078,
+ "sites": 20000
+}
