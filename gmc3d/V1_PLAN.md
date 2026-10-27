@@ -1,12 +1,22 @@
-# Plan: close the small and medium gaps in source, geometry and tallies
+# Version 1 work plan: source, geometry and tallies
 
-Proposed 27 Oct 2026, for Phani's go. Nothing is built yet. Following the
-versioning rule, all of it stays in v1.1 (pushes v1.1.3, v1.1.4, ...);
-anisotropy is still v2.0. Every push is checked against OpenMC on a test
-problem that uses the new feature, and updates GAPS.md.
+What is left of version 1 before anisotropy (v2.0) starts: closing the
+small and medium gaps in source, geometry and tallies listed in `GAPS.md`.
+None of them needs the trained network to change (checked item by item;
+see the "model change?" column in `GAPS.md`), so none waits on model work.
 
-The large gaps (DAGMC/CAD, tetrahedral meshes, the physics stages) are out of
-scope here, as agreed.
+Status: proposed 27 Oct 2026, waiting for Phani's go. Nothing in it is
+built yet.
+
+Rules for every push below:
+- It is a v1.1.x version (`VERSION`, `CHANGELOG.md`, git tag).
+- It is checked against OpenMC on a test problem that uses the new
+  feature, and the unit tests pass.
+- It updates `GAPS.md`: removes what it closed, adds anything it leaves out.
+
+Out of scope here: the large gaps (DAGMC/CAD geometry, tetrahedral meshes,
+compiled sources) and everything marked YES under "model change?" (balls
+over 30 mfp, the network's short-path tail, the physics stages).
 
 ## v1.1.2 (done): GAPS.md with the model-change column, and this plan
 
