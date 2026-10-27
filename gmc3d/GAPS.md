@@ -1,80 +1,98 @@
 # What gmc3d leaves out (the gaps list)
 
-Every version adds what it left out here, and removes what it fixed. Each
-gap says which version left it, how it shows up for a user, and a rough
-size (S = a day or less, M = a few days, L = a week or more). "Refused"
-means `core/openmc_import.py` stops with an `Unsupported` error naming the
-feature. "Silent" means the model runs anyway and the feature is ignored or
-approximated, so it is the more dangerous kind.
+Every version adds what it left out here and removes what it fixed.
 
-Last updated: v1.1.0 (27 Oct 2026).
+Columns:
+- **shows as**: "refused" means `core/openmc_import.py` stops with an
+  `Unsupported` error naming the feature. "SILENT" means the model runs
+  anyway and the feature is ignored or approximated, which is the more
+  dangerous kind.
+- **size**: S = a day or less, M = a few days, L = a week or more.
+- **model change?**: whether fixing it needs the trained network to change
+  (retraining, new inputs or a new architecture). The network sees only the
+  ball's radius R and returns (mu, s), so geometry, sources, tallies and
+  boundaries normally stay outside it. Gaps marked YES are on hold until
+  the model work they belong to.
+- **plan**: the push in `V1_PLAN.md` that closes it, or "hold" / "later".
+
+Last updated: v1.1.2 (27 Oct 2026).
 
 ## Geometry (left in v1.0)
 
-| gap | how it shows | size | note |
-|---|---|---|---|
-| Cylinders and cones on a general axis (`Cylinder`, `Cone` with any direction) | refused | S | only X/Y/Z-axis ones today |
-| `Quadric` (general second-order surface) | refused | M | needs a general distance-to-surface bound for the balls |
-| `XTorus` / `YTorus` / `ZTorus` | refused | M | quartic ray intersection; distance bound harder |
-| `HexLattice` | refused | M | hexagonal element lookup and walls |
-| White and periodic boundaries | refused | S/M | white = isotropic reflection; periodic needs paired surfaces |
-| Distributed materials / cell instances (one cell, many materials) | refused | M | |
-| DAGMC / CAD geometry | refused | L | triangle surface meshes; distance field needs a BVH |
-| Cell tallies on cells filled with a universe or lattice | refused | S | material and void cells only |
-
-## Physics (left in v1.0, by stage)
-
-| gap | how it shows | size | note |
-|---|---|---|---|
-| Anisotropic scattering | refused | L | Stage 2 = v2.0 |
-| More than one energy group | refused | L | Stage 3 |
-| Fission / k-eff | refused | L | Stage 4; needs fission sites born inside balls (the v1.1 profile is half of that) |
-| Continuous energy | refused | L | Stage 5 |
-| Nuclides inside materials (only one `Macroscopic` per material) | refused | M | |
-| Photons, coupled neutron-gamma | refused (multi-group only) | L | gammas born inside balls need the same point draw as v1.1 |
-| OpenMC run settings we never read: survival biasing, weight windows, energy/weight cutoffs, `max_lost_particles`, temperatures | **silent** | S to refuse them / M+ to honour them | we always use implicit capture with roulette at 0.25 |
+| gap | shows as | size | model change? | plan |
+|---|---|---|---|---|
+| `Cylinder` and `Cone` on any axis | refused | S | no: only the distance field changes | v1.1.6 |
+| White boundary | refused | S | no: balls never cross a surface | v1.1.6 |
+| Periodic boundary, translational | refused | S | no | v1.1.6 |
+| Periodic boundary, rotational | refused | M | no | v1.1.7 |
+| `HexLattice` | refused | M | no: only the distance field and lookup change | v1.1.7 |
+| `Quadric` | refused | M | no: a guaranteed lower bound on the distance just makes balls smaller | v1.1.7 |
+| `XTorus` / `YTorus` / `ZTorus` | refused | M | no (same lower-bound idea for elliptical tubes) | v1.1.7 |
+| Distributed materials (a material per cell instance) | refused | M | no: absorption is applied outside the network | v1.1.7 |
+| Cell tallies on cells filled with a universe or lattice | refused | S | no | v1.1.5 |
+| DAGMC / CAD geometry | refused | L | no, but large engineering (BVH distance field) | later |
 
 ## Source (left in v1.0)
 
-| gap | how it shows | size | note |
-|---|---|---|---|
-| Spaces other than `Point` and `Box` (`CartesianIndependent`, `SphericalIndependent`, `CylindricalIndependent`, `MeshSpatial`, `PointCloud`) | refused | S each | |
-| Angles other than `Isotropic` and `Monodirectional` (`PolarAzimuthal`) | refused | S | |
-| `FileSource`, `CompiledSource`, `MeshSource` | refused | M | |
-| Source `constraints` / domain rejection (born only in some cells) | **silent** | S | today: born anywhere in the box, rejected only if outside the geometry |
-| Source energy | ignored (one group) | - | matters from Stage 3 |
+| gap | shows as | size | model change? | plan |
+|---|---|---|---|---|
+| `CartesianIndependent`, `SphericalIndependent`, `CylindricalIndependent` | refused | S | no: sources only set where particles start | v1.1.4 |
+| `PointCloud`, `MeshSpatial` | refused | S | no | v1.1.4 |
+| `PolarAzimuthal` angle | refused | S | no | v1.1.4 |
+| `FileSource`, `MeshSource` | refused | M | no | v1.1.4 |
+| Source `constraints` (born only in given cells, materials, universes) | **SILENT** | S | no | v1.1.4 |
+| `CompiledSource` (user C++ code) | refused | L | no, but it is someone else's compiled code | stays refused |
+| Source energy | ignored (one group) | - | YES at Stage 3 (energy becomes a network input) | Stage 3 |
 
 ## Tallies (left in v1.0 and v1.1)
 
-| gap | how it shows | size | note |
-|---|---|---|---|
-| More than one filter per tally (mesh x energy, mesh x cell, ...) | refused | M | needed at Stage 3 |
-| Scores other than flux, absorption, current (e.g. `total`, `scatter`, `events`, `heating`, reaction rates) | refused | S each | |
-| Tally `estimator` setting (`tracklength` / `collision` / `analog`) | **silent** | S | we always use track length |
-| Tally nuclides, triggers, derivatives | **silent** | S to refuse | |
-| Point detectors (flux at a point) | not available | M | Kobayashi benchmarks report point fluxes; use small voxels with `cap` for now |
-| Leakage is total only in `Results.leakage`; per-surface needs a `SurfaceFilter` tally | - | - | per-surface current added in v1.1 |
-| Surface current on reflective surfaces, or on surfaces inside a filled universe | refused (v1.1) | S/M | |
-| Partial currents (in / out separately, `CellFromFilter`) | refused (v1.1) | M | needs two-filter tallies |
-| 1D and 2D `RegularMesh` | refused (v1.1) | S | |
-| `RectilinearMesh` | refused (v1.1) | S | |
-| `CylindricalMesh`, `SphericalMesh` | refused (v1.1) | M | curved bin walls |
-| `UnstructuredMesh` (tetrahedral) | refused (v1.1) | L | needs a point-location structure and ray-through-tet tracking |
-| `MeshSurfaceFilter` (currents through voxel faces) | refused (v1.1) | M | |
+| gap | shows as | size | model change? | plan |
+|---|---|---|---|---|
+| Tally `estimator` other than track length | **SILENT** | S to refuse | no to refuse; a collision estimator inside balls would be a method question | v1.1.3 (refuse) |
+| Tally nuclides, triggers, derivatives | **SILENT** | S to refuse | no | v1.1.3 (refuse) |
+| Scores `total`, `scatter` | refused | S | no: same track-length estimator | v1.1.3 |
+| Other scores (`events`, `heating`, reaction rates by nuclide) | refused | S-M each | no, but most need data a one-group library lacks | later |
+| 1D and 2D `RegularMesh`, `RectilinearMesh` | refused | S | no: the v1.1 ball rule only asks which bin holds a point | v1.1.3 |
+| More than one filter per tally | refused | M | no | v1.1.5 |
+| `EnergyFilter` | refused | S | no now (one bin); real bins at Stage 3 | v1.1.5 |
+| Partial currents (`CellFromFilter` x `SurfaceFilter`) | refused | S after multi-filter | no | v1.1.5 |
+| `CylindricalMesh`, `SphericalMesh` | refused | M | no | v1.1.8 |
+| Surface current on reflective surfaces / inside a filled universe | refused | S/M | no | v1.1.8 |
+| `MeshSurfaceFilter` (currents through voxel faces) | refused | M | no IF balls are shrunk to one voxel when it is present (exact, less speed-up); YES if balls stay full-size, since (mu, s) cannot say which faces the walk crossed | v1.1.8 (shrink) |
+| Point detectors (flux at a point; Kobayashi reports these) | not available | M | no under the idea of using v1.1 profile points as stand-in collision sites; that idea is a method decision for Phani | Phani decides |
+| `UnstructuredMesh` (tetrahedral) | refused | L | no, but large engineering | later |
 
-## Ball method limits (approximations and ranges)
+## Run settings (left in v1.0)
 
-| gap | how it shows | size | note |
-|---|---|---|---|
-| Balls bigger than 30 mfp | **silent**: balls shrunk to 30 mfp | S | network and profile table both stop at R = 30 |
-| R* below 1 mfp with a mesh tally | refused (v1.1) | S | profile table starts at R = 1 |
-| Mesh flux in balls is exact only on average | by design (v1.1) | - | extra noise is measured in `runs/2026-10-27/MESH.md`; profile table error checked by `run.py meshcheck` |
-| Mesh points cost about 0.1 us each, up to 16 per ball | by design (v1.1) | S | could adapt K to the mesh's real dimensionality (a 1D slab mesh needs fewer) |
-| Network accuracy in its rare short-path tail (R = 29, kappa = 0.1: weight +73%, z 3.1) | **silent** | M | from 5 Oct ballcheck; the six test problems barely use it |
-| Lookup-table backend's fixed sample (~1.2% leakage bias in strongly absorbing balls) | **silent** | - | table kept only as a reference, per Phani |
-| Network runs on GPU only for the draws; transport stays on CPU | by design | L | the transport loop is now the ceiling (`runs/2026-10-14`) |
+| gap | shows as | size | model change? | plan |
+|---|---|---|---|---|
+| OpenMC settings we don't read: survival biasing, weight windows, cutoffs, `max_lost_particles`, temperatures | **SILENT** | S to warn | no. They change noise and speed only, not the expected answer, so a warning fits | v1.1.3 (warn) |
+| Honouring weight windows | - | M+ | no at ball exits; splitting INSIDE a ball is impossible without seeing the walk | later |
 
-## Open checks (not gaps in the code, but unfinished)
+## Physics (by stage)
+
+| gap | shows as | size | model change? | plan |
+|---|---|---|---|---|
+| Anisotropic scattering | refused | L | **YES**: the scattering law becomes a network input | v2.0 |
+| More than one energy group | refused | L | **YES** | Stage 3 |
+| Fission / k-eff | refused | L | **YES** (fission sites inside balls; the v1.1 profile covers where, not how many) | Stage 4 |
+| Continuous energy | refused | L | **YES** | Stage 5 |
+| Nuclides inside materials | refused | M | no at one group (sum to macroscopic), YES once energy enters | Stage 3 |
+| Photons, coupled neutron-gamma | refused | L | **YES** (a gamma model, or the scattering law as input) | later |
+
+## Ball method limits
+
+| gap | shows as | size | model change? | plan |
+|---|---|---|---|---|
+| Balls bigger than 30 mfp | **SILENT**: shrunk to 30 mfp (exact, slower) | M | **YES**: retrain the network on a wider R range (the profile table just needs rebuilding) | hold |
+| Network's rare short-path tail (R = 29, kappa = 0.1: weight +73%, z 3.1, 5 Oct ballcheck) | **SILENT** | M | **YES**: retraining or a different architecture | hold |
+| R* below 1 mfp with a mesh tally | refused (v1.1) | S | no: rebuild the profile table from a smaller R | later |
+| Mesh flux in balls exact only on average | by design (v1.1) | - | no | - |
+| Mesh points cost about 0.1 us each, up to 16 per ball | by design (v1.1) | S | no: adapt the point count to the mesh's real dimensions | later |
+| Lookup-table backend's fixed sample (~1.2% leakage bias in strongly absorbing balls) | **SILENT** | - | the table is not the model; kept only as a reference | - |
+| Network on GPU only for the draws; transport stays on CPU | by design | L | no | later |
+
+## Open checks (unfinished, not missing features)
 
 | item | since | note |
 |---|---|---|

@@ -5,6 +5,14 @@ Every push to `3d-gmc` gets a version, written in `VERSION` and tagged
 (1.1 = mesh tallies, still Stage 1); the first number is the stage
 (2.0 = anisotropic scattering); the last counts pushes within an update.
 
+## v1.1.2 (27 Oct 2026): model-change column and the version 1 plan
+
+- `GAPS.md` gains a "model change?" column: whether closing each gap needs
+  the trained network to change. Only the physics stages, balls over 30 mfp
+  and the network's short-path tail do; those are on hold.
+- `V1_PLAN.md`: the remaining version 1 work (source, geometry, tallies;
+  the small and medium gaps), as pushes v1.1.3 to v1.1.8. No code changes.
+
 ## v1.1.1 (27 Oct 2026): the gaps list
 
 - `GAPS.md`: everything gmc3d leaves out so far (geometry, physics, source,

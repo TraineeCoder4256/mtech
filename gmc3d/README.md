@@ -2,7 +2,8 @@
 
 Version: see `VERSION`; what each version changed is in `CHANGELOG.md`;
 what is still left out (and whether it is refused or silently ignored) is
-in `GAPS.md`, updated with every version.
+in `GAPS.md`, updated with every version; the remaining version 1 work is
+in `V1_PLAN.md`.
 
 Status: **Stage 1 built** (any CSG geometry, one energy group, isotropic
 scattering, fixed source). Results and the open research decisions are in
