@@ -46,7 +46,9 @@ def save_json(results, path, extra=None):
         data["tallies"][name] = {
             k: t[k] for k in ("id", "filter", "bin_ids", "mesh", "mean", "se")
             if k in t}
-        data["tallies"][name]["columns"] = ["flux", "absorption"]
+        data["tallies"][name]["columns"] = \
+            ["current", "-"] if t.get("filter") == "surface" else \
+            ["flux", "absorption"]
     if extra:
         data.update(extra)
     path.write_text(json.dumps(_plain(data), indent=1))

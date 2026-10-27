@@ -17,12 +17,25 @@ Two kinds of event deposit flux:
                ball lies inside ONE cell at every universe level, so cell,
                material and total tallies get this exactly.  A mesh voxel
                is different: the walk's track is spread through the ball,
-               and where exactly is not known (research item R4).  Two
-               rules are offered, chosen per run:
+               and where exactly is not known from (mu, s) alone
+               (research item R4).  Two rules are offered, chosen per run:
+                 'profile' (default) the deposit is split equally over
+                           K points of the ball's walk, each drawn from
+                           where walks lay their flux (ball/profile.py),
+                           and each point's voxel gets its share: exact
+                           on average, full-size balls, some extra noise
+                           (K grows with the ball's size over the voxel
+                           size; see transport.py)
                  'cap'     the ball is shrunk to fit inside the voxel holding
                            its centre, so the deposit is exact (smaller balls)
-                 'centre'  all of it goes to the voxel holding the centre
-                           (full-size balls; the mesh profile is smeared)
+               The old 'centre' rule (everything in the centre voxel) was
+               removed in v1.1: it smeared every flux map.
+
+A surface crossing scores current: the weight crossing, + if the particle
+moves to the surface's positive side and - if to its negative side (OpenMC's
+'current' score with a SurfaceFilter; on a vacuum boundary that is the
+leakage through that surface, signed).  Only flights cross surfaces, so a
+surface tally never depends on the ball backend.
 
 Absorption is scored as sigma_a times the flux deposit, the same
 track-length estimator OpenMC uses by default.
@@ -72,8 +85,9 @@ from dataclasses import dataclass
 import numpy as np
 from numba import njit
 
-TOTAL, CELL, MATERIAL, MESH = 0, 1, 2, 3
-_KIND = {"total": TOTAL, "cell": CELL, "material": MATERIAL, "mesh": MESH}
+TOTAL, CELL, MATERIAL, MESH, SURFACE = 0, 1, 2, 3, 4
+_KIND = {"total": TOTAL, "cell": CELL, "material": MATERIAL, "mesh": MESH,
+         "surface": SURFACE}
 SCORES = ("flux", "absorption")
 LEAKAGE = 0                       # index of the leakage entry
 INF = 1.0e300
@@ -83,12 +97,15 @@ Layout = namedtuple("Layout", [
     "kind", "offset",            # per tally: filter kind, first entry
     "cell_bin", "mat_bin",       # per tally x cell / material: bin or -1
     "mesh_ll", "mesh_dw", "mesh_dim",   # per tally (zeros if not a mesh)
+    "surf_bin",                  # per tally x surface: bin or -1
+    "has_mesh", "has_surface",   # any tally of that kind (skip work if not)
     "n_entries",                 # length of a row of acc
 ])
 
 
-def compile_layout(tallies, n_cells, n_mats):
-    """Tally list -> Layout.  Bin b of tally t is at offset[t] + 2 b."""
+def compile_layout(tallies, n_cells, n_mats, n_surfs=1):
+    """Tally list -> Layout.  Bin b of tally t is at offset[t] + 2 b.
+    (A surface bin keeps the pair layout: current, then an unused 0.)"""
     nt = max(len(tallies), 1)
     kind = np.zeros(nt, np.int64)
     offset = np.zeros(nt, np.int64)
@@ -97,6 +114,7 @@ def compile_layout(tallies, n_cells, n_mats):
     mesh_ll = np.zeros((nt, 3))
     mesh_dw = np.ones((nt, 3))
     mesh_dim = np.ones((nt, 3), np.int64)
+    surf_bin = np.full((nt, max(n_surfs, 1)), -1, np.int64)
     pos = 1                                       # entry 0 is leakage
     for t, tl in enumerate(tallies):
         kind[t] = _KIND[tl.filter]
@@ -109,6 +127,9 @@ def compile_layout(tallies, n_cells, n_mats):
         elif tl.filter == "material":
             nb = len(tl.bins)
             mat_bin[t, tl.bins] = np.arange(nb)
+        elif tl.filter == "surface":
+            nb = len(tl.bins)
+            surf_bin[t, tl.bins] = np.arange(nb)
         else:
             ll, ur, dim = tl.mesh
             mesh_ll[t], mesh_dim[t] = ll, dim
@@ -117,8 +138,10 @@ def compile_layout(tallies, n_cells, n_mats):
         pos += 2 * nb
     if not tallies:
         kind[0] = -1
+    kinds = [tl.filter for tl in tallies]
     return Layout(kind, offset, cell_bin, mat_bin, mesh_ll, mesh_dw,
-                  mesh_dim, pos)
+                  mesh_dim, surf_bin, "mesh" in kinds, "surface" in kinds,
+                  pos)
 
 
 # ------------------------------------------------------------ the kernels
@@ -226,8 +249,21 @@ def score_segment(row, L, cell, mat, sa, w, x, y, z, u, v, ww, length):
 
 
 @njit(cache=True)
-def score_ball(row, L, cell, mat, sa, flux, x, y, z):
-    """A ball step centred at (x,y,z) that deposited `flux` in total."""
+def score_surface(row, L, surf, signed_w):
+    """A flight crossing surface `surf` with weight +-w (sign: towards
+    the positive side)."""
+    for t in range(L.kind.size):
+        if L.kind[t] == SURFACE:
+            b = L.surf_bin[t, surf]
+            if b >= 0:
+                row[L.offset[t] + 2 * b] += signed_w
+
+
+@njit(cache=True)
+def score_ball(row, L, cell, mat, sa, flux):
+    """A ball step that deposited `flux` in total: total, cell and
+    material tallies (exact; the ball is inside one cell).  Mesh tallies
+    are scored by `score_ball_mesh`, at points transport.py chooses."""
     for t in range(L.kind.size):
         k = L.kind[t]
         if k == TOTAL:
@@ -240,7 +276,15 @@ def score_ball(row, L, cell, mat, sa, flux, x, y, z):
             b = L.mat_bin[t, mat]
             if b >= 0:
                 _add(row, L.offset[t] + 2 * b, flux, sa)
-        elif k == MESH:
+
+
+@njit(cache=True)
+def score_ball_mesh(row, L, sa, flux, x, y, z):
+    """`flux` of a ball into the voxel holding (x, y, z), in every mesh:
+    the ball's centre under 'cap', a drawn point of its walk under
+    'profile' (see transport.py)."""
+    for t in range(L.kind.size):
+        if L.kind[t] == MESH:
             ll, dw, dim = L.mesh_ll[t], L.mesh_dw[t], L.mesh_dim[t]
             ix = int(np.floor((x - ll[0]) / dw[0]))
             iy = int(np.floor((y - ll[1]) / dw[1]))
@@ -383,7 +427,8 @@ class Accumulator:
         for t, tl in enumerate(tallies):
             a = self.layout.offset[t]
             nb = {"total": 1, "cell": len(tl.bins),
-                  "material": len(tl.bins)}.get(
+                  "material": len(tl.bins),
+                  "surface": len(tl.bins)}.get(
                 tl.filter, int(np.prod(tl.mesh[2])) if tl.mesh else 1)
             out[tl.name or f"tally{tl.id}"] = {
                 "id": tl.id, "filter": tl.filter, "bin_ids": tl.bin_ids,

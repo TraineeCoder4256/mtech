@@ -30,6 +30,37 @@ So a backend only has to draw (mu, s) for a given R; this file does the
 rest: picks the exit point, turns mu into a direction, deposits the flux
 w (1 - exp(-sigma_a s)) / sigma_a, and decays the weight by exp(-sigma_a s).
 
+Where in a mesh that flux goes is the mesh rule (tallies.py): under
+'profile', the default, a point of the walk is drawn (ball/profile.py:
+a path length T weighted by the flux laid down there, then where walks of
+that length sit) and its voxel gets the deposit -- exact on average for
+every voxel.  Under 'cap' the ball is shrunk to one voxel.
+
+One point per ball is already exact on average, but a big ball then drops
+its whole flux in one voxel among hundreds, which is very noisy -- and
+worst at the edge of the geometry, where a voxel holding a thin sliver of
+material is hit rarely but hard (measured: the sphere's edge voxels gave
+chi2/dof 1.86 against OpenMC with one point, the error bar itself being
+unreliable for such rare, large scores).  So the flux is split equally over
+
+    K = min(K_MAX, ceil(2 (d / h)^2))
+
+independent points, d the ball's radius and h the smallest voxel width: a
+ball spans about (2 d / h)^3 voxels, a flight across it about 2 d / h, so K
+of that ratio gives each voxel about as many scores as a flight would.  K
+changes the noise and the cost, never the mean.  Measured 27 Oct 2026
+(exact balls, R* = 1, 2M histories, mesh chi2/dof against OpenMC; plain MC
+gets 1.04 on the sphere):
+
+    K_MAX    sphere chi2/dof  transport s     slab chi2/dof  transport s
+      1           1.945           1.9              1.346          6.8
+      4           1.192           2.5              1.116          8.5
+     16           1.074           5.2              0.870         12.7
+     64           1.079          15.0              0.847         22.7
+
+Each point costs about 0.1 us; past 16 they buy nothing measurable, hence
+K_MAX = 16.
+
 Two details keep it exact and cheap:
 
     * A ball is used only if R >= r_star (small balls cost more than the
@@ -60,18 +91,22 @@ from . import geometry as G
 from . import rng
 from . import surfaces as S
 from . import tallies as T
+from ball import profile as ball_profile
+from ball.profile import draw_r
 
 DEAD, MOVING, WAITING, READY = 0, 1, 2, 3
 TINY = 1.0e-8            # cm: how far past a surface a crossing is pushed
 GUARD = 1.0e-9           # cm: a ball stops this far short of a surface
 MAX_EVENTS = 10_000_000  # per history, a guard against a stuck particle
+K_MAX = 16               # most mesh points a ball's flux is split over
 INF = G.INF
 
 # work counters, one row per chunk (cnt[chunk, k])
 COUNTERS = ("histories", "flights", "scatters", "crossings", "balls",
-            "ball_skipped", "roulette_killed", "lost", "rescued")
+            "ball_skipped", "roulette_killed", "lost", "rescued",
+            "mesh_points")
 (C_HIST, C_FLIGHT, C_SCATTER, C_CROSS, C_BALL, C_SKIP, C_RKILL, C_LOST,
- C_RESCUE) = range(len(COUNTERS))
+ C_RESCUE, C_POINTS) = range(len(COUNTERS))
 
 Particles = namedtuple("Particles", [
     "x", "y", "z", "u", "v", "w", "wgt", "seed", "status", "fresh",
@@ -86,6 +121,10 @@ Physics = namedtuple("Physics", [
     "w_cut", "w_surv",                # Russian roulette
     "ball_on", "r_star", "r_max",     # ball step on/off, R range (mfp)
     "mesh_cap",                       # 'cap' rule for mesh tallies
+    "mesh_profile",                   # 'profile' rule (and a mesh exists)
+    "mesh_h", "k_max",                # smallest voxel width; most points
+    "prof_log_r", "prof_log1p_ell", "prof_f_unsc", "prof_cdf",
+                                      # ball/profile.py's table
 ])
 
 SourceArrays = namedtuple("SourceArrays", [
@@ -119,6 +158,13 @@ def _reflect(g, k, x, y, z, u, v, w):
     u, v, w = u - 2.0 * dot * nx, v - 2.0 * dot * ny, w - 2.0 * dot * nz
     r = np.sqrt(u * u + v * v + w * w)
     return u / r, v / r, w / r
+
+
+@njit(cache=True, inline="always")
+def _crossing_sign(g, k, x, y, z, u, v, w):
+    """+1 if (u, v, w) at (x, y, z) heads to surface k's positive side."""
+    nx, ny, nz = S.normal(g.surf_kind[k], g.surf_coef[k], x, y, z)
+    return 1.0 if u * nx + v * ny + w * nz > 0.0 else -1.0
 
 
 # ----------------------------------------------------------------- source
@@ -188,7 +234,21 @@ def _track(i, g, ph, L, P, row, cnt):
         d = P.ball_d[i]
         s_cm = P.s[i] * d / P.ball_R[i]          # mfp -> cm
         flux = T._decayed(wgt, sa, 0.0, s_cm)
-        T.score_ball(row, L, cell, mat, sa, flux, x, y, z)
+        T.score_ball(row, L, cell, mat, sa, flux)
+        if ph.mesh_profile:
+            # K points of the walk share the flux (tallies.py, profile.py)
+            k_pts = min(ph.k_max, max(1, int(np.ceil(
+                2.0 * (d / ph.mesh_h) ** 2))))
+            for _ in range(k_pts):
+                r = draw_r(ph.prof_log_r, ph.prof_log1p_ell, ph.prof_f_unsc,
+                           ph.prof_cdf, P.ball_R[i], sa / ph.sig_s[mat],
+                           P.s[i], P.seed, i) * d / P.ball_R[i]  # in cm
+                px, py, pz = rng.isotropic(P.seed, i)
+                T.score_ball_mesh(row, L, sa, flux / k_pts,
+                                  x + r * px, y + r * py, z + r * pz)
+            cnt[C_POINTS] += k_pts
+        elif L.has_mesh:
+            T.score_ball_mesh(row, L, sa, flux, x, y, z)
         wgt *= np.exp(-sa * s_cm)
         nx, ny, nz = rng.isotropic(P.seed, i)    # exit point
         x, y, z = x + d * nx, y + d * ny, z + d * nz
@@ -227,6 +287,10 @@ def _track(i, g, ph, L, P, row, cnt):
             rescues += 1
             cnt[C_RESCUE] += 1
             if g.surf_bc[k] == G.BC_VACUUM:
+                if L.has_surface:
+                    T.score_surface(row, L, k,
+                                    _crossing_sign(g, k, x, y, z, u, v, w)
+                                    * wgt)
                 row[T.LEAKAGE] += wgt
                 P.status[i] = DEAD
                 return
@@ -278,6 +342,10 @@ def _track(i, g, ph, L, P, row, cnt):
             cnt[C_SCATTER] += 1
         else:
             cnt[C_CROSS] += 1
+            if at_root and surf >= 0 and L.has_surface:
+                T.score_surface(row, L, surf,
+                                _crossing_sign(g, surf, x, y, z, u, v, w)
+                                * wgt)
             if at_root and g.surf_bc[surf] == G.BC_VACUUM:
                 row[T.LEAKAGE] += wgt
                 P.status[i] = DEAD
@@ -316,6 +384,45 @@ def _advance(g, ph, L, P, acc, cnt, nchunk):
 
 
 # ------------------------------------------------------------- the driver
+def physics(problem, backend=None, r_star=3.0, r_max=None,
+            mesh_rule="profile", w_cut=0.25, w_surv=1.0, k_max=None):
+    """The Physics and tally Layout a run uses (also used by
+    checks/loop_breakdown.py, which times run() phase by phase).
+    Returns (ph, L, r_max actually used)."""
+    if mesh_rule not in ("profile", "cap"):
+        raise ValueError("mesh_rule must be 'profile' or 'cap'")
+    k_max = K_MAX if k_max is None else k_max
+    g, m = problem.geom, problem.mats
+    L = T.compile_layout(problem.tallies, len(problem.cell_ids),
+                         len(m.ids), len(g.surf_kind))
+    use_profile = backend is not None and mesh_rule == "profile" and \
+        L.has_mesh
+    if backend is not None:
+        r_max = backend.r_max if r_max is None else min(r_max,
+                                                        backend.r_max)
+        if r_star < backend.r_min:
+            raise ValueError(f"r_star {r_star} is below the backend's "
+                             f"smallest ball {backend.r_min}")
+    mesh_h = float(L.mesh_dw[L.kind == T.MESH].min()) if L.has_mesh \
+        else 1.0
+    if use_profile:
+        prof = ball_profile.get()
+        r_max = min(r_max, prof.r_max)       # the profile's range
+        if r_star < prof.r_min:
+            raise ValueError(f"r_star {r_star} is below the mesh profile's "
+                             f"smallest ball {prof.r_min}")
+        tab = prof.arrays()
+    else:
+        tab = (np.zeros(2), np.zeros((1, 2)), np.zeros((1, 2)),
+               np.zeros((1, 2, 2)))
+    ph = Physics(m.sig_s.astype(float), m.sig_a.astype(float),
+                 np.flatnonzero(g.surf_bc != G.BC_TRANSMISSION),
+                 float(w_cut), float(w_surv), backend is not None,
+                 float(r_star), float(r_max or INF), mesh_rule == "cap",
+                 use_profile, mesh_h, int(k_max), *tab)
+    return ph, L, r_max
+
+
 def _particles(n):
     f = lambda: np.zeros(n)
     return Particles(f(), f(), f(), f(), f(), f(), f(),
@@ -325,35 +432,25 @@ def _particles(n):
 
 
 def run(problem, particles=100_000, batches=20, seed=1, backend=None,
-        r_star=3.0, r_max=None, mesh_rule="cap", w_cut=0.25, w_surv=1.0,
-        nchunk=32, verbose=False):
+        r_star=3.0, r_max=None, mesh_rule="profile", w_cut=0.25, w_surv=1.0,
+        nchunk=32, verbose=False, k_max=None):
     """Solve a Problem (from openmc_import.load).
 
     backend      None for plain Monte Carlo, or a ball backend from ball/
     r_star       smallest ball used, in mean free paths
     r_max        biggest ball used (default: the backend's own limit)
-    mesh_rule    'cap' or 'centre' (see tallies.py)
+    mesh_rule    'profile' or 'cap' (see tallies.py)
+    k_max        most mesh points per ball under 'profile' (default K_MAX;
+                 1 gives the one-point rule, for comparisons)
 
     Returns tallies.Results: per-source-particle means and standard errors.
     """
-    if mesh_rule not in ("cap", "centre"):
-        raise ValueError("mesh_rule must be 'cap' or 'centre'")
-    g, m = problem.geom, problem.mats
-    if backend is not None:
-        r_max = backend.r_max if r_max is None else min(r_max,
-                                                        backend.r_max)
-        if r_star < backend.r_min:
-            raise ValueError(f"r_star {r_star} is below the backend's "
-                             f"smallest ball {backend.r_min}")
-    ph = Physics(m.sig_s.astype(float), m.sig_a.astype(float),
-                 np.flatnonzero(g.surf_bc != G.BC_TRANSMISSION),
-                 float(w_cut), float(w_surv), backend is not None,
-                 float(r_star), float(r_max or INF), mesh_rule == "cap")
+    g = problem.geom
+    ph, L, r_max = physics(problem, backend, r_star, r_max, mesh_rule,
+                           w_cut, w_surv, k_max)
     s = problem.source
     src = SourceArrays(s.kind, s.lo, s.hi, s.mono.astype(np.bool_),
                        s.direction, s.cdf)
-    L = T.compile_layout(problem.tallies, len(problem.cell_ids),
-                         len(m.ids))
     accum = T.Accumulator(L)
     cnt = np.zeros((nchunk, len(COUNTERS)), np.int64)
     t_track = t_backend = 0.0
@@ -389,6 +486,7 @@ def run(problem, particles=100_000, batches=20, seed=1, backend=None,
     timing = {"transport_s": t_track, "backend_s": t_backend}
     settings = dict(particles=particles, batches=batches, seed=seed,
                     backend=getattr(backend, "name", None), r_star=r_star,
-                    r_max=r_max, mesh_rule=mesh_rule, w_cut=w_cut,
+                    r_max=r_max, mesh_rule=mesh_rule,
+                    k_max=ph.k_max if ph.mesh_profile else None, w_cut=w_cut,
                     w_surv=w_surv, nchunk=nchunk)
     return accum.results(problem.tallies, counters, timing, settings)

@@ -102,24 +102,17 @@ def _best(fn, args, reps, n, tries=5):
 
 # --------------------------------------------------------------- Part A
 def run_split(problem, particles, batches, seed, backend, r_star,
-              mesh_rule="centre", nchunk=32):
+              mesh_rule="profile", nchunk=32):
     """core/transport.run, with a stopwatch on every phase.
 
     Kept deliberately close to the original so the two can be compared
     line by line; the phases are the only addition.
     """
     g, m = problem.geom, problem.mats
-    r_max = None
-    if backend is not None:
-        r_max = backend.r_max
-    ph = TR.Physics(m.sig_s.astype(float), m.sig_a.astype(float),
-                    np.flatnonzero(g.surf_bc != G.BC_TRANSMISSION),
-                    0.25, 1.0, backend is not None, float(r_star),
-                    float(r_max or TR.INF), mesh_rule == "cap")
+    ph, L, _ = TR.physics(problem, backend, r_star, None, mesh_rule)
     s = problem.source
     src = TR.SourceArrays(s.kind, s.lo, s.hi, s.mono.astype(np.bool_),
                           s.direction, s.cdf)
-    L = T.compile_layout(problem.tallies, len(problem.cell_ids), len(m.ids))
     accum = T.Accumulator(L)
     cnt = np.zeros((nchunk, len(TR.COUNTERS)), np.int64)
     ph_t = dict(allocate=0.0, birth=0.0, advance=0.0, gather=0.0,
@@ -200,9 +193,9 @@ def main():
           f"{a.particles * a.batches:,} histories")
 
     TR.run(pr, 1000, 1, seed=1, backend=be, r_star=a.r_star,
-           mesh_rule="centre")                       # compile the kernels
+           mesh_rule="profile")                       # compile the kernels
     ref = TR.run(pr, a.particles, a.batches, seed=1, backend=be,
-                 r_star=a.r_star, mesh_rule="centre")
+                 r_star=a.r_star, mesh_rule="profile")
     res, ph_t, wall, sites = run_split(pr, a.particles, a.batches, 1, be,
                                        a.r_star)
 
@@ -243,7 +236,8 @@ def main():
     d = gen.normal(size=(3, n))
     d /= np.linalg.norm(d, axis=0)
     us, vs, ws = d
-    L = T.compile_layout(pr.tallies, len(pr.cell_ids), len(pr.mats.ids))
+    L = T.compile_layout(pr.tallies, len(pr.cell_ids), len(pr.mats.ids),
+                         len(pr.geom.surf_kind))
     row = np.zeros(L.n_entries)
     steps = np.full(n, 0.5)
     args = (pr.geom, sites["x"], sites["y"], sites["z"], us, vs, ws)

@@ -58,7 +58,7 @@ def big_ball_share(problem, particles, batches, mc_scatters, seed=3):
     """Share of all scatters inside balls with R >= each histogram edge."""
     orc = Oracle()
     r = transport.run(problem, particles, batches, seed=seed, backend=orc,
-                      r_star=1.0, mesh_rule="centre")
+                      r_star=1.0, mesh_rule="profile")
     inside = orc.hist_scatters[::-1].cumsum()[::-1]       # R >= edge
     balls = orc.hist_balls[::-1].cumsum()[::-1]
     total = max(mc_scatters, 1)
@@ -138,7 +138,7 @@ def study(names, backends, r_stars=(2.0, 3.0, 5.0, 10.0), particles=100_000,
                 if rs < be.r_min:
                     continue
                 r = transport.run(pr, particles, batches, seed=seed + 1,
-                                  backend=be, r_star=rs, mesh_rule="centre")
+                                  backend=be, r_star=rs, mesh_rule="profile")
                 wall = r.timing["transport_s"] + r.timing["backend_s"]
                 cmp = compare.compare(r, mc)
                 tot = cmp.get("total/flux", {})

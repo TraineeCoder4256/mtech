@@ -18,8 +18,11 @@ feature (S1-GEO-6), instead of being run wrongly:
     materials     one energy group, isotropic scattering, no fission,
                   from an OpenMC multigroup library (Macroscopic data)
     sources       point or box, isotropic or one direction
-    tallies       no filter, cell, material or regular-mesh filters;
-                  scores flux and absorption
+    tallies       no filter, cell, material or regular-mesh filters,
+                  scoring flux and absorption; or a surface filter on
+                  root-universe vacuum or transmission surfaces, scoring
+                  current (net weight crossing, + towards the positive
+                  side, as OpenMC defines it)
 """
 
 from dataclasses import dataclass, field
@@ -62,9 +65,9 @@ class Source:
 class Tally:
     """One OpenMC tally, as the solver will fill it.
 
-    filter is 'total', 'cell', 'material' or 'mesh'.  For 'mesh', mesh holds
-    (lower_left, upper_right, dimension).  bins are internal cell or material
-    indices (cell/material filters only).
+    filter is 'total', 'cell', 'material', 'mesh' or 'surface'.  For 'mesh',
+    mesh holds (lower_left, upper_right, dimension).  bins are internal
+    cell, material or surface indices (cell/material/surface filters).
     """
     id: int
     name: str
@@ -224,20 +227,24 @@ def _source(model):
 
 
 # ------------------------------------------------------------------ tallies
-def _tallies(model, cell_index, mat_index):
+def _tallies(model, cell_index, mat_index, surf_index, root_surfs):
     out = []
     for t in model.tallies:
         scores = list(t.scores)
-        bad = set(scores) - {"flux", "absorption"}
-        if bad:
-            raise Unsupported(f"tally {t.id} scores {sorted(bad)}; stage 1 "
-                              f"handles flux and absorption")
         if len(t.filters) > 1:
             raise Unsupported(f"tally {t.id} has {len(t.filters)} filters; "
                               f"stage 1 handles one")
+        f = t.filters[0] if t.filters else None
+        if isinstance(f, openmc.SurfaceFilter):
+            out.append(_surface_tally(t, f, model, surf_index, root_surfs))
+            continue
+        bad = set(scores) - {"flux", "absorption"}
+        if bad:
+            raise Unsupported(f"tally {t.id} scores {sorted(bad)}; stage 1 "
+                              f"handles flux and absorption (and current "
+                              f"with a SurfaceFilter)")
         tl = Tally(t.id, t.name, "total", scores)
-        if t.filters:
-            f = t.filters[0]
+        if f is not None:
             if isinstance(f, openmc.CellFilter):
                 tl.filter = "cell"
                 tl.bin_ids = [int(b) for b in f.bins]
@@ -264,9 +271,37 @@ def _tallies(model, cell_index, mat_index):
             else:
                 raise Unsupported(f"tally {t.id} filter "
                                   f"{type(f).__name__}; stage 1 handles "
-                                  f"Cell, Material and 3D RegularMesh")
+                                  f"Cell, Material, Surface and 3D "
+                                  f"RegularMesh")
         out.append(tl)
     return out
+
+
+def _surface_tally(t, f, model, surf_index, root_surfs):
+    """A SurfaceFilter tally: net current through each listed surface.
+
+    Only surfaces of the root universe are accepted (inside a translated
+    or rotated universe the crossing direction would need the local
+    frame), and not reflective ones (a reflection is a crossing that comes
+    straight back).  Balls never cross a surface -- a ball lies inside one
+    cell -- so every crossing is an ordinary flight and the tally is exact
+    whatever the ball backend."""
+    if list(t.scores) != ["current"]:
+        raise Unsupported(f"tally {t.id} has a SurfaceFilter; stage 1 "
+                          f"scores only current there, alone")
+    all_surfs = model.geometry.get_all_surfaces()
+    tl = Tally(t.id, t.name, "surface", ["current"])
+    tl.bin_ids = [int(b) for b in f.bins]
+    for sid in tl.bin_ids:
+        if sid not in root_surfs:
+            raise Unsupported(f"tally {t.id} filters on surface {sid}, "
+                              f"which is not a surface of the root "
+                              f"universe's cells")
+        if all_surfs[sid].boundary_type == "reflective":
+            raise Unsupported(f"tally {t.id} filters on surface {sid}, "
+                              f"which is reflective")
+    tl.bins = np.array([surf_index[b] for b in tl.bin_ids], np.int64)
+    return tl
 
 
 # ------------------------------------------------------------------- load
@@ -360,6 +395,11 @@ def load(model):
         lat_ll, lat_pitch, lat_shape, as_int(lat_ndim),
         lat_ustart, as_int(lat_univs), as_int(lat_outer),
         univ_index[geo.root_universe.id])
+    root_surfs = set()
+    for c in geo.root_universe.cells.values():
+        _region_tokens(c.region, surf_index, [], root_surfs)
+    root_surfs = {surfs[i].id for i in root_surfs}
     return Problem(model, geom, mats, _source(model),
-                   _tallies(model, cell_index, mat_index),
+                   _tallies(model, cell_index, mat_index, surf_index,
+                            root_surfs),
                    np.array([c.id for c in cells]), [c.name for c in cells])

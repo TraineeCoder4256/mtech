@@ -8,6 +8,8 @@
     python run.py ballcheck                        backends vs exact walk
     python run.py measure                          speed study, all problems
     python run.py race                             OpenMC vs ours, head to head
+    python run.py meshcheck                        mesh profile vs exact walks
+    python run.py maps                             flux maps vs OpenMC, as PNG
 
 Backends: mc (no balls), oracle (exact walk), table, network.
 --device cuda runs the network on a GPU (the transport stays on the CPU);
@@ -30,7 +32,7 @@ sys.path.insert(0, str(HERE))
 from ball import network, table                              # noqa: E402
 from ball.oracle import Oracle                                # noqa: E402
 from checks import ball_metrics, compare, measure, openmc_ref  # noqa: E402
-from checks import race, validate                             # noqa: E402
+from checks import flux_maps, mesh_profile, race, validate    # noqa: E402
 from core import openmc_import, output, transport             # noqa: E402
 from problems import PROBLEMS                                 # noqa: E402
 
@@ -89,7 +91,11 @@ def cmd_solve(args, log):
     log(f"{args.problem} with {args.backend}: leakage {r.leakage:.6g} +- "
         f"{r.leakage_se:.2g}")
     for name, t in r.tallies.items():
-        if t["mean"].shape[0] == 1:
+        if t["filter"] == "surface":
+            for sid, m_, e_ in zip(t["bin_ids"], t["mean"][:, 0],
+                                   t["se"][:, 0]):
+                log(f"  {name}: surface {sid} current {m_:.6g} +- {e_:.2g}")
+        elif t["mean"].shape[0] == 1:
             log(f"  {name}: flux {t['mean'][0, 0]:.6g} +- {t['se'][0, 0]:.2g}"
                 f", absorption {t['mean'][0, 1]:.6g} +- {t['se'][0, 1]:.2g}")
     log(f"  counters {r.counters}")
@@ -165,6 +171,24 @@ def cmd_race(args, log):
     return "race"
 
 
+def cmd_meshcheck(args, log):
+    rows = mesh_profile.run(log=log)
+    (out_dir(args) / "meshcheck.json").write_text(
+        json.dumps(output._plain(rows), indent=1))
+    return "meshcheck"
+
+
+def cmd_maps(args, log):
+    res = flux_maps.run(args.problems or list(validate.VALIDATE_ORDER),
+                        backend(args.backend, args.device),
+                        out_dir(args) / "maps", DATA / "openmc",
+                        args.particles, args.batches, seed=args.seed,
+                        r_star=args.r_star, log=log)
+    (out_dir(args) / "maps.json").write_text(
+        json.dumps(output._plain(res), indent=1))
+    return "maps"
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawTextHelpFormatter)
@@ -183,7 +207,8 @@ def main():
     s.add_argument("--backend", default="mc",
                    choices=["mc", "oracle", "table", "network"])
     s.add_argument("--r-star", type=float, default=3.0)
-    s.add_argument("--mesh-rule", default="cap", choices=["cap", "centre"])
+    s.add_argument("--mesh-rule", default="profile",
+                   choices=["profile", "cap"])
     s.add_argument("--openmc", action="store_true")
     common(s)
 
@@ -216,6 +241,17 @@ def main():
     s.add_argument("--backends", nargs="+",
                    default=["oracle", "network", "table"])
     common(s, batches=40)
+
+    s = sub.add_parser("meshcheck")
+    common(s)
+
+    s = sub.add_parser("maps")
+    s.add_argument("problems", nargs="*")
+    s.add_argument("--backend", default="network",
+                   choices=["oracle", "table", "network"])
+    s.add_argument("--r-star", type=float, default=3.0)
+    common(s)
+    s.set_defaults(seed=5)
 
     args = p.parse_args()
     log = Log()

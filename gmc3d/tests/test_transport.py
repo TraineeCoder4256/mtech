@@ -35,7 +35,7 @@ def test_infinite_medium(use_balls):
     pr = openmc_import.load(PROBLEMS["sphere"](radius=5, sig_s=1.0,
                                                sig_a=0.1, box=True))
     r = transport.run(pr, 20000, 10, backend=Oracle() if use_balls else None,
-                      r_star=1.0, mesh_rule="centre")
+                      r_star=1.0, mesh_rule="profile")
     t = r.tallies["total"]
     assert r.leakage == 0.0
     assert abs(t["mean"][0, 0] - 10.0) < 4 * t["se"][0, 0]
@@ -51,7 +51,7 @@ def test_balls_match_plain_mc_on_slab():
     pr = openmc_import.load(PROBLEMS["slab"]())
     a = transport.run(pr, 20000, 10, seed=2)
     b = transport.run(pr, 20000, 10, seed=3, backend=Oracle(), r_star=1.0,
-                      mesh_rule="centre")
+                      mesh_rule="profile")
     assert b.counters["balls"] > 0
     z = (a.leakage - b.leakage) / np.hypot(a.leakage_se, b.leakage_se)
     assert abs(z) < 4

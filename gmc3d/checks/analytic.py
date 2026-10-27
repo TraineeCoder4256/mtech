@@ -40,7 +40,7 @@ def infinite_medium(backend=None, r_star=3.0, particles=20_000,
     pr = openmc_import.load(PROBLEMS["sphere"](radius=5.0, sig_s=ss,
                                                sig_a=sa, box=True))
     r = transport.run(pr, particles, batches, backend=backend,
-                      r_star=r_star, mesh_rule="centre")
+                      r_star=r_star, mesh_rule="profile")
     t = r.tallies["total"]
     return [("infinite medium flux", t["mean"][0, 0], 1 / sa, t["se"][0, 0]),
             ("infinite medium absorption", t["mean"][0, 1], 1.0,

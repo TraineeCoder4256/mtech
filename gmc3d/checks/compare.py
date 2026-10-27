@@ -55,7 +55,9 @@ def compare(ours, ref):
         if name not in ref.tallies:
             continue
         r = ref.tallies[name]
-        for k, score in enumerate(SCORE_NAMES):
+        names = ("current",) if t.get("filter") == "surface" else \
+            SCORE_NAMES
+        for k, score in enumerate(names):
             z, ok = z_scores(t["mean"][:, k], t["se"][:, k],
                              r["mean"][:, k], r["se"][:, k])
             zk = z[ok]

@@ -1,8 +1,12 @@
 # gmc3d: ball-step GMC for any 3D CSG geometry
 
+Version: see `VERSION`; what each version changed is in `CHANGELOG.md`.
+
 Status: **Stage 1 built** (any CSG geometry, one energy group, isotropic
 scattering, fixed source). Results and the open research decisions are in
-`runs/2026-10-05/STAGE1.md`.
+`runs/2026-10-05/STAGE1.md`. Since v1.1, mesh tallies (flux maps) are right
+inside balls too, and surface current tallies exist; see
+`runs/2026-10-27/MESH.md`.
 
 The method: right after a scatter, a distance field gives the biggest
 one-material ball around the particle. If the ball is big enough, one call
@@ -34,6 +38,8 @@ Numba and PyTorch):
     python run.py table                         # build the lookup table
     python run.py train                         # train the network
     python run.py ballcheck                     # backends vs the exact walk
+    python run.py meshcheck                     # mesh profile vs exact walks
+    python run.py maps                          # flux maps vs OpenMC (PNG)
     python run.py measure                       # speed study
     python run.py race                          # OpenMC vs ours, head to head
     python run.py race --device cuda            # ... with the network on a GPU
@@ -62,7 +68,8 @@ core/                THE SOLVER
   openmc_import.py     openmc.Model -> the arrays above (refuses what
                        Stage 1 can't do, by name)
   rng.py               one random stream per particle (OpenMC's generator)
-  tallies.py           flux and absorption scoring, mesh tracking, error bars
+  tallies.py           flux, absorption and surface-current scoring, mesh
+                       tracking, the mesh rules for balls, error bars
   transport.py         plain Monte Carlo + ball steps; the batched loop
   output.py            results to JSON; mesh tallies to VTK (ParaView)
 
@@ -72,6 +79,8 @@ ball/                THE BALL STEP
   table.py             backend 2: draw from pre-computed walks
   data.py              training data + the network's input/output encoding
   network.py           backend 3: a normalizing flow, and its training
+  profile.py           where in a ball its flux lies (the 'profile' mesh
+                       rule): a table of walk positions by path length
 
 checks/              IS IT RIGHT, AND IS IT FAST
   openmc_ref.py        run OpenMC on the same model, read its tallies
@@ -79,6 +88,8 @@ checks/              IS IT RIGHT, AND IS IT FAST
   analytic.py          problems with exact answers
   validate.py          the Stage 1 suite (all problems, OpenMC, exact balls)
   ball_metrics.py      one radius at a time: backend vs exact walk
+  mesh_profile.py      the mesh rule vs exact walks, one ball at a time
+  flux_maps.py         mesh tallies vs OpenMC as pictures (PNG per problem)
   measure.py           cost per flight, big-ball share, cost per draw, R*
   race.py              OpenMC vs our plain MC vs ball runs, timed
   gpu_bench.py         the network's cost per draw on a GPU, and what it
@@ -114,7 +125,10 @@ core/transport.run --(per batch)--> particles fly (geometry, tallies, rng)
 
 ## Rules for this folder
 
-All 3D work lives here, on branch `3d-gmc` (SRS NF-8). `gmc2d/` stays frozen
+All 3D work lives here, on branch `3d-gmc` (SRS NF-8). Every push carries a
+version: `VERSION` here and a git tag `v<version>` on the pushed commit.
+v1.0 is Stage 1 as of 14 Oct 2026; v1.1.x is the mesh-tally work (bug fixes
+and small features); v2.0 starts anisotropic scattering (Stage 2). `gmc2d/` stays frozen
 so the 2D results remain reproducible; code reused from it (the spline flow,
 the training loop conventions, the Monte Carlo conventions) is copied and
 adapted, not imported. Each file's docstring says what uses it and what it

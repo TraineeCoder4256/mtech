@@ -85,6 +85,7 @@ import sys
 import time
 from pathlib import Path
 
+import numpy as np
 import openmc
 
 from core.tallies import Results
@@ -125,9 +126,16 @@ def read(sp_path, wall=None):
         leak, leak_se = float(g["leakage"][3]), float(g["leakage"][4])
         out = {}
         for tid, t in sp.tallies.items():
-            col = [t.scores.index(k) for k in ("flux", "absorption")]
-            mean = t.mean.reshape(t.mean.shape[0], -1)[:, col]
-            se = t.std_dev.reshape(t.std_dev.shape[0], -1)[:, col]
+            m = t.mean.reshape(t.mean.shape[0], -1)
+            d = t.std_dev.reshape(t.std_dev.shape[0], -1)
+            if "current" in t.scores:      # surface tally: (current, 0)
+                k = t.scores.index("current")
+                z = np.zeros((m.shape[0], 1))
+                mean = np.hstack([m[:, k:k + 1], z])
+                se = np.hstack([d[:, k:k + 1], z])
+            else:
+                col = [t.scores.index(k) for k in ("flux", "absorption")]
+                mean, se = m[:, col], d[:, col]
             out[t.name or f"tally{tid}"] = {"id": tid, "mean": mean,
                                             "se": se}
         timing = {"openmc_transport_s": float(sp.runtime["transport"]),

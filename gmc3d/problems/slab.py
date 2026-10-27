@@ -6,8 +6,9 @@ the first centimetre and diffuse through.  Deep inside, the nearest
 boundary is far away, so balls of tens of mean free paths fit: the regime
 where a ball step can pay.
 
-Tallies: a 60-bin depth profile (mesh), total leakage-relevant flux, and
-total flux/absorption.
+Tallies: a 60-bin depth profile (mesh), total flux/absorption, and (since
+v1.1) the current through each face: x = 0 (reflection, negative: leaving
+towards -x) and x = 60 (transmission, positive).
 """
 import openmc
 
@@ -31,6 +32,8 @@ def build(thickness=60.0, sig_s=0.5, sig_a=0.005, half_width=100.0, bins=60):
         common.flux_tally("depth", common.mesh_filter(
             (0.0, -half_width, -half_width),
             (thickness, half_width, half_width), (bins, 1, 1))),
+        common.flux_tally("sides", openmc.SurfaceFilter([x0, x1]),
+                          scores=("current",)),
     ])
     src = common.box_source((0.0, -half_width, -half_width),
                             (1.0, half_width, half_width))

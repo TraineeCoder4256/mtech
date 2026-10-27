@@ -76,7 +76,7 @@ TABLE_FILE = Path(__file__).resolve().parent.parent / "data" / "ball" / \
 def _row(pr, be, particles, batches, r_star, seed=7):
     t = time.perf_counter()
     r = transport.run(pr, particles, batches, seed=seed, backend=be,
-                      r_star=r_star, mesh_rule="centre")
+                      r_star=r_star, mesh_rule="profile")
     wall = time.perf_counter() - t
     c, tm = r.counters, r.timing
     calls = max(c["backend_calls"], 1)
