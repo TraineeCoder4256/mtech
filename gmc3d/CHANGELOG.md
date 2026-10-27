@@ -5,6 +5,13 @@ Every push to `3d-gmc` gets a version, written in `VERSION` and tagged
 (1.1 = mesh tallies, still Stage 1); the first number is the stage
 (2.0 = anisotropic scattering); the last counts pushes within an update.
 
+## v1.1.1 (27 Oct 2026): the gaps list
+
+- `GAPS.md`: everything gmc3d leaves out so far (geometry, physics, source,
+  tallies, ball-method limits, open checks), with whether each is refused
+  or silently ignored, and a rough size. Updated with every version from
+  now on. No code changes.
+
 ## v1.1.0 (27 Oct 2026): flux maps right inside balls, surface currents
 
 - **New mesh rule `profile`, now the default everywhere.** A ball's flux is

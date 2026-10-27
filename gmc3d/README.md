@@ -1,6 +1,8 @@
 # gmc3d: ball-step GMC for any 3D CSG geometry
 
-Version: see `VERSION`; what each version changed is in `CHANGELOG.md`.
+Version: see `VERSION`; what each version changed is in `CHANGELOG.md`;
+what is still left out (and whether it is refused or silently ignored) is
+in `GAPS.md`, updated with every version.
 
 Status: **Stage 1 built** (any CSG geometry, one energy group, isotropic
 scattering, fixed source). Results and the open research decisions are in
