@@ -7,8 +7,10 @@ arrays below).
 A surface is two things in the compiled geometry:
 
     kind[i]      an integer code (the constants below)
-    coef[i, :]   up to 4 numbers, in the same order as OpenMC's own
+    coef[i, :]   up to NCOEF numbers, in the same order as OpenMC's own
                  coefficients, so a surface reads the same in both codes
+                 (a cylinder or cone on any axis: x0, y0, z0, r or r2,
+                 then the axis direction dx, dy, dz, made unit length)
 
 Each surface is the zero set of a function f(x, y, z), with the same sign
 convention as OpenMC: the "-" half-space is f < 0, the "+" half-space f > 0.
@@ -18,6 +20,11 @@ convention as OpenMC: the "-" half-space is f < 0, the "+" half-space f > 0.
     cylinder    f = (distance to the axis)^2 - r^2
     cone        f = (distance to the axis)^2 - r2 (axial offset)^2
                 (r2 is OpenMC's "R squared": the slope of the cone, squared)
+
+The axis of a cylinder or cone is x, y or z, or (since v1.4) any unit
+direction d.  For any axis, with q = p - (x0, y0, z0) and h = q . d its
+offset along the axis, the distance to the axis is |q - h d|: the same
+formulas, measured in the axis's own frame.
 
 Four things are asked of a surface, and each has its own kernel:
 
@@ -42,13 +49,27 @@ X_PLANE, Y_PLANE, Z_PLANE, PLANE = 0, 1, 2, 3
 SPHERE = 4
 X_CYLINDER, Y_CYLINDER, Z_CYLINDER = 5, 6, 7
 X_CONE, Y_CONE, Z_CONE = 8, 9, 10
+CYLINDER, CONE = 11, 12          # any axis (OpenMC's Cylinder, Cone)
+NCOEF = 8                        # columns of coef
 
 KIND_NAMES = {
     X_PLANE: "x-plane", Y_PLANE: "y-plane", Z_PLANE: "z-plane", PLANE: "plane",
     SPHERE: "sphere", X_CYLINDER: "x-cylinder", Y_CYLINDER: "y-cylinder",
     Z_CYLINDER: "z-cylinder", X_CONE: "x-cone", Y_CONE: "y-cone",
-    Z_CONE: "z-cone",
+    Z_CONE: "z-cone", CYLINDER: "cylinder", CONE: "cone",
 }
+
+
+@njit(cache=True, inline="always")
+def _any_axis(c, x, y, z):
+    """For a cylinder or cone on any axis: (q, h, rho2) with q = p - apex
+    (or a point on the axis), h = q . d and rho2 = |q - h d|^2, the squared
+    distance to the axis (from the perpendicular vector itself, not
+    |q|^2 - h^2, which cancels badly far along the axis)."""
+    qx, qy, qz = x - c[0], y - c[1], z - c[2]
+    h = qx * c[4] + qy * c[5] + qz * c[6]
+    tx, ty, tz = qx - h * c[4], qy - h * c[5], qz - h * c[6]
+    return qx, qy, qz, h, tx * tx + ty * ty + tz * tz
 
 
 @njit(cache=True, inline="always")
@@ -76,6 +97,11 @@ def value(kind, c, x, y, z):
     if kind == SPHERE:
         dx, dy, dz = x - c[0], y - c[1], z - c[2]
         return dx * dx + dy * dy + dz * dz - c[3] * c[3]
+    if kind >= CYLINDER:
+        _, _, _, h, rho2 = _any_axis(c, x, y, z)
+        if kind == CYLINDER:
+            return rho2 - c[3] * c[3]
+        return rho2 - c[3] * h * h
     if kind <= Z_CYLINDER:
         # cylinder: c = (centre a, centre b, r) in the two transverse axes
         a, b, _ = _axis_frame(kind, x, y, z)
@@ -137,6 +163,18 @@ def ray(kind, c, x, y, z, u, v, w):
         return _smallest_positive_root(
             1.0, dx * u + dy * v + dz * w,
             dx * dx + dy * dy + dz * dz - c[3] * c[3])
+    if kind >= CYLINDER:
+        # with ud = u . d: |q + t u|^2 - (h + t ud)^2 (1 + k), k = 0 for a
+        # cylinder (minus r^2) and r2 for a cone
+        qx, qy, qz, h, rho2 = _any_axis(c, x, y, z)
+        ud = u * c[4] + v * c[5] + w * c[6]
+        qu = qx * u + qy * v + qz * w
+        if kind == CYLINDER:
+            return _smallest_positive_root(1.0 - ud * ud, qu - h * ud,
+                                           rho2 - c[3] * c[3])
+        k = 1.0 + c[3]
+        return _smallest_positive_root(1.0 - k * ud * ud, qu - k * h * ud,
+                                       rho2 - c[3] * h * h)
     if kind <= Z_CYLINDER:
         a, b, _ = _axis_frame(kind, x, y, z)
         ua, ub, _ = _axis_frame(kind, u, v, w)
@@ -173,6 +211,9 @@ def nearest(kind, c, x, y, z):
     if kind == SPHERE:
         dx, dy, dz = x - c[0], y - c[1], z - c[2]
         return abs(np.sqrt(dx * dx + dy * dy + dz * dz) - c[3])
+    if kind == CYLINDER:
+        _, _, _, _, rho2 = _any_axis(c, x, y, z)
+        return abs(np.sqrt(rho2) - c[3])
     if kind <= Z_CYLINDER:
         a, b, _ = _axis_frame(kind, x, y, z)
         da, db = a - c[0], b - c[1]
@@ -181,8 +222,12 @@ def nearest(kind, c, x, y, z):
     # rho = distance from the axis and h = offset along it.  The surface
     # there is two rays from the apex, rho = k |h| with k = sqrt(r2).  The
     # distance to the cone is the distance to the nearer ray.
-    a, b, h = _axis_frame(kind, x - c[0], y - c[1], z - c[2])
-    rho = np.sqrt(a * a + b * b)
+    if kind == CONE:
+        _, _, _, h, rho2 = _any_axis(c, x, y, z)
+        rho = np.sqrt(rho2)
+    else:
+        a, b, h = _axis_frame(kind, x - c[0], y - c[1], z - c[2])
+        rho = np.sqrt(a * a + b * b)
     k = np.sqrt(c[3])
     nrm = np.sqrt(k * k + 1.0)
     best = INF
@@ -211,6 +256,12 @@ def normal(kind, c, x, y, z):
         return c[0], c[1], c[2]
     if kind == SPHERE:
         return 2.0 * (x - c[0]), 2.0 * (y - c[1]), 2.0 * (z - c[2])
+    if kind >= CYLINDER:
+        # grad of |q|^2 - (1 + k) h^2 (- r^2): 2 (q - (1 + k) h d)
+        qx, qy, qz, h, _ = _any_axis(c, x, y, z)
+        f = h if kind == CYLINDER else (1.0 + c[3]) * h
+        return (2.0 * (qx - f * c[4]), 2.0 * (qy - f * c[5]),
+                2.0 * (qz - f * c[6]))
     if kind <= Z_CYLINDER:
         a, b, _ = _axis_frame(kind, x, y, z)
         ga, gb, gc = 2.0 * (a - c[0]), 2.0 * (b - c[1]), 0.0

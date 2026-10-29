@@ -7,6 +7,31 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v1.4.0 (29 Oct 2026): tilted shapes, white and periodic walls
+
+- **`Cylinder` and `Cone` on any axis** (OpenMC's general forms, which it
+  writes as quadrics). Exact flight crossing, exact nearest distance (so
+  balls stay as large as they can be against tilted walls), and the
+  normal, all in `core/surfaces.py`. Checked against OpenMC's own surface
+  function, by brute force on a fine grid of surface points (nearest is
+  never too large and at most 0.008 cm smaller than the grid minimum), and
+  by locating 3,000 random points in the new problem as OpenMC does.
+- **White boundary**: a particle at the wall comes back in a new
+  direction drawn from the cosine law about the inward normal, OpenMC's
+  definition. Unit test: mu^2 and the azimuth are uniform (50,000 draws);
+  a closed white sphere absorbs every particle.
+- **Periodic boundary, translational**: a particle leaving one plane
+  comes back through its partner plane with the same direction. Partners
+  come from `periodic_surface`, or pair automatically for X/Y/Z planes as
+  in OpenMC. Unit test: in the uniform slab, periodic side walls give the
+  same leakage as mirror walls.
+- Refused, with a message: rotational periodic (non-parallel partners,
+  v1.4.1), periodic on a non-plane, `albedo` other than 1, a current tally
+  on a white or periodic surface.
+- New problem `tilted`: a block with a pipe along (1, 1, 1) and a cone
+  along (1, -1, 2), periodic x walls, white y walls, vacuum z faces.
+- Validate on all 7 problems and the results in `runs/2026-10-29/v1.4/`.
+
 ## v1.3.0 (29 Oct 2026): tallies with several filters
 
 - **Several filters per tally**, combined as OpenMC does (the last

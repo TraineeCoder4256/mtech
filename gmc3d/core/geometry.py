@@ -52,7 +52,8 @@ STACK = 64               # deepest region formula evaluated
 FILL_MATERIAL, FILL_VOID, FILL_UNIVERSE, FILL_LATTICE = 0, 1, 2, 3
 
 # boundary conditions of a surface
-BC_TRANSMISSION, BC_VACUUM, BC_REFLECTIVE = 0, 1, 2
+BC_TRANSMISSION, BC_VACUUM, BC_REFLECTIVE, BC_WHITE, BC_PERIODIC = \
+    0, 1, 2, 3, 4
 
 # region formula tokens: a half-space is +(i+1) or -(i+1) for surface i;
 # operators are large codes no surface index reaches
@@ -64,6 +65,7 @@ VOID = -1
 
 Geometry = namedtuple("Geometry", [
     "surf_kind", "surf_coef", "surf_bc",                    # per surface
+    "surf_shift",       # periodic surface: the jump to its partner plane
     "cell_tok_start", "cell_tok_len", "tokens",             # region formulas
     "cell_surf_start", "cell_surf_len", "cell_surfs",       # surfaces a cell uses
     "cell_fill_type", "cell_fill",                          # what fills it

@@ -1,0 +1,1538 @@
+{
+ "analytic": [
+  [
+   "pure absorber leakage",
+   0.3678794411714462,
+   0.36787944117144233,
+   0.0
+  ],
+  [
+   "pure absorber flux",
+   6.32120558828549,
+   6.321205588285577,
+   1.6653921995499912e-08
+  ],
+  [
+   "infinite medium flux",
+   9.992117200018237,
+   10.0,
+   0.01038131844679981
+  ],
+  [
+   "infinite medium absorption",
+   0.9992117200018239,
+   1.0,
+   0.0010381318446801304
+  ],
+  [
+   "infinite medium leakage",
+   0.0,
+   0.0,
+   0.0
+  ],
+  [
+   "pure absorber leakage",
+   0.3678794411714462,
+   0.36787944117144233,
+   0.0
+  ],
+  [
+   "pure absorber flux",
+   6.32120558828549,
+   6.321205588285577,
+   1.6653921995499912e-08
+  ],
+  [
+   "infinite medium flux",
+   10.018822671416016,
+   10.0,
+   0.009249503843879677
+  ],
+  [
+   "infinite medium absorption",
+   1.0018822671416017,
+   1.0,
+   0.0009249503843878197
+  ],
+  [
+   "infinite medium leakage",
+   0.0,
+   0.0,
+   0.0
+  ]
+ ],
+ "problems": {
+  "sphere": {
+   "pass_mc": true,
+   "pass_balls": true,
+   "mc_vs_openmc": {
+    "leakage": {
+     "ours": 0.03176816531128936,
+     "ours_se": 8.942118629448243e-05,
+     "ref": 0.03143549999999997,
+     "ref_se": 0.0001152249597673576,
+     "z": 2.280834431371736
+    },
+    "total/flux": {
+     "bins": 1,
+     "chi2_dof": 1.6282762586295434,
+     "max_abs_z": 1.276039285692076,
+     "frac_over_3": 0.0,
+     "ours": 9.686881880174711,
+     "ours_se": 0.002981576178307496,
+     "ref": 9.678044478855453,
+     "ref_se": 0.006250986296735501
+    },
+    "total/absorption": {
+     "bins": 1,
+     "chi2_dof": 1.628276258636407,
+     "max_abs_z": 1.2760392856947653,
+     "frac_over_3": 0.0,
+     "ours": 0.9686881880174708,
+     "ours_se": 0.0002981576178319961,
+     "ref": 0.9678044478855441,
+     "ref_se": 0.0006250986296720901
+    },
+    "cell/flux": {
+     "bins": 1,
+     "chi2_dof": 1.6282762586295434,
+     "max_abs_z": 1.276039285692076,
+     "frac_over_3": 0.0,
+     "ours": 9.686881880174711,
+     "ours_se": 0.002981576178307496,
+     "ref": 9.678044478855453,
+     "ref_se": 0.006250986296735501
+    },
+    "cell/absorption": {
+     "bins": 1,
+     "chi2_dof": 1.628276258636407,
+     "max_abs_z": 1.2760392856947653,
+     "frac_over_3": 0.0,
+     "ours": 0.9686881880174708,
+     "ours_se": 0.0002981576178319961,
+     "ref": 0.9678044478855441,
+     "ref_se": 0.0006250986296720901
+    },
+    "mesh/flux": {
+     "bins": 5102,
+     "chi2_dof": 1.013546724348989,
+     "max_abs_z": 4.514492670287392,
+     "frac_over_3": 0.00431203449627597
+    },
+    "mesh/absorption": {
+     "bins": 5102,
+     "chi2_dof": 1.0135467243489864,
+     "max_abs_z": 4.514492670287386,
+     "frac_over_3": 0.00431203449627597
+    }
+   },
+   "balls_vs_openmc": {
+    "leakage": {
+     "ours": 0.03175537997185558,
+     "ours_se": 0.00012286466109208362,
+     "ref": 0.03143549999999997,
+     "ref_se": 0.0001152249597673576,
+     "z": 1.8990575326628654
+    },
+    "total/flux": {
+     "bins": 1,
+     "chi2_dof": 0.662253672963741,
+     "max_abs_z": 0.8137896982413461,
+     "frac_over_3": 0.0,
+     "ours": 9.683140413685498,
+     "ours_se": 0.00037089631465465276,
+     "ref": 9.678044478855453,
+     "ref_se": 0.006250986296735501
+    },
+    "total/absorption": {
+     "bins": 1,
+     "chi2_dof": 0.6622536729667609,
+     "max_abs_z": 0.8137896982432015,
+     "frac_over_3": 0.0,
+     "ours": 0.9683140413685495,
+     "ours_se": 3.708963148393433e-05,
+     "ref": 0.9678044478855441,
+     "ref_se": 0.0006250986296720901
+    },
+    "cell/flux": {
+     "bins": 1,
+     "chi2_dof": 0.662253672963741,
+     "max_abs_z": 0.8137896982413461,
+     "frac_over_3": 0.0,
+     "ours": 9.683140413685498,
+     "ours_se": 0.00037089631465465276,
+     "ref": 9.678044478855453,
+     "ref_se": 0.006250986296735501
+    },
+    "cell/absorption": {
+     "bins": 1,
+     "chi2_dof": 0.6622536729667609,
+     "max_abs_z": 0.8137896982432015,
+     "frac_over_3": 0.0,
+     "ours": 0.9683140413685495,
+     "ours_se": 3.708963148393433e-05,
+     "ref": 0.9678044478855441,
+     "ref_se": 0.0006250986296720901
+    },
+    "mesh/flux": {
+     "bins": 5077,
+     "chi2_dof": 1.0340888491724822,
+     "max_abs_z": 4.5812004814243314,
+     "frac_over_3": 0.004136300965136892
+    },
+    "mesh/absorption": {
+     "bins": 5077,
+     "chi2_dof": 1.0340888491724807,
+     "max_abs_z": 4.581200481424333,
+     "frac_over_3": 0.004136300965136892
+    }
+   },
+   "counters_mc": {
+    "histories": 2000000,
+    "flights": 37175191,
+    "scatters": 37017699,
+    "crossings": 157492,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 1842508,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "counters_balls": {
+    "histories": 2000000,
+    "flights": 73292,
+    "scatters": 0,
+    "crossings": 73292,
+    "balls": 1999923,
+    "ball_skipped": 77,
+    "roulette_killed": 1926708,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 31998768,
+    "backend_calls": 20,
+    "source_redrawn": 0
+   },
+   "timing_mc": {
+    "transport_s": 20.21283030299969,
+    "backend_s": 0.0
+   },
+   "timing_balls": {
+    "transport_s": 12.08424280600002,
+    "backend_s": 1.9024623049997444
+   },
+   "timing_openmc": {
+    "openmc_transport_s": 6.031946045000002,
+    "openmc_total_s": 6.094406025
+   }
+  },
+  "slab": {
+   "pass_mc": false,
+   "pass_balls": true,
+   "mc_vs_openmc": {
+    "leakage": {
+     "ours": 0.8608098604545571,
+     "ours_se": 0.00018696975385779343,
+     "ref": 0.8607815000000001,
+     "ref_se": 0.0002473243167687165,
+     "z": 0.09147248514634206
+    },
+    "total/flux": {
+     "bins": 1,
+     "chi2_dof": 2.3976207336127597,
+     "max_abs_z": 1.5484252431463263,
+     "frac_over_3": 0.0,
+     "ours": 27.82953840677713,
+     "ours_se": 0.03902584090361585,
+     "ref": 27.925281996142356,
+     "ref_se": 0.04796132359090016
+    },
+    "total/absorption": {
+     "bins": 1,
+     "chi2_dof": 2.3976207336170754,
+     "max_abs_z": 1.54842524314772,
+     "frac_over_3": 0.0,
+     "ours": 0.13914769203388572,
+     "ours_se": 0.00019512920451807104,
+     "ref": 0.13962640998071196,
+     "ref_se": 0.0002398066179542393
+    },
+    "total/scatter": {
+     "bins": 1,
+     "chi2_dof": 2.3976207336132958,
+     "max_abs_z": 1.5484252431464993,
+     "frac_over_3": 0.0,
+     "ours": 13.914769203388564,
+     "ours_se": 0.019512920451807924,
+     "ref": 13.962640998071178,
+     "ref_se": 0.023980661795445626
+    },
+    "total/total": {
+     "bins": 1,
+     "chi2_dof": 2.3976207336198647,
+     "max_abs_z": 1.5484252431486205,
+     "frac_over_3": 0.0,
+     "ours": 14.053916895422448,
+     "ours_se": 0.019708049656325565,
+     "ref": 14.102267408051912,
+     "ref_se": 0.024220468413364938
+    },
+    "depth1d/flux": {
+     "bins": 30,
+     "chi2_dof": 1.8194449620337698,
+     "max_abs_z": 2.9474388897023034,
+     "frac_over_3": 0.0
+    },
+    "depth1d/absorption": {
+     "bins": 30,
+     "chi2_dof": 1.819444962033461,
+     "max_abs_z": 2.9474388897015076,
+     "frac_over_3": 0.0
+    },
+    "depth1d/scatter": {
+     "bins": 30,
+     "chi2_dof": 1.8194449620337698,
+     "max_abs_z": 2.9474388897023034,
+     "frac_over_3": 0.0
+    },
+    "depth1d/total": {
+     "bins": 30,
+     "chi2_dof": 1.8194449620336306,
+     "max_abs_z": 2.9474388897016777,
+     "frac_over_3": 0.0
+    },
+    "depth/flux": {
+     "bins": 60,
+     "chi2_dof": 1.7656114335278483,
+     "max_abs_z": 3.1891116044383128,
+     "frac_over_3": 0.03333333333333333
+    },
+    "depth/absorption": {
+     "bins": 60,
+     "chi2_dof": 1.7656114335279347,
+     "max_abs_z": 3.18911160443798,
+     "frac_over_3": 0.03333333333333333
+    },
+    "sides/current": {
+     "bins": 2,
+     "chi2_dof": 0.2682819800507642,
+     "max_abs_z": 0.7323371740799747,
+     "frac_over_3": 0.0
+    },
+    "sides_from/current": {
+     "bins": 2,
+     "chi2_dof": 0.2682819800507642,
+     "max_abs_z": 0.7323371740799747,
+     "frac_over_3": 0.0
+    },
+    "sides_cell/current": {
+     "bins": 2,
+     "chi2_dof": 0.2682819800507642,
+     "max_abs_z": 0.7323371740799747,
+     "frac_over_3": 0.0
+    }
+   },
+   "balls_vs_openmc": {
+    "leakage": {
+     "ours": 0.860786445753838,
+     "ours_se": 0.00019853673938462595,
+     "ref": 0.8607815000000001,
+     "ref_se": 0.0002473243167687165,
+     "z": 0.015594210564021688
+    },
+    "total/flux": {
+     "bins": 1,
+     "chi2_dof": 0.9040277454225657,
+     "max_abs_z": 0.9508037365421771,
+     "frac_over_3": 0.0,
+     "ours": 27.865319249399572,
+     "ours_se": 0.04095053929125114,
+     "ref": 27.925281996142356,
+     "ref_se": 0.04796132359090016
+    },
+    "total/absorption": {
+     "bins": 1,
+     "chi2_dof": 0.9040277454247841,
+     "max_abs_z": 0.9508037365433437,
+     "frac_over_3": 0.0,
+     "ours": 0.13932659624699786,
+     "ours_se": 0.00020475269645625928,
+     "ref": 0.13962640998071196,
+     "ref_se": 0.0002398066179542393
+    },
+    "total/scatter": {
+     "bins": 1,
+     "chi2_dof": 0.9040277454227601,
+     "max_abs_z": 0.9508037365422793,
+     "frac_over_3": 0.0,
+     "ours": 13.932659624699786,
+     "ours_se": 0.02047526964562557,
+     "ref": 13.962640998071178,
+     "ref_se": 0.023980661795445626
+    },
+    "total/total": {
+     "bins": 1,
+     "chi2_dof": 0.9040277454255009,
+     "max_abs_z": 0.9508037365437206,
+     "frac_over_3": 0.0,
+     "ours": 14.071986220946789,
+     "ours_se": 0.02068002234207649,
+     "ref": 14.102267408051912,
+     "ref_se": 0.024220468413364938
+    },
+    "depth1d/flux": {
+     "bins": 30,
+     "chi2_dof": 1.668492037226545,
+     "max_abs_z": 2.429486518532165,
+     "frac_over_3": 0.0
+    },
+    "depth1d/absorption": {
+     "bins": 30,
+     "chi2_dof": 1.6684920372263514,
+     "max_abs_z": 2.4294865185314745,
+     "frac_over_3": 0.0
+    },
+    "depth1d/scatter": {
+     "bins": 30,
+     "chi2_dof": 1.668492037226545,
+     "max_abs_z": 2.429486518532165,
+     "frac_over_3": 0.0
+    },
+    "depth1d/total": {
+     "bins": 30,
+     "chi2_dof": 1.6684920372263254,
+     "max_abs_z": 2.4294865185315713,
+     "frac_over_3": 0.0
+    },
+    "depth/flux": {
+     "bins": 60,
+     "chi2_dof": 1.6153559101158854,
+     "max_abs_z": 2.7759786620298357,
+     "frac_over_3": 0.0
+    },
+    "depth/absorption": {
+     "bins": 60,
+     "chi2_dof": 1.6153559101158816,
+     "max_abs_z": 2.775978662029538,
+     "frac_over_3": 0.0
+    },
+    "sides/current": {
+     "bins": 2,
+     "chi2_dof": 0.9665330699450212,
+     "max_abs_z": 1.3845215480583277,
+     "frac_over_3": 0.0
+    },
+    "sides_from/current": {
+     "bins": 2,
+     "chi2_dof": 0.9665330699450212,
+     "max_abs_z": 1.3845215480583277,
+     "frac_over_3": 0.0
+    },
+    "sides_cell/current": {
+     "bins": 2,
+     "chi2_dof": 0.9665330699450212,
+     "max_abs_z": 1.3845215480583277,
+     "frac_over_3": 0.0
+    }
+   },
+   "counters_mc": {
+    "histories": 2000000,
+    "flights": 45324863,
+    "scatters": 43020811,
+    "crossings": 2304052,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 129876,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "counters_balls": {
+    "histories": 2000000,
+    "flights": 11855560,
+    "scatters": 9556754,
+    "crossings": 2298806,
+    "balls": 3204536,
+    "ball_skipped": 512526,
+    "roulette_killed": 131443,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 48713807,
+    "backend_calls": 1142,
+    "source_redrawn": 0
+   },
+   "timing_mc": {
+    "transport_s": 33.46293224799979,
+    "backend_s": 0.0
+   },
+   "timing_balls": {
+    "transport_s": 27.529137794004782,
+    "backend_s": 1.362280158994281
+   },
+   "timing_openmc": {
+    "openmc_transport_s": 17.292828797000016,
+    "openmc_total_s": 18.101436540999998
+   }
+  },
+  "curved": {
+   "pass_mc": true,
+   "pass_balls": true,
+   "mc_vs_openmc": {
+    "leakage": {
+     "ours": 0.5805614071362042,
+     "ours_se": 0.0001827026022068798,
+     "ref": 0.5805114999999998,
+     "ref_se": 0.00035303364039917124,
+     "z": 0.12554986534044685
+    },
+    "total/flux": {
+     "bins": 1,
+     "chi2_dof": 0.044209047822240465,
+     "max_abs_z": 0.21025947736604042,
+     "frac_over_3": 0.0,
+     "ours": 104.489915567832,
+     "ours_se": 0.03603090204614483,
+     "ref": 104.50518377789362,
+     "ref_se": 0.0630465144014252
+    },
+    "total/absorption": {
+     "bins": 1,
+     "chi2_dof": 0.04357456208956373,
+     "max_abs_z": 0.20874520854276807,
+     "frac_over_3": 0.0,
+     "ours": 0.41948438574082664,
+     "ours_se": 0.00018784108048862903,
+     "ref": 0.4194083536249198,
+     "ref_se": 0.0003120611843243393
+    },
+    "cell/flux": {
+     "bins": 4,
+     "chi2_dof": 0.7038346252455362,
+     "max_abs_z": 1.5135826605791185,
+     "frac_over_3": 0.0
+    },
+    "cell/absorption": {
+     "bins": 3,
+     "chi2_dof": 0.8648805545455392,
+     "max_abs_z": 1.5135826605791214,
+     "frac_over_3": 0.0
+    },
+    "mesh/flux": {
+     "bins": 2744,
+     "chi2_dof": 0.9904267508636303,
+     "max_abs_z": 3.6929890266570706,
+     "frac_over_3": 0.0014577259475218659
+    },
+    "mesh/absorption": {
+     "bins": 1584,
+     "chi2_dof": 0.9827307277400493,
+     "max_abs_z": 3.3182679170023945,
+     "frac_over_3": 0.001893939393939394
+    }
+   },
+   "balls_vs_openmc": {
+    "leakage": {
+     "ours": 0.5808314080053798,
+     "ours_se": 0.00019081045072743047,
+     "ref": 0.5805114999999998,
+     "ref_se": 0.00035303364039917124,
+     "z": 0.7971799499676571
+    },
+    "total/flux": {
+     "bins": 1,
+     "chi2_dof": 0.01223807654239405,
+     "max_abs_z": 0.11062584030141444,
+     "frac_over_3": 0.0,
+     "ours": 104.49709939700656,
+     "ours_se": 0.036954268309781775,
+     "ref": 104.50518377789362,
+     "ref_se": 0.0630465144014252
+    },
+    "total/absorption": {
+     "bins": 1,
+     "chi2_dof": 0.0417768896367225,
+     "max_abs_z": 0.2043939569476615,
+     "frac_over_3": 0.0,
+     "ours": 0.4194831240724369,
+     "ours_se": 0.00019088920804287806,
+     "ref": 0.4194083536249198,
+     "ref_se": 0.0003120611843243393
+    },
+    "cell/flux": {
+     "bins": 4,
+     "chi2_dof": 0.21558890898522948,
+     "max_abs_z": 0.600726866061617,
+     "frac_over_3": 0.0
+    },
+    "cell/absorption": {
+     "bins": 3,
+     "chi2_dof": 0.2380554098743737,
+     "max_abs_z": 0.6007268660616357,
+     "frac_over_3": 0.0
+    },
+    "mesh/flux": {
+     "bins": 2744,
+     "chi2_dof": 0.968787487515881,
+     "max_abs_z": 3.791023459883062,
+     "frac_over_3": 0.0029154518950437317
+    },
+    "mesh/absorption": {
+     "bins": 1584,
+     "chi2_dof": 0.9622234663395302,
+     "max_abs_z": 3.2648138320139943,
+     "frac_over_3": 0.001893939393939394
+    }
+   },
+   "counters_mc": {
+    "histories": 2000000,
+    "flights": 121890552,
+    "scatters": 111928206,
+    "crossings": 9962346,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 220181,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "counters_balls": {
+    "histories": 2000000,
+    "flights": 47903946,
+    "scatters": 37960519,
+    "crossings": 9943427,
+    "balls": 13336740,
+    "ball_skipped": 2566687,
+    "roulette_killed": 220535,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 48983465,
+    "backend_calls": 1100,
+    "source_redrawn": 0
+   },
+   "timing_mc": {
+    "transport_s": 79.21493748699982,
+    "backend_s": 0.0
+   },
+   "timing_balls": {
+    "transport_s": 61.91949310700056,
+    "backend_s": 2.6249244180000915
+   },
+   "timing_openmc": {
+    "openmc_transport_s": 24.551718731000022,
+    "openmc_total_s": 24.608396439
+   }
+  },
+  "nested": {
+   "pass_mc": true,
+   "pass_balls": false,
+   "mc_vs_openmc": {
+    "leakage": {
+     "ours": 0.20307121041694193,
+     "ours_se": 0.00020299300170269482,
+     "ref": 0.20416100000000012,
+     "ref_se": 0.0002728779092988723,
+     "z": -3.2043140771429743
+    },
+    "total/flux": {
+     "bins": 1,
+     "chi2_dof": 2.960951113114249,
+     "max_abs_z": 1.7207414428420817,
+     "frac_over_3": 0.0,
+     "ours": 17.446029999529628,
+     "ours_se": 0.013851226852463646,
+     "ref": 17.485800060530252,
+     "ref_se": 0.01850177582119734
+    },
+    "total/absorption": {
+     "bins": 1,
+     "chi2_dof": 0.4538413850003559,
+     "max_abs_z": 0.6736775081597692,
+     "frac_over_3": 0.0,
+     "ours": 0.7966511752639635,
+     "ours_se": 0.00024388902337329783,
+     "ref": 0.7962569979797531,
+     "ref_se": 0.0005318599891731825
+    },
+    "material/flux": {
+     "bins": 3,
+     "chi2_dof": 1.6230184624378665,
+     "max_abs_z": 1.8659362802564978,
+     "frac_over_3": 0.0
+    },
+    "material/absorption": {
+     "bins": 3,
+     "chi2_dof": 1.6230184624344488,
+     "max_abs_z": 1.8659362802543555,
+     "frac_over_3": 0.0
+    },
+    "mesh/flux": {
+     "bins": 1000,
+     "chi2_dof": 0.8814109927750132,
+     "max_abs_z": 3.169982329269625,
+     "frac_over_3": 0.002
+    },
+    "mesh/absorption": {
+     "bins": 1000,
+     "chi2_dof": 0.8868450706861007,
+     "max_abs_z": 3.169982329269613,
+     "frac_over_3": 0.002
+    },
+    "filled/flux": {
+     "bins": 4,
+     "chi2_dof": 1.1246868764984579,
+     "max_abs_z": 1.8659362802564978,
+     "frac_over_3": 0.0
+    },
+    "filled/absorption": {
+     "bins": 4,
+     "chi2_dof": 1.310963521682392,
+     "max_abs_z": 1.8659362802543555,
+     "frac_over_3": 0.0
+    },
+    "mesh_x_material/flux": {
+     "bins": 96,
+     "chi2_dof": 0.8741483419092461,
+     "max_abs_z": 2.4442943450914245,
+     "frac_over_3": 0.0
+    },
+    "mesh_x_material/absorption": {
+     "bins": 96,
+     "chi2_dof": 0.874148341909159,
+     "max_abs_z": 2.4442943450916466,
+     "frac_over_3": 0.0
+    },
+    "mesh_x_material/scatter": {
+     "bins": 96,
+     "chi2_dof": 0.8741483419091591,
+     "max_abs_z": 2.444294345092208,
+     "frac_over_3": 0.0
+    },
+    "mesh_x_material/total": {
+     "bins": 96,
+     "chi2_dof": 0.8741483419091924,
+     "max_abs_z": 2.4442943450912558,
+     "frac_over_3": 0.0
+    },
+    "cell_x_energy/flux": {
+     "bins": 2,
+     "chi2_dof": 1.8871939677838303,
+     "max_abs_z": 1.865936280256411,
+     "frac_over_3": 0.0
+    },
+    "cell_x_energy/absorption": {
+     "bins": 2,
+     "chi2_dof": 2.116771100012612,
+     "max_abs_z": 1.8659362802543555,
+     "frac_over_3": 0.0
+    },
+    "cell_x_energy/scatter": {
+     "bins": 2,
+     "chi2_dof": 1.9402716380003955,
+     "max_abs_z": 1.865936280255371,
+     "frac_over_3": 0.0
+    },
+    "cell_x_energy/total": {
+     "bins": 2,
+     "chi2_dof": 1.887796508017804,
+     "max_abs_z": 1.8659362802538018,
+     "frac_over_3": 0.0
+    },
+    "partial/current": {
+     "bins": 3,
+     "chi2_dof": 0.8661727754212803,
+     "max_abs_z": 1.5571574654664775,
+     "frac_over_3": 0.0
+    }
+   },
+   "balls_vs_openmc": {
+    "leakage": {
+     "ours": 0.2030212808797528,
+     "ours_se": 0.0002018472866866729,
+     "ref": 0.20416100000000012,
+     "ref_se": 0.0002728779092988723,
+     "z": -3.357861447193411
+    },
+    "total/flux": {
+     "bins": 1,
+     "chi2_dof": 5.6730794679545395,
+     "max_abs_z": 2.381822719673851,
+     "frac_over_3": 0.0,
+     "ours": 17.431702836387924,
+     "ours_se": 0.013173586828774543,
+     "ref": 17.485800060530252,
+     "ref_se": 0.01850177582119734
+    },
+    "total/absorption": {
+     "bins": 1,
+     "chi2_dof": 0.3854034768955462,
+     "max_abs_z": 0.6208087281083814,
+     "frac_over_3": 0.0,
+     "ours": 0.7966187143492104,
+     "ours_se": 0.00023792863730553022,
+     "ref": 0.7962569979797531,
+     "ref_se": 0.0005318599891731825
+    },
+    "material/flux": {
+     "bins": 3,
+     "chi2_dof": 2.832906801058351,
+     "max_abs_z": 2.7017708994093446,
+     "frac_over_3": 0.0
+    },
+    "material/absorption": {
+     "bins": 3,
+     "chi2_dof": 2.8329068010525646,
+     "max_abs_z": 2.7017708994066574,
+     "frac_over_3": 0.0
+    },
+    "mesh/flux": {
+     "bins": 1000,
+     "chi2_dof": 1.0065283956148476,
+     "max_abs_z": 2.925397090445247,
+     "frac_over_3": 0.0
+    },
+    "mesh/absorption": {
+     "bins": 1000,
+     "chi2_dof": 1.013750773957796,
+     "max_abs_z": 2.9253970904452906,
+     "frac_over_3": 0.0
+    },
+    "filled/flux": {
+     "bins": 4,
+     "chi2_dof": 2.0528944131887026,
+     "max_abs_z": 2.7017708994093446,
+     "frac_over_3": 0.0
+    },
+    "filled/absorption": {
+     "bins": 4,
+     "chi2_dof": 2.2793615835197354,
+     "max_abs_z": 2.7017708994066574,
+     "frac_over_3": 0.0
+    },
+    "mesh_x_material/flux": {
+     "bins": 96,
+     "chi2_dof": 0.9331568544564276,
+     "max_abs_z": 2.5108224884333525,
+     "frac_over_3": 0.0
+    },
+    "mesh_x_material/absorption": {
+     "bins": 96,
+     "chi2_dof": 0.9331568544563306,
+     "max_abs_z": 2.5108224884335555,
+     "frac_over_3": 0.0
+    },
+    "mesh_x_material/scatter": {
+     "bins": 96,
+     "chi2_dof": 0.9331568544563192,
+     "max_abs_z": 2.5108224884341364,
+     "frac_over_3": 0.0
+    },
+    "mesh_x_material/total": {
+     "bins": 96,
+     "chi2_dof": 0.9331568544563625,
+     "max_abs_z": 2.5108224884331816,
+     "frac_over_3": 0.0
+    },
+    "cell_x_energy/flux": {
+     "bins": 2,
+     "chi2_dof": 3.7195074337710436,
+     "max_abs_z": 2.7017708994092136,
+     "frac_over_3": 0.0
+    },
+    "cell_x_energy/absorption": {
+     "bins": 2,
+     "chi2_dof": 4.0487817871623335,
+     "max_abs_z": 2.7017708994066574,
+     "frac_over_3": 0.0
+    },
+    "cell_x_energy/scatter": {
+     "bins": 2,
+     "chi2_dof": 3.755828032213518,
+     "max_abs_z": 2.7017708994080856,
+     "frac_over_3": 0.0
+    },
+    "cell_x_energy/total": {
+     "bins": 2,
+     "chi2_dof": 3.719906169263658,
+     "max_abs_z": 2.70177089940558,
+     "frac_over_3": 0.0
+    },
+    "partial/current": {
+     "bins": 3,
+     "chi2_dof": 0.37044383474892717,
+     "max_abs_z": 0.8864849475399618,
+     "frac_over_3": 0.0
+    }
+   },
+   "counters_mc": {
+    "histories": 2000000,
+    "flights": 88125031,
+    "scatters": 58691628,
+    "crossings": 29433403,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 1238629,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "counters_balls": {
+    "histories": 2000000,
+    "flights": 78699773,
+    "scatters": 49280355,
+    "crossings": 29419418,
+    "balls": 2995618,
+    "ball_skipped": 1021496,
+    "roulette_killed": 1239270,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 5621769,
+    "backend_calls": 611,
+    "source_redrawn": 0
+   },
+   "timing_mc": {
+    "transport_s": 71.77606455900059,
+    "backend_s": 0.0
+   },
+   "timing_balls": {
+    "transport_s": 77.62820187000034,
+    "backend_s": 0.6472482430003765
+   },
+   "timing_openmc": {
+    "openmc_transport_s": 23.637651856999994,
+    "openmc_total_s": 23.703299054
+   }
+  },
+  "lattice3d": {
+   "pass_mc": true,
+   "pass_balls": true,
+   "mc_vs_openmc": {
+    "leakage": {
+     "ours": 0.03342676058937642,
+     "ours_se": 0.00012024325741047062,
+     "ref": 0.03336250000000002,
+     "ref_se": 0.00012899353746124656,
+     "z": 0.364401415493465
+    },
+    "total/flux": {
+     "bins": 1,
+     "chi2_dof": 0.2599801119075756,
+     "max_abs_z": 0.5098824491072188,
+     "frac_over_3": 0.0,
+     "ours": 2.680188502009358,
+     "ours_se": 0.0015413452952142944,
+     "ref": 2.6813031352465417,
+     "ref_se": 0.0015501966535100354
+    },
+    "total/absorption": {
+     "bins": 1,
+     "chi2_dof": 0.011853493056920038,
+     "max_abs_z": 0.10887374824502019,
+     "frac_over_3": 0.0,
+     "ours": 0.9667965481371064,
+     "ours_se": 0.00016304063525151733,
+     "ref": 0.9668728842969165,
+     "ref_se": 0.0006819240866664376
+    },
+    "material/flux": {
+     "bins": 2,
+     "chi2_dof": 0.13374395907361622,
+     "max_abs_z": 0.5056031103544246,
+     "frac_over_3": 0.0
+    },
+    "material/absorption": {
+     "bins": 1,
+     "chi2_dof": 0.011853412947210354,
+     "max_abs_z": 0.10887338034253531,
+     "frac_over_3": 0.0
+    },
+    "mesh/flux": {
+     "bins": 49,
+     "chi2_dof": 1.1193066732759087,
+     "max_abs_z": 2.80523270445013,
+     "frac_over_3": 0.0
+    },
+    "mesh/absorption": {
+     "bins": 11,
+     "chi2_dof": 1.393417893048907,
+     "max_abs_z": 2.80523270444989,
+     "frac_over_3": 0.0
+    }
+   },
+   "balls_vs_openmc": {
+    "leakage": {
+     "ours": 0.03342676058937642,
+     "ours_se": 0.00012024325741047062,
+     "ref": 0.03336250000000002,
+     "ref_se": 0.00012899353746124656,
+     "z": 0.364401415493465
+    },
+    "total/flux": {
+     "bins": 1,
+     "chi2_dof": 0.2599801119075756,
+     "max_abs_z": 0.5098824491072188,
+     "frac_over_3": 0.0,
+     "ours": 2.680188502009358,
+     "ours_se": 0.0015413452952142944,
+     "ref": 2.6813031352465417,
+     "ref_se": 0.0015501966535100354
+    },
+    "total/absorption": {
+     "bins": 1,
+     "chi2_dof": 0.011853493056920038,
+     "max_abs_z": 0.10887374824502019,
+     "frac_over_3": 0.0,
+     "ours": 0.9667965481371064,
+     "ours_se": 0.00016304063525151733,
+     "ref": 0.9668728842969165,
+     "ref_se": 0.0006819240866664376
+    },
+    "material/flux": {
+     "bins": 2,
+     "chi2_dof": 0.13374395907361622,
+     "max_abs_z": 0.5056031103544246,
+     "frac_over_3": 0.0
+    },
+    "material/absorption": {
+     "bins": 1,
+     "chi2_dof": 0.011853412947210354,
+     "max_abs_z": 0.10887338034253531,
+     "frac_over_3": 0.0
+    },
+    "mesh/flux": {
+     "bins": 49,
+     "chi2_dof": 1.1193066732759087,
+     "max_abs_z": 2.80523270445013,
+     "frac_over_3": 0.0
+    },
+    "mesh/absorption": {
+     "bins": 11,
+     "chi2_dof": 1.393417893048907,
+     "max_abs_z": 2.80523270444989,
+     "frac_over_3": 0.0
+    }
+   },
+   "counters_mc": {
+    "histories": 2000000,
+    "flights": 16343864,
+    "scatters": 5958557,
+    "crossings": 10385307,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 1923056,
+    "lost": 0,
+    "rescued": 1373,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "counters_balls": {
+    "histories": 2000000,
+    "flights": 16343864,
+    "scatters": 5958557,
+    "crossings": 10385307,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 1923056,
+    "lost": 0,
+    "rescued": 1373,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing_mc": {
+    "transport_s": 13.819769766000263,
+    "backend_s": 0.0
+   },
+   "timing_balls": {
+    "transport_s": 14.791761525000766,
+    "backend_s": 0.0
+   },
+   "timing_openmc": {
+    "openmc_transport_s": 5.405022732999996,
+    "openmc_total_s": 5.446305885999999
+   }
+  },
+  "cask": {
+   "pass_mc": true,
+   "pass_balls": true,
+   "mc_vs_openmc": {
+    "leakage": {
+     "ours": 0.0023567458432137882,
+     "ours_se": 2.4433194407038056e-05,
+     "ref": 0.002355000000000003,
+     "ref_se": 3.487805465822057e-05,
+     "z": 0.04099692528390557
+    },
+    "total/flux": {
+     "bins": 1,
+     "chi2_dof": 0.6331510923163685,
+     "max_abs_z": 0.7957079189730164,
+     "frac_over_3": 0.0,
+     "ours": 34.72836710377305,
+     "ours_se": 0.018058995877052904,
+     "ref": 34.700571910913844,
+     "ref_se": 0.029901095036120196
+    },
+    "total/absorption": {
+     "bins": 1,
+     "chi2_dof": 1.2971581999806745,
+     "max_abs_z": 1.1389285315508935,
+     "frac_over_3": 0.0,
+     "ours": 0.9981654246907351,
+     "ours_se": 0.0003399027966130542,
+     "ref": 0.9972928581244037,
+     "ref_se": 0.0006866005078297785
+    },
+    "cell/flux": {
+     "bins": 7,
+     "chi2_dof": 0.506079645748414,
+     "max_abs_z": 1.500673576314607,
+     "frac_over_3": 0.0
+    },
+    "cell/absorption": {
+     "bins": 4,
+     "chi2_dof": 0.6187750731980829,
+     "max_abs_z": 1.5006735763110501,
+     "frac_over_3": 0.0
+    },
+    "cell/total": {
+     "bins": 4,
+     "chi2_dof": 0.6187750731982504,
+     "max_abs_z": 1.5006735763109844,
+     "frac_over_3": 0.0
+    },
+    "material/flux": {
+     "bins": 3,
+     "chi2_dof": 0.8237611515949047,
+     "max_abs_z": 1.5006735763150254,
+     "frac_over_3": 0.0
+    },
+    "material/absorption": {
+     "bins": 3,
+     "chi2_dof": 0.8237611515908081,
+     "max_abs_z": 1.5006735763110501,
+     "frac_over_3": 0.0
+    },
+    "material/scatter": {
+     "bins": 3,
+     "chi2_dof": 0.8237611515891118,
+     "max_abs_z": 1.5006735763093653,
+     "frac_over_3": 0.0
+    },
+    "material/total": {
+     "bins": 3,
+     "chi2_dof": 0.8237611515919508,
+     "max_abs_z": 1.5006735763120387,
+     "frac_over_3": 0.0
+    },
+    "mesh/flux": {
+     "bins": 1239,
+     "chi2_dof": 1.0645247016962303,
+     "max_abs_z": 3.5826079012268623,
+     "frac_over_3": 0.00645682001614205
+    },
+    "mesh/absorption": {
+     "bins": 360,
+     "chi2_dof": 1.0442601741399837,
+     "max_abs_z": 3.1952400811259922,
+     "frac_over_3": 0.008333333333333333
+    },
+    "plan2d/flux": {
+     "bins": 484,
+     "chi2_dof": 1.1168851616513318,
+     "max_abs_z": 3.0614826915912303,
+     "frac_over_3": 0.004132231404958678
+    },
+    "plan2d/total": {
+     "bins": 132,
+     "chi2_dof": 0.895425376753315,
+     "max_abs_z": 2.5837585272298482,
+     "frac_over_3": 0.0
+    },
+    "duct_grid/flux": {
+     "bins": 254,
+     "chi2_dof": 1.0335227686025215,
+     "max_abs_z": 3.456945251406878,
+     "frac_over_3": 0.003937007874015748
+    },
+    "duct_grid/absorption": {
+     "bins": 84,
+     "chi2_dof": 0.9737292094987411,
+     "max_abs_z": 2.8222382430764155,
+     "frac_over_3": 0.0
+    },
+    "duct_grid/total": {
+     "bins": 84,
+     "chi2_dof": 1.0073808653257958,
+     "max_abs_z": 2.8222382430764137,
+     "frac_over_3": 0.0
+    }
+   },
+   "balls_vs_openmc": {
+    "leakage": {
+     "ours": 0.0023958920635620824,
+     "ours_se": 2.6114196665302713e-05,
+     "ref": 0.002355000000000003,
+     "ref_se": 3.487805465822057e-05,
+     "z": 0.9385161214792715
+    },
+    "total/flux": {
+     "bins": 1,
+     "chi2_dof": 0.7980898050100039,
+     "max_abs_z": 0.893358721348823,
+     "frac_over_3": 0.0,
+     "ours": 34.731520891106015,
+     "ours_se": 0.017495411414020213,
+     "ref": 34.700571910913844,
+     "ref_se": 0.029901095036120196
+    },
+    "total/absorption": {
+     "bins": 1,
+     "chi2_dof": 0.5313397723040447,
+     "max_abs_z": 0.7289305675467621,
+     "frac_over_3": 0.0,
+     "ours": 0.9978317525720882,
+     "ours_se": 0.0002741099766832111,
+     "ref": 0.9972928581244037,
+     "ref_se": 0.0006866005078297785
+    },
+    "cell/flux": {
+     "bins": 7,
+     "chi2_dof": 0.6430948987170767,
+     "max_abs_z": 1.4822915582146194,
+     "frac_over_3": 0.0
+    },
+    "cell/absorption": {
+     "bins": 4,
+     "chi2_dof": 0.34769029781538624,
+     "max_abs_z": 0.7660151301187332,
+     "frac_over_3": 0.0
+    },
+    "cell/total": {
+     "bins": 4,
+     "chi2_dof": 0.34769029781507993,
+     "max_abs_z": 0.7660151301186275,
+     "frac_over_3": 0.0
+    },
+    "material/flux": {
+     "bins": 3,
+     "chi2_dof": 0.2709176050784135,
+     "max_abs_z": 0.7015766333071425,
+     "frac_over_3": 0.0
+    },
+    "material/absorption": {
+     "bins": 3,
+     "chi2_dof": 0.2709176050768551,
+     "max_abs_z": 0.7015766333038007,
+     "frac_over_3": 0.0
+    },
+    "material/scatter": {
+     "bins": 3,
+     "chi2_dof": 0.27091760507699164,
+     "max_abs_z": 0.7015766333040451,
+     "frac_over_3": 0.0
+    },
+    "material/total": {
+     "bins": 3,
+     "chi2_dof": 0.2709176050767668,
+     "max_abs_z": 0.7015766333036738,
+     "frac_over_3": 0.0
+    },
+    "mesh/flux": {
+     "bins": 1235,
+     "chi2_dof": 1.103680877259987,
+     "max_abs_z": 3.4793803491097592,
+     "frac_over_3": 0.006477732793522267
+    },
+    "mesh/absorption": {
+     "bins": 360,
+     "chi2_dof": 0.9835455023529363,
+     "max_abs_z": 3.4276298746141713,
+     "frac_over_3": 0.002777777777777778
+    },
+    "plan2d/flux": {
+     "bins": 484,
+     "chi2_dof": 1.0385814683545576,
+     "max_abs_z": 3.3336502108494983,
+     "frac_over_3": 0.004132231404958678
+    },
+    "plan2d/total": {
+     "bins": 132,
+     "chi2_dof": 0.9085807768506983,
+     "max_abs_z": 2.6321756786230974,
+     "frac_over_3": 0.0
+    },
+    "duct_grid/flux": {
+     "bins": 255,
+     "chi2_dof": 1.0372948203333952,
+     "max_abs_z": 3.446675884229385,
+     "frac_over_3": 0.00392156862745098
+    },
+    "duct_grid/absorption": {
+     "bins": 84,
+     "chi2_dof": 1.242289184354277,
+     "max_abs_z": 3.4365257842503456,
+     "frac_over_3": 0.011904761904761904
+    },
+    "duct_grid/total": {
+     "bins": 84,
+     "chi2_dof": 1.3830416332717048,
+     "max_abs_z": 3.4365257842503465,
+     "frac_over_3": 0.011904761904761904
+    }
+   },
+   "counters_mc": {
+    "histories": 2000000,
+    "flights": 80136272,
+    "scatters": 77671633,
+    "crossings": 2464639,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 1989918,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "counters_balls": {
+    "histories": 2000000,
+    "flights": 14989149,
+    "scatters": 12591079,
+    "crossings": 2398070,
+    "balls": 6191385,
+    "ball_skipped": 773031,
+    "roulette_killed": 1989919,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 68787883,
+    "backend_calls": 1012,
+    "source_redrawn": 0
+   },
+   "timing_mc": {
+    "transport_s": 61.221099714000275,
+    "backend_s": 0.0
+   },
+   "timing_balls": {
+    "transport_s": 41.00851359199828,
+    "backend_s": 2.2295532950017787
+   },
+   "timing_openmc": {
+    "openmc_transport_s": 17.447867942999988,
+    "openmc_total_s": 17.50923783
+   }
+  },
+  "tilted": {
+   "pass_mc": true,
+   "pass_balls": true,
+   "mc_vs_openmc": {
+    "leakage": {
+     "ours": 0.3536835274522846,
+     "ours_se": 0.0002644724572861591,
+     "ref": 0.35322749999999997,
+     "ref_se": 0.0003461421606265504,
+     "z": 1.046859900331333
+    },
+    "total/flux": {
+     "bins": 1,
+     "chi2_dof": 2.6837500808140717,
+     "max_abs_z": 1.6382155172058626,
+     "frac_over_3": 0.0,
+     "ours": 38.05427188313029,
+     "ours_se": 0.018901579587374165,
+     "ref": 38.106047524995695,
+     "ref_se": 0.025329827431329
+    },
+    "total/absorption": {
+     "bins": 1,
+     "chi2_dof": 5.730318110436609,
+     "max_abs_z": 2.393808286065659,
+     "frac_over_3": 0.0,
+     "ours": 0.6461725187130977,
+     "ours_se": 0.0003201100935899217,
+     "ref": 0.6477294900739144,
+     "ref_se": 0.0005661895291251192
+    },
+    "total/scatter": {
+     "bins": 1,
+     "chi2_dof": 2.3577205097471547,
+     "max_abs_z": 1.5354870594528482,
+     "frac_over_3": 0.0,
+     "ours": 30.100200501077957,
+     "ours_se": 0.015322913674643822,
+     "ref": 30.13929941275479,
+     "ref_se": 0.020337142717102175
+    },
+    "total/total": {
+     "bins": 1,
+     "chi2_dof": 2.475237308701758,
+     "max_abs_z": 1.573288692103823,
+     "frac_over_3": 0.0,
+     "ours": 30.74637301979106,
+     "ours_se": 0.015499981594433434,
+     "ref": 30.78702890282867,
+     "ref_se": 0.020676683974895374
+    },
+    "cell/flux": {
+     "bins": 3,
+     "chi2_dof": 2.2213428249795912,
+     "max_abs_z": 1.995113142368401,
+     "frac_over_3": 0.0
+    },
+    "cell/absorption": {
+     "bins": 3,
+     "chi2_dof": 2.221342824977696,
+     "max_abs_z": 1.9951131423661719,
+     "frac_over_3": 0.0
+    },
+    "mesh/flux": {
+     "bins": 1500,
+     "chi2_dof": 1.0681768602528043,
+     "max_abs_z": 3.863610981166945,
+     "frac_over_3": 0.005333333333333333
+    },
+    "mesh/absorption": {
+     "bins": 1500,
+     "chi2_dof": 1.0720401955693053,
+     "max_abs_z": 3.8636109811671036,
+     "frac_over_3": 0.004666666666666667
+    },
+    "faces/current": {
+     "bins": 2,
+     "chi2_dof": 3.298547507810157,
+     "max_abs_z": 2.212402368221845,
+     "frac_over_3": 0.0
+    }
+   },
+   "balls_vs_openmc": {
+    "leakage": {
+     "ours": 0.35314061766852706,
+     "ours_se": 0.00026455685119940013,
+     "ref": 0.35322749999999997,
+     "ref_se": 0.0003461421606265504,
+     "z": -0.1994242462572124
+    },
+    "total/flux": {
+     "bins": 1,
+     "chi2_dof": 0.5044792259876699,
+     "max_abs_z": 0.7102670103472848,
+     "frac_over_3": 0.0,
+     "ours": 38.083581881373085,
+     "ours_se": 0.018943274935430538,
+     "ref": 38.106047524995695,
+     "ref_se": 0.025329827431329
+    },
+    "total/absorption": {
+     "bins": 1,
+     "chi2_dof": 2.566604780186871,
+     "max_abs_z": 1.602062664250956,
+     "frac_over_3": 0.0,
+     "ours": 0.6466833579407425,
+     "ours_se": 0.00032530964201010873,
+     "ref": 0.6477294900739144,
+     "ref_se": 0.0005661895291251192
+    },
+    "total/scatter": {
+     "bins": 1,
+     "chi2_dof": 0.4148668675653183,
+     "max_abs_z": 0.644101597238602,
+     "frac_over_3": 0.0,
+     "ours": 30.122886111550965,
+     "ours_se": 0.015354381395780636,
+     "ref": 30.13929941275479,
+     "ref_se": 0.020337142717102175
+    },
+    "total/total": {
+     "bins": 1,
+     "chi2_dof": 0.45582815206523064,
+     "max_abs_z": 0.6751504662408452,
+     "frac_over_3": 0.0,
+     "ours": 30.769569469491692,
+     "ours_se": 0.015531180852432786,
+     "ref": 30.78702890282867,
+     "ref_se": 0.020676683974895374
+    },
+    "cell/flux": {
+     "bins": 3,
+     "chi2_dof": 0.9519293551351495,
+     "max_abs_z": 1.5601590639834508,
+     "frac_over_3": 0.0
+    },
+    "cell/absorption": {
+     "bins": 3,
+     "chi2_dof": 0.9519293551331373,
+     "max_abs_z": 1.5601590639816554,
+     "frac_over_3": 0.0
+    },
+    "mesh/flux": {
+     "bins": 1500,
+     "chi2_dof": 1.0770847190863984,
+     "max_abs_z": 3.616058211223736,
+     "frac_over_3": 0.002
+    },
+    "mesh/absorption": {
+     "bins": 1500,
+     "chi2_dof": 1.0855243008861606,
+     "max_abs_z": 3.616058211223651,
+     "frac_over_3": 0.002
+    },
+    "faces/current": {
+     "bins": 2,
+     "chi2_dof": 1.344020814845337,
+     "max_abs_z": 1.6394693991531955,
+     "frac_over_3": 0.0
+    }
+   },
+   "counters_mc": {
+    "histories": 2000000,
+    "flights": 99706024,
+    "scatters": 89757095,
+    "crossings": 9948929,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 985947,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "counters_balls": {
+    "histories": 2000000,
+    "flights": 49348350,
+    "scatters": 39381305,
+    "crossings": 9967045,
+    "balls": 11081029,
+    "ball_skipped": 2472538,
+    "roulette_killed": 988243,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 45445660,
+    "backend_calls": 1252,
+    "source_redrawn": 0
+   },
+   "timing_mc": {
+    "transport_s": 78.91960700900063,
+    "backend_s": 0.0
+   },
+   "timing_balls": {
+    "transport_s": 70.02771279300123,
+    "backend_s": 2.1375851509981203
+   },
+   "timing_openmc": {
+    "openmc_transport_s": 25.037928021000013,
+    "openmc_total_s": 25.097767648999998,
+    "wall_s": 25.132471902000134
+   }
+  }
+ },
+ "all_pass": false
+}

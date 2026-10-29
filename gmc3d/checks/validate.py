@@ -40,7 +40,7 @@ from problems import PROBLEMS
 from . import analytic, compare, openmc_ref
 
 PROBLEM_ORDER = ("sphere", "slab", "curved", "nested", "lattice3d")
-VALIDATE_ORDER = PROBLEM_ORDER + ("cask",)
+VALIDATE_ORDER = PROBLEM_ORDER + ("cask", "tilted")
 P_FAIL = 1.0e-3
 Z1_MAX = float(stats.norm.isf(P_FAIL / 2))          # 3.29
 REF_BATCHES = 400

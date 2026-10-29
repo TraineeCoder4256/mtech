@@ -11,8 +11,10 @@ S1-GEO-1).
 Anything this stage cannot do is refused here with a message naming the
 feature (S1-GEO-6), instead of being run wrongly:
 
-    surfaces      planes, spheres, axis-aligned cylinders and cones
-    boundaries    transmission, vacuum, reflective
+    surfaces      planes, spheres, cylinders and cones (on x, y, z or any
+                  axis)
+    boundaries    transmission, vacuum, reflective, white, periodic
+                  (translational: parallel planes), all with albedo 1
     cells         material, void, universe or rectangular-lattice fills,
                   with translation and rotation
     materials     one energy group, isotropic scattering, no fission,
@@ -147,9 +149,13 @@ _SURFACE_KINDS = {
     openmc.XCone: (S.X_CONE, ("x0", "y0", "z0", "r2")),
     openmc.YCone: (S.Y_CONE, ("x0", "y0", "z0", "r2")),
     openmc.ZCone: (S.Z_CONE, ("x0", "y0", "z0", "r2")),
+    openmc.Cylinder: (S.CYLINDER, ("x0", "y0", "z0", "r", "dx", "dy", "dz")),
+    openmc.Cone: (S.CONE, ("x0", "y0", "z0", "r2", "dx", "dy", "dz")),
 }
 _BCS = {"transmission": G.BC_TRANSMISSION, "vacuum": G.BC_VACUUM,
-        "reflective": G.BC_REFLECTIVE}
+        "reflective": G.BC_REFLECTIVE, "white": G.BC_WHITE,
+        "periodic": G.BC_PERIODIC}
+_PLANES = (openmc.XPlane, openmc.YPlane, openmc.ZPlane, openmc.Plane)
 
 
 def _surface(surf):
@@ -161,10 +167,72 @@ def _surface(surf):
         raise Unsupported(f"surface {surf.id} has boundary "
                           f"'{surf.boundary_type}'; stage 1 handles "
                           f"{sorted(_BCS)}")
+    if surf.boundary_type != "transmission" and surf.albedo != 1.0:
+        raise Unsupported(f"surface {surf.id} has albedo {surf.albedo}; "
+                          f"gmc3d handles albedo 1 only")
     code, names = kind
-    coef = np.zeros(4)
+    coef = np.zeros(S.NCOEF)
     coef[:len(names)] = [getattr(surf, n) for n in names]
+    if code in (S.CYLINDER, S.CONE):
+        d = coef[4:7]
+        if not np.linalg.norm(d) > 0.0:
+            raise Unsupported(f"surface {surf.id}: axis direction is zero")
+        coef[4:7] = d / np.linalg.norm(d)
     return code, coef, _BCS[surf.boundary_type]
+
+
+def _plane(surf):
+    """(unit normal n, d) with the plane n . p = d."""
+    if isinstance(surf, openmc.XPlane):
+        n, d = np.array([1.0, 0, 0]), surf.x0
+    elif isinstance(surf, openmc.YPlane):
+        n, d = np.array([0, 1.0, 0]), surf.y0
+    elif isinstance(surf, openmc.ZPlane):
+        n, d = np.array([0, 0, 1.0]), surf.z0
+    else:
+        n, d = np.array([surf.a, surf.b, surf.c], float), surf.d
+    k = np.linalg.norm(n)
+    return n / k, d / k
+
+
+def _periodic_shifts(surfs):
+    """For each periodic surface, the jump that takes a particle leaving
+    through it to the same spot on its partner plane.
+
+    Partners as OpenMC pairs them: `periodic_surface` if set, otherwise the
+    one other periodic plane of the same axis (X, Y or Z planes only).
+    Only translational periodicity (parallel planes) is handled here;
+    rotational periodicity (planes at an angle) is v1.4.1."""
+    shift = np.zeros((len(surfs), 3))
+    per = [s for s in surfs if s.boundary_type == "periodic"]
+    for s in per:
+        if not isinstance(s, _PLANES):
+            raise Unsupported(f"surface {s.id} is periodic but a "
+                              f"{type(s).__name__}; periodic boundaries "
+                              f"must be planes")
+    index = {s.id: i for i, s in enumerate(surfs)}
+    for s in per:
+        partner = s.periodic_surface
+        if partner is None:
+            same = [o for o in per if o is not s and type(o) is type(s)
+                    and type(s) is not openmc.Plane]
+            if len(same) != 1:
+                raise Unsupported(f"periodic surface {s.id} has no partner: "
+                                  f"set periodic_surface")
+            partner = same[0]
+        if partner.boundary_type != "periodic":
+            raise Unsupported(f"surface {s.id}'s periodic partner "
+                              f"{partner.id} is not periodic")
+        n1, d1 = _plane(s)
+        n2, d2 = _plane(partner)
+        if np.dot(n1, n2) < 0:
+            n2, d2 = -n2, -d2
+        if np.linalg.norm(np.cross(n1, n2)) > 1e-9:
+            raise Unsupported(f"periodic surfaces {s.id} and {partner.id} "
+                              f"are not parallel: rotational periodicity "
+                              f"is not handled yet (v1.4.1)")
+        shift[index[s.id]] = (d2 - d1) * n1
+    return shift
 
 
 def _region_tokens(region, surf_index, out, used):
@@ -421,9 +489,10 @@ def _filter(t, f, kind, model, mats, cell_index, mat_index, surf_index,
             raise Unsupported(f"tally {t.id} filters on surface {sid}, "
                               f"which is not a surface of the root "
                               f"universe's cells")
-        if all_surfs[sid].boundary_type == "reflective":
+        bt = all_surfs[sid].boundary_type
+        if bt in ("reflective", "white", "periodic"):
             raise Unsupported(f"tally {t.id} filters on surface {sid}, "
-                              f"which is reflective")
+                              f"which is {bt}")
     return Filter(kind, len(ids), np.array([surf_index[b] for b in ids],
                                            np.int64), ids)
 
@@ -512,7 +581,8 @@ def load(model):
 
     as_int = lambda a: np.asarray(a, np.int64)
     geom = G.Geometry(
-        as_int(kinds), np.asarray(coefs, float).reshape(-1, 4), as_int(bcs),
+        as_int(kinds), np.asarray(coefs, float).reshape(-1, S.NCOEF),
+        as_int(bcs), _periodic_shifts(surfs),
         tok_start, tok_len, as_int(tokens),
         cs_start, cs_len, as_int(cell_surfs),
         fill_type, fill, trans, rot,

@@ -161,6 +161,34 @@ def _reflect(g, k, x, y, z, u, v, w):
     return u / r, v / r, w / r
 
 
+@njit(cache=True)
+def _boundary(g, k, P, i, x, y, z, u, v, w):
+    """A particle at (x, y, z) on root surface k, heading out through it:
+    where it carries on from, and in which direction, under k's boundary
+    condition (not vacuum, which ends the history).
+
+      reflective   mirrored direction
+      white        a new direction drawn from the cosine law about the
+                   inward normal (mu = sqrt(xi)), OpenMC's definition
+      periodic     same direction, moved to the partner plane
+                   (translational: g.surf_shift[k])
+    """
+    bc = g.surf_bc[k]
+    if bc == G.BC_REFLECTIVE:
+        u, v, w = _reflect(g, k, x, y, z, u, v, w)
+    elif bc == G.BC_WHITE:
+        nx, ny, nz = S.normal(g.surf_kind[k], g.surf_coef[k], x, y, z)
+        nn = np.sqrt(nx * nx + ny * ny + nz * nz)
+        sg = -1.0 if u * nx + v * ny + w * nz > 0.0 else 1.0   # inward
+        mu = np.sqrt(rng.rand(P.seed, i))
+        u, v, w = rotate(sg * nx / nn, sg * ny / nn, sg * nz / nn, mu,
+                         2.0 * np.pi * rng.rand(P.seed, i))
+    elif bc == G.BC_PERIODIC:
+        x, y, z = (x + g.surf_shift[k, 0], y + g.surf_shift[k, 1],
+                   z + g.surf_shift[k, 2])
+    return x, y, z, u, v, w
+
+
 @njit(cache=True, inline="always")
 def _crossing_sign(g, k, x, y, z, u, v, w):
     """+1 if (u, v, w) at (x, y, z) heads to surface k's positive side."""
@@ -283,7 +311,7 @@ def _track(i, g, ph, L, P, row, cnt, pth, last, to, univ, scr):
                 row[T.LEAKAGE] += wgt
                 P.status[i] = DEAD
                 return
-            u, v, w = _reflect(g, k, x, y, z, u, v, w)
+            x, y, z, u, v, w = _boundary(g, k, P, i, x, y, z, u, v, w)
             x, y, z = x + 2.0 * TINY * u, y + 2.0 * TINY * v, \
                 z + 2.0 * TINY * w
             continue
@@ -363,8 +391,8 @@ def _track(i, g, ph, L, P, row, cnt, pth, last, to, univ, scr):
                 row[T.LEAKAGE] += wgt
                 P.status[i] = DEAD
                 return
-            if at_root and g.surf_bc[surf] == G.BC_REFLECTIVE:
-                u, v, w = _reflect(g, surf, x, y, z, u, v, w)
+            if at_root and g.surf_bc[surf] != G.BC_TRANSMISSION:
+                x, y, z, u, v, w = _boundary(g, surf, P, i, x, y, z, u, v, w)
             x, y, z = x + TINY * u, y + TINY * v, z + TINY * w
 
         if wgt < ph.w_cut * P.w0[i]:

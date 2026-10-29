@@ -6,8 +6,8 @@ None of them needs the trained network to change (checked item by item;
 see the "model change?" column in `GAPS.md`), so none waits on model work.
 
 Status: proposed 27 Oct 2026; Phani gave the go on 29 Oct 2026. v1.1.3
-v1.2.0 (sources) and v1.3.0 (multi-filter tallies) are done; v1.4.0
-(geometry, small items) is next.
+v1.2.0 (sources), v1.3.0 (multi-filter tallies) and v1.4.0 (geometry,
+small items) are done; v1.4.1 (geometry, medium items) is next.
 
 Numbering (Phani, 29 Oct 2026): v1.1.x is the mesh work and the easy
 tally items; each later area gets its own minor version (v1.2 sources,
@@ -77,7 +77,7 @@ surface bins are fixed, so the mesh walk just adds an offset. This unlocks:
 Check: vs OpenMC on the nested problem (filled cells) and the slab (partial
 currents).
 
-## v1.4.0: geometry, the small items
+## v1.4.0: geometry, the small items (done 29 Oct 2026)
 
 | item | how |
 |---|---|

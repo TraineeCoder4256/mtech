@@ -15,20 +15,20 @@ Columns:
   the model work they belong to.
 - **plan**: the push in `V1_PLAN.md` that closes it, or "hold" / "later".
 
-Last updated: v1.3.0 (29 Oct 2026).
+Last updated: v1.4.0 (29 Oct 2026).
 
-## Geometry (left in v1.0)
+## Geometry (left in v1.0 to v1.4.0)
 
 | gap | shows as | size | model change? | plan |
 |---|---|---|---|---|
-| `Cylinder` and `Cone` on any axis | refused | S | no: only the distance field changes | v1.4.0 |
-| White boundary | refused | S | no: balls never cross a surface | v1.4.0 |
-| Periodic boundary, translational | refused | S | no | v1.4.0 |
-| Periodic boundary, rotational | refused | M | no | v1.4.1 |
+| Periodic boundary, rotational (planes not parallel) | refused (v1.4.0) | M | no | v1.4.1 |
 | `HexLattice` | refused | M | no: only the distance field and lookup change | v1.4.1 |
 | `Quadric` | refused | M | no: a guaranteed lower bound on the distance just makes balls smaller | v1.4.1 |
 | `XTorus` / `YTorus` / `ZTorus` | refused | M | no (same lower-bound idea for elliptical tubes) | v1.4.1 |
 | Distributed materials (a material per cell instance) | refused | M | no: absorption is applied outside the network | v1.4.1 |
+| Periodic boundary on a non-plane surface | refused (v1.4.0), as in OpenMC | - | no | stays refused |
+| Periodic pairing of general `Plane`s without `periodic_surface` set | refused (v1.4.0); X/Y/Z planes pair automatically, as in OpenMC | S | no | later |
+| Boundary `albedo` other than 1 | refused (v1.4.0) | S | no: a weight factor at the wall | later |
 | DAGMC / CAD geometry | refused | L | no, but large engineering (BVH distance field) | later |
 
 ## Source (what v1.2 leaves)
@@ -62,7 +62,7 @@ Since v1.2 every OpenMC source kind is read except the rows below
 | `SurfaceFilter` with a `MeshFilter` | refused (v1.3) | - | as `MeshSurfaceFilter` below | v1.5 |
 | `EnergyFilter` bins real energies | one group: every particle sits at the group's midpoint, as in OpenMC (v1.3) | - | **YES** at Stage 3 (energy becomes a network input) | Stage 3 |
 | `CylindricalMesh`, `SphericalMesh` | refused | M | no | v1.5 |
-| Surface current on reflective surfaces / inside a filled universe | refused | S/M | no | v1.5 |
+| Surface current on reflective, white or periodic surfaces / inside a filled universe | refused (white, periodic since v1.4.0) | S/M | no | v1.5 |
 | `MeshSurfaceFilter` (currents through voxel faces) | refused | M | no IF balls are shrunk to one voxel when it is present (exact, less speed-up); YES if balls stay full-size, since (mu, s) cannot say which faces the walk crossed | v1.5 (shrink) |
 | Point detectors (flux at a point; Kobayashi reports these) | not available | M | no under the idea of using v1.1 profile points as stand-in collision sites; that idea is a method decision for Phani | Phani decides |
 | `UnstructuredMesh` (tetrahedral) | refused | L | no, but large engineering | later |

@@ -6,10 +6,11 @@
     curved      cylinder, sphere and cone; curved walls
     nested      3D lattice, rotated/translated universe, outer universe
     cask        storage cask with a streaming duct (a user-style example)
+    tilted      any-axis cylinder and cone; periodic and white boundaries
 
 Usage:  from problems import PROBLEMS;  model = PROBLEMS["slab"]()
 """
-from . import cask, curved, lattice3d, nested, slab, sphere
+from . import cask, curved, lattice3d, nested, slab, sphere, tilted
 
 PROBLEMS = {
     "sphere": sphere.build,
@@ -18,4 +19,5 @@ PROBLEMS = {
     "curved": curved.build,
     "nested": nested.build,
     "cask": cask.build,
+    "tilted": tilted.build,
 }
