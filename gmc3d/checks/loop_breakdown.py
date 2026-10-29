@@ -73,7 +73,7 @@ def _bench_score(row, L, cells, mats, xs, ys, zs, us, vs, ws, steps, reps):
     acc = 0.0
     for _ in range(reps):
         for i in range(xs.size):
-            T.score_segment(row, L, cells[i], mats[i], 0.1, 1.0,
+            T.score_segment(row, L, cells[i], mats[i], 0.1, 0.9, 1.0,
                             xs[i], ys[i], zs[i], us[i], vs[i], ws[i],
                             steps[i])
             acc += row[0]

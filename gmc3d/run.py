@@ -35,6 +35,7 @@ from checks import ball_metrics, compare, measure, openmc_ref  # noqa: E402
 from checks import flux_maps, mesh_profile, race, validate    # noqa: E402
 from core import openmc_import, output, transport             # noqa: E402
 from problems import PROBLEMS                                 # noqa: E402
+from core.tallies import SCORES                               # noqa: E402
 
 DATA = HERE / "data"
 TABLE_FILE = DATA / "ball" / "table.npz"
@@ -84,6 +85,8 @@ def out_dir(args):
 def cmd_solve(args, log):
     model = PROBLEMS[args.problem]()
     pr = openmc_import.load(model)
+    for line in pr.warnings:
+        log(f"  WARNING {line}")
     be = backend(args.backend, args.device)
     r = transport.run(pr, args.particles, args.batches, seed=args.seed,
                       backend=be, r_star=args.r_star,
@@ -96,8 +99,9 @@ def cmd_solve(args, log):
                                    t["se"][:, 0]):
                 log(f"  {name}: surface {sid} current {m_:.6g} +- {e_:.2g}")
         elif t["mean"].shape[0] == 1:
-            log(f"  {name}: flux {t['mean'][0, 0]:.6g} +- {t['se'][0, 0]:.2g}"
-                f", absorption {t['mean'][0, 1]:.6g} +- {t['se'][0, 1]:.2g}")
+            log(f"  {name}: " + ", ".join(
+                f"{sc} {t['mean'][0, k]:.6g} +- {t['se'][0, k]:.2g}"
+                for k, sc in enumerate(SCORES) if sc in t["scores"]))
     log(f"  counters {r.counters}")
     log(f"  timing {r.timing}")
     d = out_dir(args)

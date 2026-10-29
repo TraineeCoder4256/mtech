@@ -8,11 +8,15 @@ where a ball step can pay.
 
 Tallies: a 60-bin depth profile (mesh), total flux/absorption, and (since
 v1.1) the current through each face: x = 0 (reflection, negative: leaving
-towards -x) and x = 60 (transmission, positive).
+towards -x) and x = 60 (transmission, positive).  Since v1.1.3 the total
+tally also scores scatter and total, and a 1D RegularMesh (30 bins in x,
+unbounded in y and z, all four scores) checks the 1D mesh path.
 """
 import openmc
 
 from . import common
+
+ALL_SCORES = ("flux", "absorption", "scatter", "total")
 
 
 def build(thickness=60.0, sig_s=0.5, sig_a=0.005, half_width=100.0, bins=60):
@@ -28,7 +32,9 @@ def build(thickness=60.0, sig_s=0.5, sig_a=0.005, half_width=100.0, bins=60):
     cell = openmc.Cell(name="shield", fill=m["shield"], region=region)
     geometry = openmc.Geometry([cell])
     tallies = openmc.Tallies([
-        common.flux_tally("total"),
+        common.flux_tally("total", scores=ALL_SCORES),
+        common.flux_tally("depth1d", common.mesh_filter(
+            (0.0,), (thickness,), (bins // 2,)), scores=ALL_SCORES),
         common.flux_tally("depth", common.mesh_filter(
             (0.0, -half_width, -half_width),
             (thickness, half_width, half_width), (bins, 1, 1))),

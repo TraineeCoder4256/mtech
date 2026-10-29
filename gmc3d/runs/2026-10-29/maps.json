@@ -1,0 +1,135 @@
+{
+ "cask": {
+  "vs_openmc": {
+   "leakage": {
+    "ours": 0.002401114696272443,
+    "ours_se": 2.5736317512837744e-05,
+    "ref": 0.0023825000000000022,
+    "ref_se": 3.375400282584115e-05,
+    "z": 0.43854668297504545
+   },
+   "total/flux": {
+    "bins": 1,
+    "chi2_dof": 0.0032685801358338885,
+    "max_abs_z": 0.05717149758257071,
+    "frac_over_3": 0.0,
+    "ours": 34.71733993111344,
+    "ours_se": 0.017054565485563434,
+    "ref": 34.71943689244888,
+    "ref_se": 0.032472291976616226
+   },
+   "total/absorption": {
+    "bins": 1,
+    "chi2_dof": 0.4090471971246575,
+    "max_abs_z": 0.6395679769380714,
+    "frac_over_3": 0.0,
+    "ours": 0.9974076680575629,
+    "ours_se": 0.0002829686928834962,
+    "ref": 0.9979204495385889,
+    "ref_se": 0.0007501676322951505
+   },
+   "cell/flux": {
+    "bins": 7,
+    "chi2_dof": 0.5693693245761869,
+    "max_abs_z": 1.4011847167826617,
+    "frac_over_3": 0.0
+   },
+   "cell/absorption": {
+    "bins": 4,
+    "chi2_dof": 0.7646839972810187,
+    "max_abs_z": 1.4011847167826572,
+    "frac_over_3": 0.0
+   },
+   "cell/total": {
+    "bins": 4,
+    "chi2_dof": 0.7646839972808632,
+    "max_abs_z": 1.4011847167826073,
+    "frac_over_3": 0.0
+   },
+   "material/flux": {
+    "bins": 3,
+    "chi2_dof": 0.318034738461688,
+    "max_abs_z": 0.6639939717913252,
+    "frac_over_3": 0.0
+   },
+   "material/absorption": {
+    "bins": 3,
+    "chi2_dof": 0.3180347384620555,
+    "max_abs_z": 0.6639939717909685,
+    "frac_over_3": 0.0
+   },
+   "material/scatter": {
+    "bins": 3,
+    "chi2_dof": 0.3180347384614613,
+    "max_abs_z": 0.6639939717909685,
+    "frac_over_3": 0.0
+   },
+   "material/total": {
+    "bins": 3,
+    "chi2_dof": 0.3180347384622038,
+    "max_abs_z": 0.6639939717914961,
+    "frac_over_3": 0.0
+   },
+   "mesh/flux": {
+    "bins": 1237,
+    "chi2_dof": 1.0920085753700575,
+    "max_abs_z": 4.354086895976047,
+    "frac_over_3": 0.004850444624090542
+   },
+   "mesh/absorption": {
+    "bins": 360,
+    "chi2_dof": 1.01327161657749,
+    "max_abs_z": 3.0791984939177848,
+    "frac_over_3": 0.002777777777777778
+   },
+   "plan2d/flux": {
+    "bins": 484,
+    "chi2_dof": 1.1382708961524035,
+    "max_abs_z": 3.8055471096320392,
+    "frac_over_3": 0.010330578512396695
+   },
+   "plan2d/total": {
+    "bins": 132,
+    "chi2_dof": 0.8931937743264428,
+    "max_abs_z": 3.578253189519499,
+    "frac_over_3": 0.007575757575757576
+   },
+   "duct_grid/flux": {
+    "bins": 254,
+    "chi2_dof": 1.2196053043182207,
+    "max_abs_z": 3.157041432421889,
+    "frac_over_3": 0.007874015748031496
+   },
+   "duct_grid/absorption": {
+    "bins": 84,
+    "chi2_dof": 0.8455339053347176,
+    "max_abs_z": 2.6432557671856127,
+    "frac_over_3": 0.0
+   },
+   "duct_grid/total": {
+    "bins": 84,
+    "chi2_dof": 0.8784607946870198,
+    "max_abs_z": 2.4512974800675966,
+    "frac_over_3": 0.0
+   }
+  },
+  "counters": {
+   "histories": 2000000,
+   "flights": 23854086,
+   "scatters": 21429625,
+   "crossings": 2424461,
+   "balls": 3595086,
+   "ball_skipped": 47967,
+   "roulette_killed": 1989908,
+   "lost": 0,
+   "rescued": 0,
+   "mesh_points": 56887790,
+   "backend_calls": 483
+  },
+  "timing": {
+   "transport_s": 26.517086890999508,
+   "backend_s": 21.83706591500072
+  },
+  "map": "cask.png"
+ }
+}

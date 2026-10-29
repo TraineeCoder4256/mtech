@@ -230,25 +230,25 @@ def _track(i, g, ph, L, P, row, cnt):
     if P.status[i] == READY:
         # ---- finish a ball step: the backend has filled mu and s
         cell, mat = P.cell[i], P.mat[i]
-        sa = ph.sig_a[mat]
+        sa, ss = ph.sig_a[mat], ph.sig_s[mat]
         d = P.ball_d[i]
         s_cm = P.s[i] * d / P.ball_R[i]          # mfp -> cm
         flux = T._decayed(wgt, sa, 0.0, s_cm)
-        T.score_ball(row, L, cell, mat, sa, flux)
+        T.score_ball(row, L, cell, mat, sa, ss, flux)
         if ph.mesh_profile:
             # K points of the walk share the flux (tallies.py, profile.py)
             k_pts = min(ph.k_max, max(1, int(np.ceil(
                 2.0 * (d / ph.mesh_h) ** 2))))
             for _ in range(k_pts):
                 r = draw_r(ph.prof_log_r, ph.prof_log1p_ell, ph.prof_f_unsc,
-                           ph.prof_cdf, P.ball_R[i], sa / ph.sig_s[mat],
+                           ph.prof_cdf, P.ball_R[i], sa / ss,
                            P.s[i], P.seed, i) * d / P.ball_R[i]  # in cm
                 px, py, pz = rng.isotropic(P.seed, i)
-                T.score_ball_mesh(row, L, sa, flux / k_pts,
+                T.score_ball_mesh(row, L, sa, ss, flux / k_pts,
                                   x + r * px, y + r * py, z + r * pz)
             cnt[C_POINTS] += k_pts
         elif L.has_mesh:
-            T.score_ball_mesh(row, L, sa, flux, x, y, z)
+            T.score_ball_mesh(row, L, sa, ss, flux, x, y, z)
         wgt *= np.exp(-sa * s_cm)
         nx, ny, nz = rng.isotropic(P.seed, i)    # exit point
         x, y, z = x + d * nx, y + d * ny, z + d * nz
@@ -331,7 +331,8 @@ def _track(i, g, ph, L, P, row, cnt):
             cnt[C_LOST] += 1              # flying off to infinity in a void
             P.status[i] = DEAD
             return
-        T.score_segment(row, L, cell, mat, sa, wgt, x, y, z, u, v, w, step)
+        T.score_segment(row, L, cell, mat, sa, ss, wgt, x, y, z, u, v, w,
+                        step)
         wgt *= np.exp(-sa * step)
         x, y, z = x + step * u, y + step * v, z + step * w
         cnt[C_FLIGHT] += 1

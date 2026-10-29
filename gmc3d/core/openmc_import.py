@@ -18,13 +18,21 @@ feature (S1-GEO-6), instead of being run wrongly:
     materials     one energy group, isotropic scattering, no fission,
                   from an OpenMC multigroup library (Macroscopic data)
     sources       point or box, isotropic or one direction
-    tallies       no filter, cell, material or regular-mesh filters,
-                  scoring flux and absorption; or a surface filter on
-                  root-universe vacuum or transmission surfaces, scoring
-                  current (net weight crossing, + towards the positive
-                  side, as OpenMC defines it)
+    tallies       no filter, cell, material or mesh filters (1D, 2D or 3D
+                  RegularMesh, RectilinearMesh), scoring flux, absorption,
+                  scatter and total with the track-length estimator; or a
+                  surface filter on root-universe vacuum or transmission
+                  surfaces, scoring current (net weight crossing, +
+                  towards the positive side, as OpenMC defines it)
+    settings      fixed-source runs.  Settings that change only the noise
+                  or the run's length, never the expected answer (survival
+                  biasing, weight windows, cutoffs, temperatures, tally
+                  triggers, ...), are not used: each one is named in a
+                  warning (`IgnoredSetting`, and `Problem.warnings`) so
+                  nothing is ignored silently.
 """
 
+import warnings
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -36,6 +44,11 @@ from . import surfaces as S
 
 class Unsupported(ValueError):
     """The model uses something this stage of gmc3d does not handle."""
+
+
+class IgnoredSetting(UserWarning):
+    """The model sets something gmc3d does not use.  Only things that
+    cannot change the expected answer are let through this way."""
 
 
 # ------------------------------------------------------------- containers
@@ -66,8 +79,11 @@ class Tally:
     """One OpenMC tally, as the solver will fill it.
 
     filter is 'total', 'cell', 'material', 'mesh' or 'surface'.  For 'mesh',
-    mesh holds (lower_left, upper_right, dimension).  bins are internal
-    cell, material or surface indices (cell/material/surface filters).
+    mesh holds (lower_left, upper_right, dimension) of the bounding box,
+    always 3 long (a 1D or 2D mesh gets one bin of +-tallies.BIG on each
+    missing axis), and edges the bin edges on each axis.  bins are
+    internal cell, material or surface indices (cell/material/surface
+    filters).
     """
     id: int
     name: str
@@ -76,6 +92,7 @@ class Tally:
     bins: np.ndarray = field(default_factory=lambda: np.zeros(0, np.int64))
     bin_ids: list = field(default_factory=list)       # OpenMC ids of bins
     mesh: tuple = None
+    edges: list = None
 
 
 @dataclass
@@ -87,6 +104,7 @@ class Problem:
     tallies: list
     cell_ids: np.ndarray         # OpenMC id of each internal cell index
     cell_names: list
+    warnings: list = field(default_factory=list)   # settings not used
 
 
 # ------------------------------------------------------------------ surfaces
@@ -226,11 +244,93 @@ def _source(model):
                   np.array(mono), np.array(dirn, float), cdf)
 
 
+# ----------------------------------------------------------------- settings
+# Settings elements (as OpenMC writes them to settings.xml) that gmc3d
+# reads.  Everything else present in a model is either refused below or
+# named in a warning.
+_SETTINGS_USED = {"run_mode", "particles", "batches", "source",
+                  "energy_mode", "seed"}
+# Settings that only say where OpenMC writes its own files or how much it
+# prints: no effect on any answer and nothing for gmc3d to do, so no
+# warning either.
+_SETTINGS_QUIET = {"output", "verbosity", "statepoint", "sourcepoint",
+                   "track", "max_tracks"}
+
+
+def _settings(model):
+    """Refuse settings that change the problem; return a warning line
+    for each setting that only changes noise or run length."""
+    s = model.settings
+    if s.run_mode not in (None, "fixed source"):
+        raise Unsupported(f"settings.run_mode '{s.run_mode}'; stage 1 "
+                          f"solves fixed-source problems (criticality is "
+                          f"stage 4)")
+    if s.photon_transport:
+        raise Unsupported("settings.photon_transport; stage 1 transports "
+                          "neutrons only")
+    tags = sorted({c.tag for c in s.to_xml_element()}
+                  - _SETTINGS_USED - _SETTINGS_QUIET)
+    return [f"settings: '{tag}' is set but not used by gmc3d (it can "
+            f"change only the noise or the run's length, not the answer)"
+            for tag in tags]
+
+
 # ------------------------------------------------------------------ tallies
-def _tallies(model, cell_index, mat_index, surf_index, root_surfs):
+SCORES = ("flux", "absorption", "scatter", "total")
+
+
+def _mesh(t, m):
+    """An OpenMC mesh -> (bounding box, bin edges on x, y, z)."""
+    from .tallies import BIG
+    if isinstance(m, openmc.RegularMesh):
+        nd = len(m.dimension)
+        ll = np.asarray(m.lower_left, float)
+        ur = np.asarray(m.upper_right, float)
+        edges = [np.linspace(ll[a], ur[a], int(m.dimension[a]) + 1)
+                 for a in range(nd)]
+    elif isinstance(m, openmc.RectilinearMesh):
+        edges = [np.asarray(g, float) for g in
+                 (m.x_grid, m.y_grid, m.z_grid)]
+        for a, e in enumerate(edges):
+            if e.size < 2 or np.any(np.diff(e) <= 0):
+                raise Unsupported(f"tally {t.id}: mesh {m.id} "
+                                  f"{'xyz'[a]}_grid must rise strictly")
+    else:
+        raise Unsupported(f"tally {t.id}: mesh {m.id} is a "
+                          f"{type(m).__name__}; stage 1 handles "
+                          f"RegularMesh (1D, 2D, 3D) and RectilinearMesh")
+    edges += [np.array([-BIG, BIG])] * (3 - len(edges))
+    box = (np.array([e[0] for e in edges]), np.array([e[-1] for e in edges]),
+           np.array([e.size - 1 for e in edges], np.int64))
+    return box, edges
+
+
+def _check_tally(t, warn):
+    """Tally settings gmc3d cannot honour: refuse what would change the
+    answer, warn about what changes only when the run stops."""
+    est = t.estimator
+    if est not in (None, "tracklength"):
+        raise Unsupported(f"tally {t.id} asks for the '{est}' estimator; "
+                          f"gmc3d scores track length only (inside a ball "
+                          f"the collisions are not seen)")
+    nucs = [str(n) for n in t.nuclides]
+    if nucs and nucs != ["total"]:
+        raise Unsupported(f"tally {t.id} lists nuclides {nucs}; stage 1 "
+                          f"materials are macroscopic (one group)")
+    if t.derivative is not None:
+        raise Unsupported(f"tally {t.id} has a derivative; gmc3d has no "
+                          f"differential tallies")
+    if t.triggers:
+        warn.append(f"tally {t.id}: triggers are set but not used (gmc3d "
+                    f"runs the batches asked for; triggers only stop a "
+                    f"run early)")
+
+
+def _tallies(model, cell_index, mat_index, surf_index, root_surfs, warn):
     out = []
     for t in model.tallies:
         scores = list(t.scores)
+        _check_tally(t, warn)
         if len(t.filters) > 1:
             raise Unsupported(f"tally {t.id} has {len(t.filters)} filters; "
                               f"stage 1 handles one")
@@ -238,10 +338,10 @@ def _tallies(model, cell_index, mat_index, surf_index, root_surfs):
         if isinstance(f, openmc.SurfaceFilter):
             out.append(_surface_tally(t, f, model, surf_index, root_surfs))
             continue
-        bad = set(scores) - {"flux", "absorption"}
+        bad = set(scores) - set(SCORES)
         if bad:
             raise Unsupported(f"tally {t.id} scores {sorted(bad)}; stage 1 "
-                              f"handles flux and absorption (and current "
+                              f"handles {list(SCORES)} (and current "
                               f"with a SurfaceFilter)")
         tl = Tally(t.id, t.name, "total", scores)
         if f is not None:
@@ -260,19 +360,13 @@ def _tallies(model, cell_index, mat_index, surf_index, root_surfs):
                 tl.filter = "material"
                 tl.bin_ids = [int(b) for b in f.bins]
                 tl.bins = np.array([mat_index[b] for b in tl.bin_ids])
-            elif isinstance(f, openmc.MeshFilter) and \
-                    isinstance(f.mesh, openmc.RegularMesh) and \
-                    len(f.mesh.dimension) == 3:
-                m = f.mesh
+            elif type(f) is openmc.MeshFilter:
                 tl.filter = "mesh"
-                tl.mesh = (np.array(m.lower_left, float),
-                           np.array(m.upper_right, float),
-                           np.array(m.dimension, np.int64))
+                tl.mesh, tl.edges = _mesh(t, f.mesh)
             else:
                 raise Unsupported(f"tally {t.id} filter "
                                   f"{type(f).__name__}; stage 1 handles "
-                                  f"Cell, Material, Surface and 3D "
-                                  f"RegularMesh")
+                                  f"Cell, Material, Surface and Mesh")
         out.append(tl)
     return out
 
@@ -307,6 +401,7 @@ def _surface_tally(t, f, model, surf_index, root_surfs):
 # ------------------------------------------------------------------- load
 def load(model):
     """Compile an openmc.Model into a Problem.  Raises Unsupported."""
+    warn = _settings(model)                 # refuse early
     geo = model.geometry
     surfs = sorted(geo.get_all_surfaces().values(), key=lambda s: s.id)
     surf_index = {s.id: i for i, s in enumerate(surfs)}
@@ -399,7 +494,10 @@ def load(model):
     for c in geo.root_universe.cells.values():
         _region_tokens(c.region, surf_index, [], root_surfs)
     root_surfs = {surfs[i].id for i in root_surfs}
-    return Problem(model, geom, mats, _source(model),
-                   _tallies(model, cell_index, mat_index, surf_index,
-                            root_surfs),
-                   np.array([c.id for c in cells]), [c.name for c in cells])
+    tallies = _tallies(model, cell_index, mat_index, surf_index, root_surfs,
+                       warn)
+    for line in warn:
+        warnings.warn(line, IgnoredSetting, stacklevel=2)
+    return Problem(model, geom, mats, _source(model), tallies,
+                   np.array([c.id for c in cells]), [c.name for c in cells],
+                   warn)

@@ -15,32 +15,32 @@ Columns:
   the model work they belong to.
 - **plan**: the push in `V1_PLAN.md` that closes it, or "hold" / "later".
 
-Last updated: v1.1.2 (27 Oct 2026).
+Last updated: v1.1.3 (29 Oct 2026).
 
 ## Geometry (left in v1.0)
 
 | gap | shows as | size | model change? | plan |
 |---|---|---|---|---|
-| `Cylinder` and `Cone` on any axis | refused | S | no: only the distance field changes | v1.1.6 |
-| White boundary | refused | S | no: balls never cross a surface | v1.1.6 |
-| Periodic boundary, translational | refused | S | no | v1.1.6 |
-| Periodic boundary, rotational | refused | M | no | v1.1.7 |
-| `HexLattice` | refused | M | no: only the distance field and lookup change | v1.1.7 |
-| `Quadric` | refused | M | no: a guaranteed lower bound on the distance just makes balls smaller | v1.1.7 |
-| `XTorus` / `YTorus` / `ZTorus` | refused | M | no (same lower-bound idea for elliptical tubes) | v1.1.7 |
-| Distributed materials (a material per cell instance) | refused | M | no: absorption is applied outside the network | v1.1.7 |
-| Cell tallies on cells filled with a universe or lattice | refused | S | no | v1.1.5 |
+| `Cylinder` and `Cone` on any axis | refused | S | no: only the distance field changes | v1.4.0 |
+| White boundary | refused | S | no: balls never cross a surface | v1.4.0 |
+| Periodic boundary, translational | refused | S | no | v1.4.0 |
+| Periodic boundary, rotational | refused | M | no | v1.4.1 |
+| `HexLattice` | refused | M | no: only the distance field and lookup change | v1.4.1 |
+| `Quadric` | refused | M | no: a guaranteed lower bound on the distance just makes balls smaller | v1.4.1 |
+| `XTorus` / `YTorus` / `ZTorus` | refused | M | no (same lower-bound idea for elliptical tubes) | v1.4.1 |
+| Distributed materials (a material per cell instance) | refused | M | no: absorption is applied outside the network | v1.4.1 |
+| Cell tallies on cells filled with a universe or lattice | refused | S | no | v1.3 |
 | DAGMC / CAD geometry | refused | L | no, but large engineering (BVH distance field) | later |
 
 ## Source (left in v1.0)
 
 | gap | shows as | size | model change? | plan |
 |---|---|---|---|---|
-| `CartesianIndependent`, `SphericalIndependent`, `CylindricalIndependent` | refused | S | no: sources only set where particles start | v1.1.4 |
-| `PointCloud`, `MeshSpatial` | refused | S | no | v1.1.4 |
-| `PolarAzimuthal` angle | refused | S | no | v1.1.4 |
-| `FileSource`, `MeshSource` | refused | M | no | v1.1.4 |
-| Source `constraints` (born only in given cells, materials, universes) | **SILENT** | S | no | v1.1.4 |
+| `CartesianIndependent`, `SphericalIndependent`, `CylindricalIndependent` | refused | S | no: sources only set where particles start | v1.2 |
+| `PointCloud`, `MeshSpatial` | refused | S | no | v1.2 |
+| `PolarAzimuthal` angle | refused | S | no | v1.2 |
+| `FileSource`, `MeshSource` | refused | M | no | v1.2 |
+| Source `constraints` (born only in given cells, materials, universes) | **SILENT** | S | no | v1.2 |
 | `CompiledSource` (user C++ code) | refused | L | no, but it is someone else's compiled code | stays refused |
 | Source energy | ignored (one group) | - | YES at Stage 3 (energy becomes a network input) | Stage 3 |
 
@@ -48,25 +48,26 @@ Last updated: v1.1.2 (27 Oct 2026).
 
 | gap | shows as | size | model change? | plan |
 |---|---|---|---|---|
-| Tally `estimator` other than track length | **SILENT** | S to refuse | no to refuse; a collision estimator inside balls would be a method question | v1.1.3 (refuse) |
-| Tally nuclides, triggers, derivatives | **SILENT** | S to refuse | no | v1.1.3 (refuse) |
-| Scores `total`, `scatter` | refused | S | no: same track-length estimator | v1.1.3 |
+| Tally `estimator` other than track length | refused (v1.1.3) | M | no; a collision estimator inside balls would be a method question | later |
+| Tally triggers honoured (stop when precise enough) | warned (v1.1.3) | S | no | later |
+| `MeshBornFilter` (bins by birth place) | refused (v1.1.3) | S | no | later |
+| Tally derivatives (differential tallies) | refused (v1.1.3) | M | no at one group; the sensitivity of a ball's (mu, s) to a cross section is a research question | later |
 | Other scores (`events`, `heating`, reaction rates by nuclide) | refused | S-M each | no, but most need data a one-group library lacks | later |
-| 1D and 2D `RegularMesh`, `RectilinearMesh` | refused | S | no: the v1.1 ball rule only asks which bin holds a point | v1.1.3 |
-| More than one filter per tally | refused | M | no | v1.1.5 |
-| `EnergyFilter` | refused | S | no now (one bin); real bins at Stage 3 | v1.1.5 |
-| Partial currents (`CellFromFilter` x `SurfaceFilter`) | refused | S after multi-filter | no | v1.1.5 |
-| `CylindricalMesh`, `SphericalMesh` | refused | M | no | v1.1.8 |
-| Surface current on reflective surfaces / inside a filled universe | refused | S/M | no | v1.1.8 |
-| `MeshSurfaceFilter` (currents through voxel faces) | refused | M | no IF balls are shrunk to one voxel when it is present (exact, less speed-up); YES if balls stay full-size, since (mu, s) cannot say which faces the walk crossed | v1.1.8 (shrink) |
+| More than one filter per tally | refused | M | no | v1.3 |
+| `EnergyFilter` | refused | S | no now (one bin); real bins at Stage 3 | v1.3 |
+| Partial currents (`CellFromFilter` x `SurfaceFilter`) | refused | S after multi-filter | no | v1.3 |
+| `CylindricalMesh`, `SphericalMesh` | refused | M | no | v1.5 |
+| Surface current on reflective surfaces / inside a filled universe | refused | S/M | no | v1.5 |
+| `MeshSurfaceFilter` (currents through voxel faces) | refused | M | no IF balls are shrunk to one voxel when it is present (exact, less speed-up); YES if balls stay full-size, since (mu, s) cannot say which faces the walk crossed | v1.5 (shrink) |
 | Point detectors (flux at a point; Kobayashi reports these) | not available | M | no under the idea of using v1.1 profile points as stand-in collision sites; that idea is a method decision for Phani | Phani decides |
 | `UnstructuredMesh` (tetrahedral) | refused | L | no, but large engineering | later |
+| Flux-map pictures (`run.py maps`) draw a rectilinear mesh's bins as equal widths; `.vtk` output writes only flux and absorption and assumes even spacing | cosmetic (v1.1.3) | S | no | later |
 
 ## Run settings (left in v1.0)
 
 | gap | shows as | size | model change? | plan |
 |---|---|---|---|---|
-| OpenMC settings we don't read: survival biasing, weight windows, cutoffs, `max_lost_particles`, temperatures | **SILENT** | S to warn | no. They change noise and speed only, not the expected answer, so a warning fits | v1.1.3 (warn) |
+| OpenMC settings we don't use: survival biasing, weight windows, cutoffs, `max_lost_particles`, temperatures, anything else not read | warned by name (v1.1.3) | - | no. They change noise, speed or run length only, not the expected answer | honouring them: later |
 | Honouring weight windows | - | M+ | no at ball exits; splitting INSIDE a ball is impossible without seeing the walk | later |
 
 ## Physics (by stage)

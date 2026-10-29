@@ -12,7 +12,12 @@ user would write one, to show the workflow end to end.
 
 Uses two cylinder orientations, spheres, planes, unions and complements,
 and void cells.  Tallies: total, every cell (the detector is the
-interesting one), and a coarse mesh.
+interesting one), and a coarse mesh.  Since v1.1.3 also: total on the cell
+tally, all four scores by material, a 2D RegularMesh in x-y (unbounded in
+z), and a RectilinearMesh whose bins are fine along the duct and coarse
+elsewhere.  The `scatter` score sits only on the material tally because
+OpenMC 0.16 crashes (segmentation fault, checked 29 Oct 2026) when a
+multigroup track-length `scatter` tally is scored in a void cell.
 """
 import openmc
 
@@ -52,11 +57,25 @@ def build():
                     region=world & ~body & ~detector),
     ]
     geometry = openmc.Geometry(cells)
+    duct_grid = openmc.RectilinearMesh()
+    duct_grid.x_grid = [-120.0, -60.0, -25.0, 0.0, 25.0, 40.0, 58.0, 60.0,
+                        70.0, 85.0, 100.0, 120.0]
+    duct_grid.y_grid = [-120.0, -20.0, -2.5, 2.5, 20.0, 120.0]
+    duct_grid.z_grid = [-120.0, -90.0, -2.5, 2.5, 90.0, 120.0]
     tallies = openmc.Tallies([
         common.flux_tally("total"),
-        common.flux_tally("cell", openmc.CellFilter(cells)),
+        common.flux_tally("cell", openmc.CellFilter(cells),
+                          scores=("flux", "absorption", "total")),
+        common.flux_tally("material", openmc.MaterialFilter(
+            [m["fuel"], m["steel"], m["concrete"]]),
+            scores=("flux", "absorption", "scatter", "total")),
         common.flux_tally("mesh", common.mesh_filter(
             (-120.0, -120.0, -120.0), (120.0, 120.0, 120.0), (12, 12, 12))),
+        common.flux_tally("plan2d", common.mesh_filter(
+            (-120.0, -120.0), (120.0, 120.0), (24, 24)),
+            scores=("flux", "total")),
+        common.flux_tally("duct_grid", openmc.MeshFilter(duct_grid),
+                          scores=("flux", "absorption", "total")),
     ])
     src = common.box_source((-14.0, -14.0, -60.0), (14.0, 14.0, 60.0))
     return openmc.Model(geometry, materials, common.settings(src), tallies)

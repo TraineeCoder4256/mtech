@@ -37,11 +37,14 @@ moves to the surface's positive side and - if to its negative side (OpenMC's
 leakage through that surface, signed).  Only flights cross surfaces, so a
 surface tally never depends on the ball backend.
 
-Absorption is scored as sigma_a times the flux deposit, the same
-track-length estimator OpenMC uses by default.
+Absorption, scatter and total are scored as sigma_a, sigma_s and sigma_t
+times the flux deposit, the same track-length estimator OpenMC uses by
+default.  Each is accumulated on its own (not derived from the flux
+afterwards), because a bin that spans two materials has no single sigma.
 
-Layout.  Every tally bin holds two numbers, flux then absorption, in one
-flat array; entry 0 is the leakage (weight leaving through vacuum
+Layout.  Every tally bin holds NS = 4 numbers, flux, absorption, scatter
+and total (in that order, whatever the tally asked for), in one flat
+array; entry 0 is the leakage (weight leaving through vacuum
 boundaries).  Each thread chunk has its own row (`acc[chunk]`), so threads
 never write the same memory and sums come out in a fixed order.  Means are
 per source particle, as OpenMC's tallies are.
@@ -77,6 +80,11 @@ grow with G.
 independent runs.
 
 Mesh bins are numbered with x fastest, then y, then z -- OpenMC's order.
+Every mesh is stored as its bin edges on each axis, so regular and
+rectilinear meshes share one grid walk.  A 1D or 2D regular mesh has one
+bin from -BIG to +BIG on each missing axis, as OpenMC's are unbounded
+there.  Regular axes find a point's bin by division, rectilinear ones by
+binary search.
 """
 
 from collections import namedtuple
@@ -88,15 +96,19 @@ from numba import njit
 TOTAL, CELL, MATERIAL, MESH, SURFACE = 0, 1, 2, 3, 4
 _KIND = {"total": TOTAL, "cell": CELL, "material": MATERIAL, "mesh": MESH,
          "surface": SURFACE}
-SCORES = ("flux", "absorption")
+SCORES = ("flux", "absorption", "scatter", "total")   # columns, in order
+NS = len(SCORES)                  # entries per bin
 LEAKAGE = 0                       # index of the leakage entry
 INF = 1.0e300
+BIG = 1.0e100                     # edge of a mesh's missing axis
 
 # The compiled form the Numba kernels read.
 Layout = namedtuple("Layout", [
     "kind", "offset",            # per tally: filter kind, first entry
     "cell_bin", "mat_bin",       # per tally x cell / material: bin or -1
-    "mesh_ll", "mesh_dw", "mesh_dim",   # per tally (zeros if not a mesh)
+    "mesh_ll", "mesh_dw", "mesh_dim",   # per tally x axis: first edge,
+                                        # SMALLEST bin width, bin count
+    "mesh_edges", "mesh_uniform",       # per tally x axis: edges, regular?
     "surf_bin",                  # per tally x surface: bin or -1
     "has_mesh", "has_surface",   # any tally of that kind (skip work if not)
     "n_entries",                 # length of a row of acc
@@ -104,8 +116,8 @@ Layout = namedtuple("Layout", [
 
 
 def compile_layout(tallies, n_cells, n_mats, n_surfs=1):
-    """Tally list -> Layout.  Bin b of tally t is at offset[t] + 2 b.
-    (A surface bin keeps the pair layout: current, then an unused 0.)"""
+    """Tally list -> Layout.  Bin b of tally t is at offset[t] + NS b.
+    (A surface bin keeps the same layout: current, then unused zeros.)"""
     nt = max(len(tallies), 1)
     kind = np.zeros(nt, np.int64)
     offset = np.zeros(nt, np.int64)
@@ -114,6 +126,8 @@ def compile_layout(tallies, n_cells, n_mats, n_surfs=1):
     mesh_ll = np.zeros((nt, 3))
     mesh_dw = np.ones((nt, 3))
     mesh_dim = np.ones((nt, 3), np.int64)
+    edges = [[np.array([-BIG, BIG])] * 3 for _ in range(nt)]
+    mesh_uniform = np.ones((nt, 3), np.bool_)
     surf_bin = np.full((nt, max(n_surfs, 1)), -1, np.int64)
     pos = 1                                       # entry 0 is leakage
     for t, tl in enumerate(tallies):
@@ -131,17 +145,26 @@ def compile_layout(tallies, n_cells, n_mats, n_surfs=1):
             nb = len(tl.bins)
             surf_bin[t, tl.bins] = np.arange(nb)
         else:
-            ll, ur, dim = tl.mesh
-            mesh_ll[t], mesh_dim[t] = ll, dim
-            mesh_dw[t] = (np.asarray(ur) - ll) / dim
-            nb = int(np.prod(dim))
-        pos += 2 * nb
+            for a, e in enumerate(tl.edges):
+                e = np.asarray(e, float)
+                w = np.diff(e)
+                edges[t][a] = e
+                mesh_ll[t, a], mesh_dim[t, a] = e[0], e.size - 1
+                mesh_dw[t, a] = w.min()
+                mesh_uniform[t, a] = np.allclose(w, w[0], rtol=1e-12)
+            nb = int(np.prod(mesh_dim[t]))
+        pos += NS * nb
     if not tallies:
         kind[0] = -1
     kinds = [tl.filter for tl in tallies]
+    n_edge = max(e.size for row in edges for e in row)
+    mesh_edges = np.full((nt, 3, n_edge), BIG)
+    for t in range(nt):
+        for a in range(3):
+            mesh_edges[t, a, :edges[t][a].size] = edges[t][a]
     return Layout(kind, offset, cell_bin, mat_bin, mesh_ll, mesh_dw,
-                  mesh_dim, surf_bin, "mesh" in kinds, "surface" in kinds,
-                  pos)
+                  mesh_dim, mesh_edges, mesh_uniform, surf_bin,
+                  "mesh" in kinds, "surface" in kinds, pos)
 
 
 # ------------------------------------------------------------ the kernels
@@ -154,34 +177,59 @@ def _decayed(w, sa, la, lb):
 
 
 @njit(cache=True, inline="always")
-def _add(row, at, flux, sa):
+def _add(row, at, flux, sa, ss):
     row[at] += flux
     row[at + 1] += sa * flux
+    row[at + 2] += ss * flux
+    row[at + 3] += (sa + ss) * flux
 
 
 @njit(cache=True, inline="always")
-def _axis(q, d, lo, dw, n):
+def _bin(L, t, a, q):
+    """Bin of coordinate q on axis a of mesh t, or -1 / n if outside."""
+    n = L.mesh_dim[t, a]
+    if L.mesh_uniform[t, a]:
+        return int(np.floor((q - L.mesh_ll[t, a]) / L.mesh_dw[t, a]))
+    e = L.mesh_edges[t, a]
+    if q < e[0]:
+        return -1
+    if q >= e[n]:
+        return n
+    return np.searchsorted(e[:n + 1], q, side="right") - 1
+
+
+@njit(cache=True, inline="always")
+def _axis(L, t, a, q, d):
     """DDA set-up on one axis: (voxel index, its step, distance to the
-    next voxel wall, distance between walls) for a ray at q going d."""
-    i = min(max(int(np.floor((q - lo) / dw)), 0), n - 1)
+    next voxel wall) for a ray at q going d."""
+    n = L.mesh_dim[t, a]
+    i = min(max(_bin(L, t, a, q), 0), n - 1)
+    e = L.mesh_edges[t, a]
     if d > 0.0:
-        return i, 1, (lo + (i + 1) * dw - q) / d, dw / d
+        return i, 1, (e[i + 1] - q) / d
     if d < 0.0:
-        return i, -1, (lo + i * dw - q) / d, -dw / d
-    return i, 0, INF, INF
+        return i, -1, (e[i] - q) / d
+    return i, 0, INF
+
+
+@njit(cache=True, inline="always")
+def _next_wall(L, t, a, i, s, q, d):
+    """Distance from q (along d) to the far wall of bin i, stepping s."""
+    e = L.mesh_edges[t, a]
+    return (e[i + 1] - q) / d if s > 0 else (e[i] - q) / d
 
 
 @njit(cache=True)
-def _mesh_segment(row, L, t, sa, w, x, y, z, u, v, ww, length):
+def _mesh_segment(row, L, t, sa, ss, w, x, y, z, u, v, ww, length):
     """Spread one flight over the voxels it crosses (a 3D DDA: step from
     voxel wall to voxel wall, depositing each piece's track length)."""
-    ll, dw, dim = L.mesh_ll[t], L.mesh_dw[t], L.mesh_dim[t]
+    dim = L.mesh_dim[t]
     # clip the segment to the mesh box (slab method)
     t0, t1 = 0.0, length
     for a in range(3):
         q = x if a == 0 else (y if a == 1 else z)
         d = u if a == 0 else (v if a == 1 else ww)
-        lo, hi = ll[a], ll[a] + dim[a] * dw[a]
+        lo, hi = L.mesh_edges[t, a, 0], L.mesh_edges[t, a, dim[a]]
         if d == 0.0:
             if q < lo or q > hi:
                 return
@@ -193,9 +241,10 @@ def _mesh_segment(row, L, t, sa, w, x, y, z, u, v, ww, length):
     if t0 >= t1:
         return
     # set up from the clipped start; wall distances shifted back by t0
-    ix, sx, nx_, dx = _axis(x + t0 * u, u, ll[0], dw[0], dim[0])
-    iy, sy, ny_, dy = _axis(y + t0 * v, v, ll[1], dw[1], dim[1])
-    iz, sz, nz_, dz = _axis(z + t0 * ww, ww, ll[2], dw[2], dim[2])
+    x0, y0, z0 = x + t0 * u, y + t0 * v, z + t0 * ww
+    ix, sx, nx_ = _axis(L, t, 0, x0, u)
+    iy, sy, ny_ = _axis(L, t, 1, y0, v)
+    iz, sz, nz_ = _axis(L, t, 2, z0, ww)
     nx_ += t0
     ny_ += t0
     nz_ += t0
@@ -205,47 +254,49 @@ def _mesh_segment(row, L, t, sa, w, x, y, z, u, v, ww, length):
         te = min(nx_, ny_, nz_, t1)
         if te > tc:
             b = (iz * dim[1] + iy) * dim[0] + ix
-            _add(row, base + 2 * b, _decayed(w, sa, tc, te), sa)
+            _add(row, base + NS * b, _decayed(w, sa, tc, te), sa, ss)
         tc = te
         if te >= t1:
             return
         if nx_ <= ny_ and nx_ <= nz_:
             ix += sx
-            nx_ += dx
             if ix < 0 or ix >= dim[0]:
                 return
+            nx_ = t0 + _next_wall(L, t, 0, ix, sx, x0, u)
         elif ny_ <= nz_:
             iy += sy
-            ny_ += dy
             if iy < 0 or iy >= dim[1]:
                 return
+            ny_ = t0 + _next_wall(L, t, 1, iy, sy, y0, v)
         else:
             iz += sz
-            nz_ += dz
             if iz < 0 or iz >= dim[2]:
                 return
+            nz_ = t0 + _next_wall(L, t, 2, iz, sz, z0, ww)
 
 
 @njit(cache=True)
-def score_segment(row, L, cell, mat, sa, w, x, y, z, u, v, ww, length):
+def score_segment(row, L, cell, mat, sa, ss, w, x, y, z, u, v, ww,
+                  length):
     """A flight of `length` from (x,y,z) along (u,v,ww) in `cell`/`mat`,
-    starting with weight w, in a material with absorption sa."""
+    starting with weight w, in a material with absorption sa and
+    scattering ss."""
     flux = _decayed(w, sa, 0.0, length)
     for t in range(L.kind.size):
         k = L.kind[t]
         if k == TOTAL:
-            _add(row, L.offset[t], flux, sa)
+            _add(row, L.offset[t], flux, sa, ss)
         elif k == CELL:
             b = L.cell_bin[t, cell]
             if b >= 0:
-                _add(row, L.offset[t] + 2 * b, flux, sa)
+                _add(row, L.offset[t] + NS * b, flux, sa, ss)
         elif k == MATERIAL:
             if mat >= 0:
                 b = L.mat_bin[t, mat]
                 if b >= 0:
-                    _add(row, L.offset[t] + 2 * b, flux, sa)
+                    _add(row, L.offset[t] + NS * b, flux, sa, ss)
         elif k == MESH:
-            _mesh_segment(row, L, t, sa, w, x, y, z, u, v, ww, length)
+            _mesh_segment(row, L, t, sa, ss, w, x, y, z, u, v, ww, length)
 
 
 @njit(cache=True)
@@ -256,42 +307,42 @@ def score_surface(row, L, surf, signed_w):
         if L.kind[t] == SURFACE:
             b = L.surf_bin[t, surf]
             if b >= 0:
-                row[L.offset[t] + 2 * b] += signed_w
+                row[L.offset[t] + NS * b] += signed_w
 
 
 @njit(cache=True)
-def score_ball(row, L, cell, mat, sa, flux):
+def score_ball(row, L, cell, mat, sa, ss, flux):
     """A ball step that deposited `flux` in total: total, cell and
     material tallies (exact; the ball is inside one cell).  Mesh tallies
     are scored by `score_ball_mesh`, at points transport.py chooses."""
     for t in range(L.kind.size):
         k = L.kind[t]
         if k == TOTAL:
-            _add(row, L.offset[t], flux, sa)
+            _add(row, L.offset[t], flux, sa, ss)
         elif k == CELL:
             b = L.cell_bin[t, cell]
             if b >= 0:
-                _add(row, L.offset[t] + 2 * b, flux, sa)
+                _add(row, L.offset[t] + NS * b, flux, sa, ss)
         elif k == MATERIAL:
             b = L.mat_bin[t, mat]
             if b >= 0:
-                _add(row, L.offset[t] + 2 * b, flux, sa)
+                _add(row, L.offset[t] + NS * b, flux, sa, ss)
 
 
 @njit(cache=True)
-def score_ball_mesh(row, L, sa, flux, x, y, z):
+def score_ball_mesh(row, L, sa, ss, flux, x, y, z):
     """`flux` of a ball into the voxel holding (x, y, z), in every mesh:
     the ball's centre under 'cap', a drawn point of its walk under
     'profile' (see transport.py)."""
     for t in range(L.kind.size):
         if L.kind[t] == MESH:
-            ll, dw, dim = L.mesh_ll[t], L.mesh_dw[t], L.mesh_dim[t]
-            ix = int(np.floor((x - ll[0]) / dw[0]))
-            iy = int(np.floor((y - ll[1]) / dw[1]))
-            iz = int(np.floor((z - ll[2]) / dw[2]))
+            dim = L.mesh_dim[t]
+            ix = _bin(L, t, 0, x)
+            iy = _bin(L, t, 1, y)
+            iz = _bin(L, t, 2, z)
             if 0 <= ix < dim[0] and 0 <= iy < dim[1] and 0 <= iz < dim[2]:
                 b = (iz * dim[1] + iy) * dim[0] + ix
-                _add(row, L.offset[t] + 2 * b, flux, sa)
+                _add(row, L.offset[t] + NS * b, flux, sa, ss)
 
 
 @njit(cache=True)
@@ -303,20 +354,20 @@ def mesh_room(L, x, y, z):
     for t in range(L.kind.size):
         if L.kind[t] != MESH:
             continue
-        ll, dw, dim = L.mesh_ll[t], L.mesh_dw[t], L.mesh_dim[t]
+        dim = L.mesh_dim[t]
         p = (x, y, z)
         outside2 = 0.0
         inside = INF
         for a in range(3):
-            lo, hi = ll[a], ll[a] + dim[a] * dw[a]
+            e = L.mesh_edges[t, a]
+            lo, hi = e[0], e[dim[a]]
             if p[a] < lo:
                 outside2 += (lo - p[a]) ** 2
             elif p[a] > hi:
                 outside2 += (p[a] - hi) ** 2
             else:
-                i = min(int(np.floor((p[a] - lo) / dw[a])), dim[a] - 1)
-                inside = min(inside, p[a] - (lo + i * dw[a]),
-                             lo + (i + 1) * dw[a] - p[a])
+                i = min(max(_bin(L, t, a, p[a]), 0), dim[a] - 1)
+                inside = min(inside, p[a] - e[i], e[i + 1] - p[a])
         r = np.sqrt(outside2) if outside2 > 0.0 else inside
         room = min(room, r)
     return room
@@ -329,7 +380,10 @@ class Results:
 
     leakage, leakage_se      weight leaving through vacuum boundaries
     tallies[name]            dict with 'mean' and 'se', arrays shaped
-                             (bins, 2): column 0 flux, column 1 absorption
+                             (bins, 4): columns flux, absorption, scatter,
+                             total (SCORES), whatever the tally asked for;
+                             'scores' says which were asked.  A surface
+                             tally's current is column 0.
     counters                 work done (flights, balls, ...); see transport
     timing                   seconds spent in transport and in the backend
     leakage_se_batches       the same error bar estimated the old way, from
@@ -433,8 +487,9 @@ class Accumulator:
             out[tl.name or f"tally{tl.id}"] = {
                 "id": tl.id, "filter": tl.filter, "bin_ids": tl.bin_ids,
                 "mesh": tl.mesh, "scores": tl.scores,
-                "mean": mean[a:a + 2 * nb].reshape(nb, 2),
-                "se": se[a:a + 2 * nb].reshape(nb, 2)}
+                "edges": tl.edges,
+                "mean": mean[a:a + NS * nb].reshape(nb, NS),
+                "se": se[a:a + NS * nb].reshape(nb, NS)}
         _, se_b = self.mean_se_batches()
         return Results(float(mean[LEAKAGE]), float(se[LEAKAGE]), out,
                        counters, timing, settings,

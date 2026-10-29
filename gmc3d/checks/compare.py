@@ -24,7 +24,7 @@ two such numbers measures rounding, not physics.
 
 import numpy as np
 
-SCORE_NAMES = ("flux", "absorption")
+SCORE_NAMES = ("flux", "absorption", "scatter", "total")   # columns
 NEGLIGIBLE = 1.0e-9
 
 
@@ -55,9 +55,12 @@ def compare(ours, ref):
         if name not in ref.tallies:
             continue
         r = ref.tallies[name]
-        names = ("current",) if t.get("filter") == "surface" else \
-            SCORE_NAMES
-        for k, score in enumerate(names):
+        if t.get("filter") == "surface":
+            names = [(0, "current")]
+        else:          # the scores this tally asked for, by column
+            names = [(SCORE_NAMES.index(sc), sc)
+                     for sc in t.get("scores", SCORE_NAMES[:2])]
+        for k, score in names:
             z, ok = z_scores(t["mean"][:, k], t["se"][:, k],
                              r["mean"][:, k], r["se"][:, k])
             zk = z[ok]

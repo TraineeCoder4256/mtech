@@ -5,11 +5,16 @@ small and medium gaps in source, geometry and tallies listed in `GAPS.md`.
 None of them needs the trained network to change (checked item by item;
 see the "model change?" column in `GAPS.md`), so none waits on model work.
 
-Status: proposed 27 Oct 2026, waiting for Phani's go. Nothing in it is
-built yet.
+Status: proposed 27 Oct 2026; Phani gave the go on 29 Oct 2026. v1.1.3
+is done; v1.2 (sources) is next.
+
+Numbering (Phani, 29 Oct 2026): v1.1.x is the mesh work and the easy
+tally items; each later area gets its own minor version (v1.2 sources,
+v1.3 multi-filter tallies, v1.4 geometry, v1.5 the medium tally items),
+and fixes inside an area are v1.2.1 and so on. v2.0 is still anisotropy.
 
 Rules for every push below:
-- It is a v1.1.x version (`VERSION`, `CHANGELOG.md`, git tag).
+- It carries a version (`VERSION`, `CHANGELOG.md`, git tag).
 - It is checked against OpenMC on a test problem that uses the new
   feature, and the unit tests pass.
 - It updates `GAPS.md`: removes what it closed, adds anything it leaves out.
@@ -20,7 +25,12 @@ over 30 mfp, the network's short-path tail, the physics stages).
 
 ## v1.1.2 (done): GAPS.md with the model-change column, and this plan
 
-## v1.1.3: make the silent gaps loud, plus the easy tally items
+## v1.1.3 (done 29 Oct 2026): make the silent gaps loud, plus the easy tally items
+
+Built as below, with two changes: tally triggers are warned about, not
+refused (they only stop a run early), and `MeshSurfaceFilter` /
+`MeshBornFilter`, found passing as plain meshes, are now refused.
+
 
 | item | how | check |
 |---|---|---|
@@ -30,7 +40,7 @@ over 30 mfp, the network's short-path tail, the physics stages).
 | Scores `total` and `scatter` (sigma_t and sigma_s times flux) | same track-length estimator as absorption | vs OpenMC, slab |
 | 1D and 2D `RegularMesh`, `RectilinearMesh` | the same grid walk; missing axes are infinite; rectilinear edges looked up by binary search. The v1.1 ball rule works unchanged | vs OpenMC, new mesh tallies on the slab and cask |
 
-## v1.1.4: sources, all of OpenMC's spatial and angle distributions
+## v1.2: sources, all of OpenMC's spatial and angle distributions
 
 One mechanism instead of one case per type. Before each batch, Python
 samples the source sites (position, direction) from the model's own OpenMC
@@ -50,7 +60,7 @@ in OpenMC 0.16. The transport then starts from that list. This covers:
 distribution's sampled sites are compared with the same object's own
 samples, then one problem per type is compared with OpenMC.
 
-## v1.1.5: tallies with several filters
+## v1.3: tallies with several filters
 
 The standard way, as OpenMC does it: each filter gives a bin index and the
 combined bin is their weighted sum. Along a flight the cell, material and
@@ -66,7 +76,7 @@ surface bins are fixed, so the mesh walk just adds an offset. This unlocks:
 Check: vs OpenMC on the nested problem (filled cells) and the slab (partial
 currents).
 
-## v1.1.6: geometry, the small items
+## v1.4.0: geometry, the small items
 
 | item | how |
 |---|---|
@@ -76,7 +86,7 @@ currents).
 
 Check: locate vs OpenMC on random points (as for Stage 1), then a solve.
 
-## v1.1.7: geometry, the medium items
+## v1.4.1: geometry, the medium items
 
 | item | how |
 |---|---|
@@ -89,7 +99,7 @@ Check: locate vs OpenMC on random points (as for Stage 1), then a solve.
 Check: locate and solve vs OpenMC on a new problem per item (a hex
 assembly, a torus/quadric shape, a rotational sector).
 
-## v1.1.8: tallies, the medium items
+## v1.5: tallies, the medium items
 
 | item | how |
 |---|---|
