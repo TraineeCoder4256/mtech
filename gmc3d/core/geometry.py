@@ -12,7 +12,7 @@ so Numba can walk it:
     cells      a region (a formula over half-spaces) and a fill: a material,
                nothing (void), another universe, or a lattice
     universes  a list of cells; the root universe is the whole problem
-    lattices   rectangular arrays of universes
+    lattices   rectangular or hexagonal arrays of universes
 
 A point is located by descending from the root universe: find the cell that
 contains it; if that cell holds a universe or lattice, move into that
@@ -27,7 +27,8 @@ The three questions, all answered on that same descent:
                       stays inside the current cell at EVERY level -- the
                       distance field.  It is the minimum, over levels, of the
                       distance to every surface the cell's region mentions,
-                      and to the lattice element's walls.  The region's
+                      and to the lattice element's walls (rectangular or
+                      hexagonal).  The region's
                       boundary is part of those surfaces, so this can only
                       undershoot the true distance, never overshoot.
     ray_boundary      how far a flight can go before it reaches any of those
@@ -55,6 +56,11 @@ FILL_MATERIAL, FILL_VOID, FILL_UNIVERSE, FILL_LATTICE = 0, 1, 2, 3
 BC_TRANSMISSION, BC_VACUUM, BC_REFLECTIVE, BC_WHITE, BC_PERIODIC = \
     0, 1, 2, 3, 4
 
+# lattice types: hexagonal lattices come in two orientations, named (as
+# in OpenMC) by the axis the flats face: 'y' has flat tops, 'x' flat sides
+LAT_RECT, LAT_HEX_Y, LAT_HEX_X = 0, 1, 2
+SQ3, SQ75 = np.sqrt(3.0), np.sqrt(0.75)
+
 # region formula tokens: a half-space is +(i+1) or -(i+1) for surface i;
 # operators are large codes no surface index reaches
 OP_AND, OP_OR, OP_NOT = 1 << 40, (1 << 40) + 1, (1 << 40) + 2
@@ -66,15 +72,36 @@ VOID = -1
 Geometry = namedtuple("Geometry", [
     "surf_kind", "surf_coef", "surf_bc",                    # per surface
     "surf_shift",       # periodic surface: the jump to its partner plane
+    "surf_angle",       # ... or, if not 0, the turn about z onto it
     "cell_tok_start", "cell_tok_len", "tokens",             # region formulas
     "cell_surf_start", "cell_surf_len", "cell_surfs",       # surfaces a cell uses
     "cell_fill_type", "cell_fill",                          # what fills it
     "cell_trans", "cell_rot",                               # fill transform
+    "cell_dist", "cell_off", "lat_off", "leaf_mat",         # distributed
     "univ_cell_start", "univ_cell_len", "univ_cells",       # universes
     "lat_ll", "lat_pitch", "lat_shape", "lat_ndim",         # lattices
+    "lat_type", "lat_rings",
     "lat_univ_start", "lat_univs", "lat_outer",
     "root",                                                 # root universe
 ])
+# A lattice's arrays:
+#   rectangular  lat_ll lower-left corner, lat_pitch the element sizes,
+#                lat_shape (nx, ny, nz)
+#   hexagonal    lat_ll (centre x, centre y, bottom z), lat_pitch
+#                (pitch, pitch, axial pitch), lat_rings the number of rings
+#                n, lat_shape (2n - 1, 2n - 1, nz): a square array over
+#                OpenMC's two skewed indices (shifted by n - 1), of which
+#                only the elements within n - 1 rings of the centre exist
+# lat_univs holds the universe of every entry (-1 where none exists).
+#
+# Distributed materials (a cell with one material per instance, OpenMC's
+# 'distribmat'): every material or void cell instance in the problem has a
+# number, its place in OpenMC's own instance order (Geometry.determine_paths:
+# cells in universe order, lattice elements in index order, outer universes
+# not counted).  That number is the sum, down the path, of cell_off[cell]
+# at every level and lat_off[entry] at every lattice level, so the descent
+# keeps it as a running total.  A cell with cell_dist set takes its
+# material from leaf_mat[number] (VOID for a void instance).
 
 
 # --------------------------------------------------------------- regions
@@ -126,6 +153,7 @@ def _descend(g, x, y, z, u, v, w, want_near, want_ray, path):
     """
     univ = g.root
     near, t_ray, ray_surf, ray_root = INF, INF, -1, False
+    inst = 0
     for level in range(MAX_LEVELS):
         # ---- which cell of this universe holds the point
         cell = -1
@@ -140,6 +168,7 @@ def _descend(g, x, y, z, u, v, w, want_near, want_ray, path):
         path[level] = cell
         if level + 1 < MAX_LEVELS:
             path[level + 1] = -1
+        inst += g.cell_off[cell]
 
         # ---- distances to this cell's surfaces
         s0 = g.cell_surf_start[cell]
@@ -156,7 +185,8 @@ def _descend(g, x, y, z, u, v, w, want_near, want_ray, path):
 
         ft = g.cell_fill_type[cell]
         if ft == FILL_MATERIAL:
-            return cell, g.cell_fill[cell], near, t_ray, ray_surf, ray_root
+            m = g.leaf_mat[inst] if g.cell_dist[cell] else g.cell_fill[cell]
+            return cell, m, near, t_ray, ray_surf, ray_root
         if ft == FILL_VOID:
             return cell, VOID, near, t_ray, ray_surf, ray_root
 
@@ -175,101 +205,128 @@ def _descend(g, x, y, z, u, v, w, want_near, want_ray, path):
             univ = g.cell_fill[cell]
             continue
 
-        # ---- a lattice: find the element, then its centre is the origin
+        # ---- a lattice: find the element, then its centre is the origin.
+        # Outside the array OpenMC fills every would-be element with the
+        # outer universe in that element's own coordinates, so the walls
+        # bound the flight and the ball there too.
         lat = g.cell_fill[cell]
-        ll, p, shp = g.lat_ll[lat], g.lat_pitch[lat], g.lat_shape[lat]
-        three_d = g.lat_ndim[lat] == 3
-        ix = int(np.floor((x - ll[0]) / p[0]))
-        iy = int(np.floor((y - ll[1]) / p[1]))
-        iz = int(np.floor((z - ll[2]) / p[2])) if three_d else 0
-        valid = (0 <= ix < shp[0]) and (0 <= iy < shp[1]) and \
-                (0 <= iz < shp[2])
-        lx = x - (ll[0] + (ix + 0.5) * p[0])
-        ly = y - (ll[1] + (iy + 0.5) * p[1])
-        lz = z - (ll[2] + (iz + 0.5) * p[2]) if three_d else z
+        valid, k, x, y, z = _element(g, lat, x, y, z)
+        if want_near:
+            d = _wall_near(g, lat, x, y, z)
+            if d < near:
+                near = d
+        if want_ray:
+            d = _wall_exit(g, lat, x, y, z, u, v, w)
+            if d < t_ray:
+                t_ray, ray_surf, ray_root = d, -1, False
         if valid:
-            # the element's walls bound the ball and the flight too
-            hx, hy, hz = 0.5 * p[0], 0.5 * p[1], 0.5 * p[2]
-            if want_near:
-                d = min(hx - abs(lx), hy - abs(ly))
-                if three_d:
-                    d = min(d, hz - abs(lz))
-                if d < near:
-                    near = d
-            if want_ray:
-                d = _box_exit(lx, ly, lz, u, v, w, hx, hy, hz, three_d)
-                if d < t_ray:
-                    t_ray, ray_surf, ray_root = d, -1, False
-            univ = g.lat_univs[g.lat_univ_start[lat] +
-                               (iz * shp[1] + iy) * shp[0] + ix]
-        else:
-            if g.lat_outer[lat] < 0:
-                path[level + 1 if level + 1 < MAX_LEVELS else level] = -1
-                return -1, LOST, 0.0, INF, -1, False
-            # outside the lattice's array: the outer universe, which ends
-            # where the array begins
-            if want_near:
-                d = _box_outside_distance(x, y, z, ll, p, shp, three_d)
-                if d < near:
-                    near = d
-            if want_ray:
-                d = _box_entry(x, y, z, u, v, w, ll, p, shp, three_d)
-                if d < t_ray:
-                    t_ray, ray_surf, ray_root = d, -1, False
+            univ = g.lat_univs[g.lat_univ_start[lat] + k]
+            inst += g.lat_off[g.lat_univ_start[lat] + k]
+        elif g.lat_outer[lat] >= 0:
             univ = g.lat_outer[lat]
-        x, y, z = lx, ly, lz
+        else:
+            path[level + 1 if level + 1 < MAX_LEVELS else level] = -1
+            return -1, LOST, 0.0, INF, -1, False
     return -1, LOST, 0.0, INF, -1, False
 
 
-@njit(cache=True, inline="always")
-def _box_exit(lx, ly, lz, u, v, w, hx, hy, hz, three_d):
-    """Distance from inside a centred box (half-widths h) to its wall."""
-    t = INF
-    if u > 0.0:
-        t = min(t, (hx - lx) / u)
-    elif u < 0.0:
-        t = min(t, (-hx - lx) / u)
-    if v > 0.0:
-        t = min(t, (hy - ly) / v)
-    elif v < 0.0:
-        t = min(t, (-hy - ly) / v)
-    if three_d:
-        if w > 0.0:
-            t = min(t, (hz - lz) / w)
-        elif w < 0.0:
-            t = min(t, (-hz - lz) / w)
-    return max(t, 0.0)
-
-
+# ------------------------------------------------------------- lattices
 @njit(cache=True)
-def _box_outside_distance(x, y, z, ll, p, shp, three_d):
-    """Distance from a point outside a lattice's array to the array."""
-    dx = max(ll[0] - x, 0.0, x - (ll[0] + shp[0] * p[0]))
-    dy = max(ll[1] - y, 0.0, y - (ll[1] + shp[1] * p[1]))
-    dz = max(ll[2] - z, 0.0, z - (ll[2] + shp[2] * p[2])) if three_d else 0.0
-    return np.sqrt(dx * dx + dy * dy + dz * dz)
+def _element(g, lat, x, y, z):
+    """The lattice element holding (x, y, z) (in the lattice's frame).
 
-
-@njit(cache=True)
-def _box_entry(x, y, z, u, v, w, ll, p, shp, three_d):
-    """Distance along a ray to where it enters a lattice's array (slab
-    method), or INF if it misses."""
-    t0, t1 = 0.0, INF
-    for a in range(3 if three_d else 2):
-        q = (x, y, z)[a]
-        d = (u, v, w)[a]
-        lo, hi = ll[a], ll[a] + shp[a] * p[a]
-        if d == 0.0:
-            if q < lo or q > hi:
-                return INF
+    Returns (valid, k, lx, ly, lz): whether the element exists, its entry
+    in the lattice's universe list, and the point relative to its centre.
+    A hexagonal element is the one whose centre is nearest, found among
+    four candidates exactly as OpenMC does (HexLattice.find_element)."""
+    ll, p, shp = g.lat_ll[lat], g.lat_pitch[lat], g.lat_shape[lat]
+    iz, lz = 0, z
+    if g.lat_ndim[lat] == 3:
+        iz = int(np.floor((z - ll[2]) / p[2]))
+        lz = z - (ll[2] + (iz + 0.5) * p[2])
+    t = g.lat_type[lat]
+    if t == LAT_RECT:
+        ix = int(np.floor((x - ll[0]) / p[0]))
+        iy = int(np.floor((y - ll[1]) / p[1]))
+        lx = x - (ll[0] + (ix + 0.5) * p[0])
+        ly = y - (ll[1] + (iy + 0.5) * p[1])
+        valid = (0 <= ix < shp[0]) and (0 <= iy < shp[1]) and \
+                (0 <= iz < shp[2])
+        return valid, (iz * shp[1] + iy) * shp[0] + ix, lx, ly, lz
+    pp = p[0]
+    X, Y = x - ll[0], y - ll[1]
+    if t == LAT_HEX_Y:
+        i1 = int(np.floor(X / (SQ75 * pp)))
+        i2 = int(np.floor((Y - X / SQ3) / pp))
+    else:
+        i1 = int(np.floor(-(Y - X * SQ3) / (SQ3 * pp)))
+        i2 = int(np.floor(Y / (SQ75 * pp)))
+    best, a, b, lx, ly = INF, 0, 0, 0.0, 0.0
+    for c in range(4):
+        ca, cb = i1 + (c & 1), i2 + (c >> 1)
+        if t == LAT_HEX_Y:
+            dx, dy = X - SQ75 * pp * ca, Y - (0.5 * ca + cb) * pp
         else:
-            ta, tb = (lo - q) / d, (hi - q) / d
-            if ta > tb:
-                ta, tb = tb, ta
-            t0, t1 = max(t0, ta), min(t1, tb)
-            if t0 > t1:
-                return INF
-    return t0 if t0 > 0.0 else INF
+            dx, dy = X - (ca + 0.5 * cb) * pp, Y - SQ75 * pp * cb
+        d = dx * dx + dy * dy
+        if d < best:
+            best, a, b, lx, ly = d, ca, cb, dx, dy
+    n = g.lat_rings[lat]
+    ring = max(abs(a), abs(b), abs(a + b))
+    valid = ring < n and 0 <= iz < shp[2]
+    return valid, (iz * shp[1] + b + n - 1) * shp[0] + a + n - 1, lx, ly, lz
+
+
+@njit(cache=True, inline="always")
+def _wall_near(g, lat, lx, ly, lz):
+    """Distance from a point inside an element (relative to its centre) to
+    the element's walls: exact, the element being convex."""
+    p = g.lat_pitch[lat]
+    t = g.lat_type[lat]
+    if t == LAT_RECT:
+        d = min(0.5 * p[0] - abs(lx), 0.5 * p[1] - abs(ly))
+    else:
+        h = 0.5 * p[0]
+        if t == LAT_HEX_Y:                   # flats facing +-y
+            a1, a2, a3 = ly, SQ75 * lx + 0.5 * ly, SQ75 * lx - 0.5 * ly
+        else:                                # flats facing +-x
+            a1, a2, a3 = lx, 0.5 * lx + SQ75 * ly, 0.5 * lx - SQ75 * ly
+        d = h - max(abs(a1), abs(a2), abs(a3))
+    if g.lat_ndim[lat] == 3:
+        d = min(d, 0.5 * p[2] - abs(lz))
+    return max(d, 0.0)
+
+
+@njit(cache=True, inline="always")
+def _slab_exit(q, s, h):
+    """Distance along a line (position q, speed s) to |q| = h, from inside."""
+    if s > 0.0:
+        return (h - q) / s
+    if s < 0.0:
+        return (-h - q) / s
+    return INF
+
+
+@njit(cache=True, inline="always")
+def _wall_exit(g, lat, lx, ly, lz, u, v, w):
+    """Distance along (u, v, w) from inside an element to its wall."""
+    p = g.lat_pitch[lat]
+    t = g.lat_type[lat]
+    if t == LAT_RECT:
+        d = min(_slab_exit(lx, u, 0.5 * p[0]), _slab_exit(ly, v, 0.5 * p[1]))
+    else:
+        h = 0.5 * p[0]
+        if t == LAT_HEX_Y:
+            d = min(_slab_exit(ly, v, h),
+                    _slab_exit(SQ75 * lx + 0.5 * ly, SQ75 * u + 0.5 * v, h),
+                    _slab_exit(SQ75 * lx - 0.5 * ly, SQ75 * u - 0.5 * v, h))
+        else:
+            d = min(_slab_exit(lx, u, h),
+                    _slab_exit(0.5 * lx + SQ75 * ly, 0.5 * u + SQ75 * v, h),
+                    _slab_exit(0.5 * lx - SQ75 * ly, 0.5 * u - SQ75 * v, h))
+    if g.lat_ndim[lat] == 3:
+        d = min(d, _slab_exit(lz, w, 0.5 * p[2]))
+    return max(d, 0.0)
 
 
 # ------------------------------------------------------- the three questions
@@ -354,6 +411,7 @@ def _path(g, x, y, z, cells, univs):
     """The descent of `_descend` for a point only, recording each level's
     universe and cell.  Returns the deepest material (VOID / LOST)."""
     univ = g.root
+    inst = 0
     for level in range(MAX_LEVELS):
         univs[level] = univ
         cell = -1
@@ -365,9 +423,10 @@ def _path(g, x, y, z, cells, univs):
         if cell < 0:
             return LOST
         cells[level] = cell
+        inst += g.cell_off[cell]
         ft = g.cell_fill_type[cell]
         if ft == FILL_MATERIAL:
-            return g.cell_fill[cell]
+            return g.leaf_mat[inst] if g.cell_dist[cell] else g.cell_fill[cell]
         if ft == FILL_VOID:
             return VOID
         x, y, z = (x - g.cell_trans[cell, 0], y - g.cell_trans[cell, 1],
@@ -380,24 +439,12 @@ def _path(g, x, y, z, cells, univs):
             univ = g.cell_fill[cell]
             continue
         lat = g.cell_fill[cell]
-        ll, p, shp = g.lat_ll[lat], g.lat_pitch[lat], g.lat_shape[lat]
-        three_d = g.lat_ndim[lat] == 3
-        ix = int(np.floor((x - ll[0]) / p[0]))
-        iy = int(np.floor((y - ll[1]) / p[1]))
-        iz = int(np.floor((z - ll[2]) / p[2])) if three_d else 0
-        if (0 <= ix < shp[0]) and (0 <= iy < shp[1]) and (0 <= iz < shp[2]):
-            univ = g.lat_univs[g.lat_univ_start[lat] +
-                               (iz * shp[1] + iy) * shp[0] + ix]
-            x = x - (ll[0] + (ix + 0.5) * p[0])
-            y = y - (ll[1] + (iy + 0.5) * p[1])
-            if three_d:
-                z = z - (ll[2] + (iz + 0.5) * p[2])
-        else:
-            if g.lat_outer[lat] < 0:
-                return LOST
+        valid, k, x, y, z = _element(g, lat, x, y, z)
+        if valid:
+            univ = g.lat_univs[g.lat_univ_start[lat] + k]
+            inst += g.lat_off[g.lat_univ_start[lat] + k]
+        elif g.lat_outer[lat] >= 0:
             univ = g.lat_outer[lat]
-            x = x - (ll[0] + (ix + 0.5) * p[0])
-            y = y - (ll[1] + (iy + 0.5) * p[1])
-            if three_d:
-                z = z - (ll[2] + (iz + 0.5) * p[2])
+        else:
+            return LOST
     return LOST

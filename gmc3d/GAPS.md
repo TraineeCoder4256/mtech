@@ -15,20 +15,23 @@ Columns:
   the model work they belong to.
 - **plan**: the push in `V1_PLAN.md` that closes it, or "hold" / "later".
 
-Last updated: v1.4.0 (29 Oct 2026).
+Last updated: v1.4.1 (29 Oct 2026).
 
-## Geometry (left in v1.0 to v1.4.0)
+## Geometry (left in v1.0 to v1.4.1)
 
 | gap | shows as | size | model change? | plan |
 |---|---|---|---|---|
-| Periodic boundary, rotational (planes not parallel) | refused (v1.4.0) | M | no | v1.4.1 |
-| `HexLattice` | refused | M | no: only the distance field and lookup change | v1.4.1 |
-| `Quadric` | refused | M | no: a guaranteed lower bound on the distance just makes balls smaller | v1.4.1 |
-| `XTorus` / `YTorus` / `ZTorus` | refused | M | no (same lower-bound idea for elliptical tubes) | v1.4.1 |
-| Distributed materials (a material per cell instance) | refused | M | no: absorption is applied outside the network | v1.4.1 |
 | Periodic boundary on a non-plane surface | refused (v1.4.0), as in OpenMC | - | no | stays refused |
 | Periodic pairing of general `Plane`s without `periodic_surface` set | refused (v1.4.0); X/Y/Z planes pair automatically, as in OpenMC | S | no | later |
 | Boundary `albedo` other than 1 | refused (v1.4.0) | S | no: a weight factor at the wall | later |
+| Torus whose tube reaches the axis (c >= a: horn or spindle torus) | refused (v1.4.1) | S | no | later |
+| Rotational periodic walls that do not contain the z axis | refused (v1.4.1), as in OpenMC | - | no | stays refused |
+| Rotational periodic walls with the problem on the - side of a plane | **SILENT**, as in OpenMC: both codes assume the + side of both planes and turn the wrong way otherwise | S | no | later (a check on import) |
+| Distributed materials with a void entry (`None` in the fill list) | built (v1.4.1), checked only by unit test: OpenMC 0.16 stops on one in multigroup mode (measured) | - | no | when OpenMC handles it |
+| Distributed materials inside a lattice's outer universe | refused (v1.4.1): OpenMC does not number instances there | - | no | stays refused |
+| Distributed temperatures (a temperature per cell instance) | not read (one group, one temperature) | - | YES once energy and temperature enter | Stage 3+ |
+| Quadric nearest distance is a lower bound, not exact | by design (v1.4.1): balls near a quadric are smaller than they could be (exact, slower) | M | no | later, if a quadric-heavy benchmark needs the speed |
+| Torus flights cost about 0.4 us (a sphere 0.03 us) | by design (v1.4.1): a bracketed quartic root | S | no | later |
 | DAGMC / CAD geometry | refused | L | no, but large engineering (BVH distance field) | later |
 
 ## Source (what v1.2 leaves)

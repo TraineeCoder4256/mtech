@@ -170,8 +170,10 @@ def _boundary(g, k, P, i, x, y, z, u, v, w):
       reflective   mirrored direction
       white        a new direction drawn from the cosine law about the
                    inward normal (mu = sqrt(xi)), OpenMC's definition
-      periodic     same direction, moved to the partner plane
-                   (translational: g.surf_shift[k])
+      periodic     moved to the partner plane: translational (parallel
+                   planes) by g.surf_shift[k], same direction; rotational
+                   (planes through the z axis) by turning position and
+                   direction through g.surf_angle[k] about z, as OpenMC
     """
     bc = g.surf_bc[k]
     if bc == G.BC_REFLECTIVE:
@@ -184,8 +186,14 @@ def _boundary(g, k, P, i, x, y, z, u, v, w):
         u, v, w = rotate(sg * nx / nn, sg * ny / nn, sg * nz / nn, mu,
                          2.0 * np.pi * rng.rand(P.seed, i))
     elif bc == G.BC_PERIODIC:
-        x, y, z = (x + g.surf_shift[k, 0], y + g.surf_shift[k, 1],
-                   z + g.surf_shift[k, 2])
+        a = g.surf_angle[k]
+        if a != 0.0:
+            ca, sa = np.cos(a), np.sin(a)
+            x, y = ca * x - sa * y, sa * x + ca * y
+            u, v = ca * u - sa * v, sa * u + ca * v
+        else:
+            x, y, z = (x + g.surf_shift[k, 0], y + g.surf_shift[k, 1],
+                       z + g.surf_shift[k, 2])
     return x, y, z, u, v, w
 
 

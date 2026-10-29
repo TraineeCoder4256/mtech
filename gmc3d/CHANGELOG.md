@@ -7,6 +7,42 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v1.4.1 (29 Oct 2026): hex lattices, tori, quadrics, rotation, distributed materials
+
+- **`HexLattice`**, both orientations ('y' flat tops, 'x' flat sides), 2D
+  and 3D. The element is found as OpenMC finds it (nearest of four
+  candidate centres), and each element's universe comes from OpenMC's own
+  index mapping. The six walls (and the axial ones in 3D) bound flights
+  and balls.
+- **Bug fixed (since v1.0): a lattice's outer universe.** OpenMC fills
+  every would-be element outside the array with the outer universe in
+  that element's own coordinates; we used one frame for all of them and
+  stopped flights only at the array's edge. Right for a uniform outer
+  universe (every test problem so far), wrong for any other. Now the
+  would-be elements' walls count like real ones. Nested's results change
+  within their error bars (no longer bit-identical to v1.4.0).
+- **`XTorus`, `YTorus`, `ZTorus`** (circular or elliptical tube). Flights:
+  the first root of a quartic, bracketed between its turning points (no
+  general polynomial solver; 0.4 us a flight). Nearest distance: exact,
+  the distance to the tube's ellipse in the plane through the axis.
+  Refused: a tube that reaches the axis (c >= a).
+- **`Quadric`** (any second-order surface). Flights: a quadratic. Nearest
+  distance has no formula, so a guaranteed lower bound from the value,
+  gradient and largest curvature: balls are never too big, only smaller
+  than they could be. Exact for a plane.
+- **Rotational periodic walls**: two planes through the z axis; a particle
+  leaving through one is turned about z onto the other, by OpenMC's own
+  angle rule (which takes the problem to lie on the + side of both).
+- **Distributed materials** (a cell with one material per instance): every
+  instance is numbered in OpenMC's order and the descent keeps the number
+  as a running sum, so the cost is two additions per level. Refused: a
+  wrong-length fill list, a distributed cell in an outer universe.
+- New problems `hexcore` (both hex orientations, a non-uniform outer
+  universe) and `sector` (a rotational quarter with an elliptical ZTorus,
+  an XTorus, a tilted ellipsoid quadric and a distributed pin lattice).
+- Measured in OpenMC 0.16: a distributed fill with a void entry stops
+  OpenMC in multigroup mode, so that case is checked by unit test only.
+
 ## v1.4.0 (29 Oct 2026): tilted shapes, white and periodic walls
 
 - **`Cylinder` and `Cone` on any axis** (OpenMC's general forms, which it

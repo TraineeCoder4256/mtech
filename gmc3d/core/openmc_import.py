@@ -151,6 +151,11 @@ _SURFACE_KINDS = {
     openmc.ZCone: (S.Z_CONE, ("x0", "y0", "z0", "r2")),
     openmc.Cylinder: (S.CYLINDER, ("x0", "y0", "z0", "r", "dx", "dy", "dz")),
     openmc.Cone: (S.CONE, ("x0", "y0", "z0", "r2", "dx", "dy", "dz")),
+    openmc.XTorus: (S.X_TORUS, ("x0", "y0", "z0", "a", "b", "c")),
+    openmc.YTorus: (S.Y_TORUS, ("x0", "y0", "z0", "a", "b", "c")),
+    openmc.ZTorus: (S.Z_TORUS, ("x0", "y0", "z0", "a", "b", "c")),
+    openmc.Quadric: (S.QUADRIC, ("a", "b", "c", "d", "e", "f", "g", "h", "j",
+                                 "k")),
 }
 _BCS = {"transmission": G.BC_TRANSMISSION, "vacuum": G.BC_VACUUM,
         "reflective": G.BC_REFLECTIVE, "white": G.BC_WHITE,
@@ -178,6 +183,23 @@ def _surface(surf):
         if not np.linalg.norm(d) > 0.0:
             raise Unsupported(f"surface {surf.id}: axis direction is zero")
         coef[4:7] = d / np.linalg.norm(d)
+    if code in (S.X_TORUS, S.Y_TORUS, S.Z_TORUS):
+        a, b, c = coef[3:6]
+        if not (b > 0.0 and c > 0.0):
+            raise Unsupported(f"surface {surf.id}: torus with b = {b}, "
+                              f"c = {c}; both must be positive")
+        if not c < a:
+            raise Unsupported(f"surface {surf.id}: torus with c = {c} >= "
+                              f"a = {a} (the tube meets the axis: a horn "
+                              f"or spindle torus) is not handled")
+    if code == S.QUADRIC:
+        A, B, C, D, E, F = coef[:6]
+        M = np.array([[A, D / 2, F / 2], [D / 2, B, E / 2],
+                      [F / 2, E / 2, C]])
+        coef[10] = np.abs(np.linalg.eigvalsh(M)).max()
+        if not np.abs(coef[:9]).max() > 0.0:
+            raise Unsupported(f"surface {surf.id}: quadric with no x, y or "
+                              f"z terms")
     return code, coef, _BCS[surf.boundary_type]
 
 
@@ -196,14 +218,18 @@ def _plane(surf):
 
 
 def _periodic_shifts(surfs):
-    """For each periodic surface, the jump that takes a particle leaving
-    through it to the same spot on its partner plane.
+    """For each periodic surface, how a particle leaving through it reaches
+    the same spot on its partner plane: (shift, angle).
 
     Partners as OpenMC pairs them: `periodic_surface` if set, otherwise the
     one other periodic plane of the same axis (X, Y or Z planes only).
-    Only translational periodicity (parallel planes) is handled here;
-    rotational periodicity (planes at an angle) is v1.4.1."""
+    Parallel partners are translational: shift = the jump between them.
+    Partners at an angle are rotational, as in OpenMC: both planes must
+    contain the z axis, and a particle leaving through one is turned about
+    z by angle = theta(partner normal) + pi - theta(own normal).  Like
+    OpenMC, this takes the problem to lie on the + side of both planes."""
     shift = np.zeros((len(surfs), 3))
+    angle = np.zeros(len(surfs))
     per = [s for s in surfs if s.boundary_type == "periodic"]
     for s in per:
         if not isinstance(s, _PLANES):
@@ -225,14 +251,20 @@ def _periodic_shifts(surfs):
                               f"{partner.id} is not periodic")
         n1, d1 = _plane(s)
         n2, d2 = _plane(partner)
-        if np.dot(n1, n2) < 0:
-            n2, d2 = -n2, -d2
-        if np.linalg.norm(np.cross(n1, n2)) > 1e-9:
-            raise Unsupported(f"periodic surfaces {s.id} and {partner.id} "
-                              f"are not parallel: rotational periodicity "
-                              f"is not handled yet (v1.4.1)")
-        shift[index[s.id]] = (d2 - d1) * n1
-    return shift
+        if np.linalg.norm(np.cross(n1, n2)) <= 1e-9:
+            if np.dot(n1, n2) < 0:
+                n2, d2 = -n2, -d2
+            shift[index[s.id]] = (d2 - d1) * n1
+            continue
+        for o, n, d in ((s, n1, d1), (partner, n2, d2)):
+            if abs(n[2]) > 1e-12 or abs(d) > 1e-10:
+                raise Unsupported(
+                    f"periodic surfaces {s.id} and {partner.id} are not "
+                    f"parallel, so rotational; surface {o.id} does not "
+                    f"contain the z axis (OpenMC turns only about z)")
+        a = np.arctan2(n2[1], n2[0]) + np.pi - np.arctan2(n1[1], n1[0])
+        angle[index[s.id]] = (a + np.pi) % (2 * np.pi) - np.pi
+    return shift, angle
 
 
 def _region_tokens(region, surf_index, out, used):
@@ -497,6 +529,121 @@ def _filter(t, f, kind, model, mats, cell_index, mat_index, surf_index,
                                            np.int64), ids)
 
 
+def _hex_lattice(lat, i, univ_index, ll, pitch, shape, ndim, kind, rings):
+    """Fill row i of the lattice arrays for a HexLattice (layout in
+    geometry.py) and return its universe list.  Each existing element's
+    universe comes from OpenMC's own index mapping (get_universe), so the
+    ring order and both orientations are OpenMC's."""
+    n = lat.num_rings
+    nz = lat.num_axial or 1
+    nd = 3 if lat.num_axial is not None else 2
+    ndim[i], rings[i] = nd, n
+    kind[i] = G.LAT_HEX_Y if lat.orientation == "y" else G.LAT_HEX_X
+    p = list(lat.pitch)
+    pitch[i] = (p[0], p[0], p[1] if nd == 3 else 1.0)
+    c = list(lat.center)
+    ll[i] = (c[0], c[1], c[2] - 0.5 * nz * p[1] if nd == 3 else 0.0)
+    shape[i] = (2 * n - 1, 2 * n - 1, nz)
+    out = []
+    for iz in range(nz):
+        for b in range(-(n - 1), n):
+            for a in range(-(n - 1), n):
+                idx = (a, b, iz) if nd == 3 else (a, b)
+                ok = max(abs(a), abs(b), abs(a + b)) < n
+                out.append(univ_index[lat.get_universe(idx).id] if ok
+                           else -1)
+    return out
+
+
+def _instances(geo, cells, cell_index, lats, lat_ustart, lat_univs,
+               lat_shape, lat_type, lat_rings, univs, univ_index, mat_index):
+    """Instance numbering for distributed materials (layout in
+    geometry.py): (cell_dist, cell_off, lat_off, leaf_mat).
+
+    Numbers every material and void cell instance in OpenMC's order (as
+    Geometry.determine_paths walks the tree), and gives instance j of a
+    distributed cell the j-th material of its fill list."""
+    nc = len(cells)
+    cell_dist = np.array([c.fill_type == "distribmat" for c in cells])
+    cell_off = np.zeros(nc, np.int64)
+    lat_off = np.zeros(max(len(lat_univs), 1), np.int64)
+    if not cell_dist.any():
+        return cell_dist, cell_off, lat_off, np.zeros(1, np.int64)
+
+    leaves, has_dist = {}, {}                    # per universe index
+
+    def entries(li):                             # valid lattice entries
+        k0 = lat_ustart[li]
+        n = int(np.prod(lat_shape[li]))
+        return [(k, lat_univs[k0 + k]) for k in range(n)
+                if lat_univs[k0 + k] >= 0]
+
+    def count(ui):
+        if ui in leaves:
+            return
+        n, d = 0, False
+        for cid in univs[ui].cells:
+            ci = cell_index[cid]
+            c = cells[ci]
+            cell_off[ci] = n
+            if c.fill_type == "universe":
+                fu = univ_index[c.fill.id]
+                count(fu)
+                n, d = n + leaves[fu], d or has_dist[fu]
+            elif c.fill_type == "lattice":
+                li = lats.index(c.fill)
+                m = 0
+                for k, fu in entries(li):
+                    count(fu)
+                    lat_off[lat_ustart[li] + k] = m
+                    m, d = m + leaves[fu], d or has_dist[fu]
+                if c.fill.outer is not None:
+                    ou = univ_index[c.fill.outer.id]
+                    count(ou)
+                    if has_dist[ou]:
+                        raise Unsupported(
+                            f"lattice {c.fill.id}'s outer universe holds a "
+                            f"cell with distributed materials; OpenMC does "
+                            f"not number instances there")
+                n += m
+            else:
+                n, d = n + 1, d or bool(cell_dist[ci])
+        leaves[ui], has_dist[ui] = n, d
+
+    root = univ_index[geo.root_universe.id]
+    count(root)
+    leaf_mat = np.full(leaves[root], G.VOID, np.int64)
+    seen = np.zeros(nc, np.int64)
+
+    def walk(ui, base):
+        if not has_dist[ui]:
+            return
+        for cid in univs[ui].cells:
+            ci = cell_index[cid]
+            c = cells[ci]
+            g = base + cell_off[ci]
+            if c.fill_type == "universe":
+                walk(univ_index[c.fill.id], g)
+            elif c.fill_type == "lattice":
+                li = lats.index(c.fill)
+                for k, fu in entries(li):
+                    walk(fu, g + lat_off[lat_ustart[li] + k])
+            elif cell_dist[ci]:
+                j = seen[ci]
+                if j < len(c.fill):
+                    m = c.fill[j]
+                    leaf_mat[g] = G.VOID if m is None else mat_index[m.id]
+                seen[ci] += 1
+
+    walk(root, 0)
+    for ci in np.flatnonzero(cell_dist):
+        if seen[ci] != len(cells[ci].fill):
+            raise Unsupported(
+                f"cell {cells[ci].id} has {len(cells[ci].fill)} materials "
+                f"for {seen[ci]} instances")
+    return cell_dist, cell_off, lat_off, leaf_mat
+
+
 # ------------------------------------------------------------------- load
 def load(model):
     """Compile an openmc.Model into a Problem.  Raises Unsupported."""
@@ -514,9 +661,9 @@ def load(model):
     univ_index = {u.id: i for i, u in enumerate(univs)}
     lats = sorted(geo.get_all_lattices().values(), key=lambda l: l.id)
     for lat in lats:
-        if not isinstance(lat, openmc.RectLattice):
+        if not isinstance(lat, (openmc.RectLattice, openmc.HexLattice)):
             raise Unsupported(f"lattice {lat.id} is a {type(lat).__name__}; "
-                              f"stage 1 handles RectLattice")
+                              f"RectLattice and HexLattice are handled")
     lat_index = {l.id: i for i, l in enumerate(lats)}
     cells = sorted(geo.get_all_cells().values(), key=lambda c: c.id)
     cell_index = {c.id: i for i, c in enumerate(cells)}
@@ -539,6 +686,8 @@ def load(model):
         ft = c.fill_type
         if ft == "material":
             fill_type[i], fill[i] = G.FILL_MATERIAL, mat_index[c.fill.id]
+        elif ft == "distribmat":
+            fill_type[i] = G.FILL_MATERIAL     # material from leaf_mat
         elif ft == "void":
             fill_type[i] = G.FILL_VOID
         elif ft == "universe":
@@ -561,34 +710,44 @@ def load(model):
     nl = max(len(lats), 1)
     lat_ll, lat_pitch = np.zeros((nl, 3)), np.ones((nl, 3))
     lat_shape, lat_ndim = np.ones((nl, 3), np.int64), np.full(nl, 2)
+    lat_type, lat_rings = np.zeros(nl, np.int64), np.zeros(nl, np.int64)
     lat_ustart, lat_outer, lat_univs = np.zeros(nl, np.int64), \
         np.full(nl, -1), []
     for i, lat in enumerate(lats):
+        lat_ustart[i] = len(lat_univs)
+        if lat.outer is not None:
+            lat_outer[i] = univ_index[lat.outer.id]
+        if isinstance(lat, openmc.HexLattice):
+            lat_univs += _hex_lattice(lat, i, univ_index, lat_ll, lat_pitch,
+                                      lat_shape, lat_ndim, lat_type,
+                                      lat_rings)
+            continue
         nd = lat.ndim
         lat_ndim[i] = nd
         lat_ll[i, :nd] = lat.lower_left
         lat_pitch[i, :nd] = lat.pitch
         lat_shape[i, :nd] = lat.shape
-        lat_ustart[i] = len(lat_univs)
         nx, ny, nz = lat_shape[i]
         for iz in range(nz):
             for iy in range(ny):
                 for ix in range(nx):
                     idx = (ix, iy, iz) if nd == 3 else (ix, iy)
                     lat_univs.append(univ_index[lat.get_universe(idx).id])
-        if lat.outer is not None:
-            lat_outer[i] = univ_index[lat.outer.id]
 
+    cell_dist, cell_off, lat_off, leaf_mat = _instances(
+        geo, cells, cell_index, lats, lat_ustart, lat_univs, lat_shape,
+        lat_type, lat_rings, univs, univ_index, mat_index)
     as_int = lambda a: np.asarray(a, np.int64)
     geom = G.Geometry(
         as_int(kinds), np.asarray(coefs, float).reshape(-1, S.NCOEF),
-        as_int(bcs), _periodic_shifts(surfs),
+        as_int(bcs), *_periodic_shifts(surfs),
         tok_start, tok_len, as_int(tokens),
         cs_start, cs_len, as_int(cell_surfs),
         fill_type, fill, trans, rot,
+        cell_dist, cell_off, lat_off, leaf_mat,
         uc_start, uc_len, as_int(univ_cells),
         lat_ll, lat_pitch, lat_shape, as_int(lat_ndim),
-        lat_ustart, as_int(lat_univs), as_int(lat_outer),
+        lat_type, lat_rings, lat_ustart, as_int(lat_univs), as_int(lat_outer),
         univ_index[geo.root_universe.id])
     root_surfs = set()
     for c in geo.root_universe.cells.values():

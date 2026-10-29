@@ -7,10 +7,13 @@
     nested      3D lattice, rotated/translated universe, outer universe
     cask        storage cask with a streaming duct (a user-style example)
     tilted      any-axis cylinder and cone; periodic and white boundaries
+    hexcore     hexagonal lattices, both orientations, tiled outer universe
+    sector      rotational periodic quarter; tori, quadric, distributed mats
 
 Usage:  from problems import PROBLEMS;  model = PROBLEMS["slab"]()
 """
-from . import cask, curved, lattice3d, nested, slab, sphere, tilted
+from . import (cask, curved, hexcore, lattice3d, nested, sector, slab,
+               sphere, tilted)
 
 PROBLEMS = {
     "sphere": sphere.build,
@@ -20,4 +23,6 @@ PROBLEMS = {
     "nested": nested.build,
     "cask": cask.build,
     "tilted": tilted.build,
+    "hexcore": hexcore.build,
+    "sector": sector.build,
 }
