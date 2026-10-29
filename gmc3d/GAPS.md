@@ -15,7 +15,7 @@ Columns:
   the model work they belong to.
 - **plan**: the push in `V1_PLAN.md` that closes it, or "hold" / "later".
 
-Last updated: v1.2.0 (29 Oct 2026).
+Last updated: v1.3.0 (29 Oct 2026).
 
 ## Geometry (left in v1.0)
 
@@ -29,7 +29,6 @@ Last updated: v1.2.0 (29 Oct 2026).
 | `Quadric` | refused | M | no: a guaranteed lower bound on the distance just makes balls smaller | v1.4.1 |
 | `XTorus` / `YTorus` / `ZTorus` | refused | M | no (same lower-bound idea for elliptical tubes) | v1.4.1 |
 | Distributed materials (a material per cell instance) | refused | M | no: absorption is applied outside the network | v1.4.1 |
-| Cell tallies on cells filled with a universe or lattice | refused | S | no | v1.3 |
 | DAGMC / CAD geometry | refused | L | no, but large engineering (BVH distance field) | later |
 
 ## Source (what v1.2 leaves)
@@ -48,7 +47,7 @@ Since v1.2 every OpenMC source kind is read except the rows below
 | `PointCloud` / `MeshSpatial` `bias` | built (v1.2), checked only by unit test: OpenMC 0.16 refuses the XML its own Python writes for it, so no OpenMC comparison | - | no | when OpenMC fixes it |
 | Source energy | ignored (one group) | - | YES at Stage 3 (energy becomes a network input) | Stage 3 |
 
-## Tallies (left in v1.0 and v1.1)
+## Tallies (left in v1.0 to v1.3)
 
 | gap | shows as | size | model change? | plan |
 |---|---|---|---|---|
@@ -57,9 +56,11 @@ Since v1.2 every OpenMC source kind is read except the rows below
 | `MeshBornFilter` (bins by birth place) | refused (v1.1.3) | S | no | later |
 | Tally derivatives (differential tallies) | refused (v1.1.3) | M | no at one group; the sensitivity of a ball's (mu, s) to a cross section is a research question | later |
 | Other scores (`events`, `heating`, reaction rates by nuclide) | refused | S-M each | no, but most need data a one-group library lacks | later |
-| More than one filter per tally | refused | M | no | v1.3 |
-| `EnergyFilter` | refused | S | no now (one bin); real bins at Stage 3 | v1.3 |
-| Partial currents (`CellFromFilter` x `SurfaceFilter`) | refused | S after multi-filter | no | v1.3 |
+| Filters other than Cell, CellFrom, Material, Mesh, Surface, Energy (`UniverseFilter`, `CellInstanceFilter`, `DistribcellFilter`, `MaterialFromFilter`, `CellBornFilter`, angle and time filters, ...) | refused (v1.3) | S each (Universe: the path is already there) | no | later |
+| Two filters of the same kind in one tally (OpenMC allows two MeshFilters, for instance) | refused (v1.3) | S | no | later |
+| `CellFromFilter` on a track tally (bins a flight by the cell the particle last left) | refused (v1.3) | S | no | later |
+| `SurfaceFilter` with a `MeshFilter` | refused (v1.3) | - | as `MeshSurfaceFilter` below | v1.5 |
+| `EnergyFilter` bins real energies | one group: every particle sits at the group's midpoint, as in OpenMC (v1.3) | - | **YES** at Stage 3 (energy becomes a network input) | Stage 3 |
 | `CylindricalMesh`, `SphericalMesh` | refused | M | no | v1.5 |
 | Surface current on reflective surfaces / inside a filled universe | refused | S/M | no | v1.5 |
 | `MeshSurfaceFilter` (currents through voxel faces) | refused | M | no IF balls are shrunk to one voxel when it is present (exact, less speed-up); YES if balls stay full-size, since (mu, s) cannot say which faces the walk crossed | v1.5 (shrink) |
@@ -101,4 +102,5 @@ Since v1.2 every OpenMC source kind is read except the rows below
 
 | item | since | note |
 |---|---|---|
+| Plain MC 5-16% slower than v1.2 (sphere 4.10 vs 3.89 s, cask 13.50 vs 11.64 s, `runs/2026-10-29/v1.3/speed.log`) | v1.3 | cause of the last part not found; a fix would be v1.3.1 |
 | No race against OpenMC with weight windows | v1.0 | the fair comparison for shielding claims |

@@ -55,7 +55,7 @@ def compare(ours, ref):
         if name not in ref.tallies:
             continue
         r = ref.tallies[name]
-        if t.get("filter") == "surface":
+        if "surface" in t.get("filter", ""):
             names = [(0, "current")]
         else:          # the scores this tally asked for, by column
             names = [(SCORE_NAMES.index(sc), sc)

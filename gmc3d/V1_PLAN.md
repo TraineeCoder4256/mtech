@@ -6,7 +6,8 @@ None of them needs the trained network to change (checked item by item;
 see the "model change?" column in `GAPS.md`), so none waits on model work.
 
 Status: proposed 27 Oct 2026; Phani gave the go on 29 Oct 2026. v1.1.3
-and v1.2.0 (sources) are done; v1.3 (multi-filter tallies) is next.
+v1.2.0 (sources) and v1.3.0 (multi-filter tallies) are done; v1.4.0
+(geometry, small items) is next.
 
 Numbering (Phani, 29 Oct 2026): v1.1.x is the mesh work and the easy
 tally items; each later area gets its own minor version (v1.2 sources,
@@ -60,7 +61,7 @@ in OpenMC 0.16. The transport then starts from that list. This covers:
 distribution's sampled sites are compared with the same object's own
 samples, then one problem per type is compared with OpenMC.
 
-## v1.3: tallies with several filters
+## v1.3 (done, v1.3.0): tallies with several filters
 
 The standard way, as OpenMC does it: each filter gives a bin index and the
 combined bin is their weighted sum. Along a flight the cell, material and

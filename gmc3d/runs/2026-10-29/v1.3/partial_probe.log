@@ -1,0 +1,25 @@
+# Current through the core's +x face (x = 4, a transmission surface of the
+# root universe) in the nested problem. OpenMC 500,000 histories (seed 7);
+# ours 500,000 plain MC (seed 3), per source particle.
+
+before the fix (v1.3 first build, and every version before it):
+  net    OpenMC 0.0408   ours 0.0821   (se 0.0003)
+  to     OpenMC [-0.0725  0.1133]   ours [-0.0725  0.1546]    (cell entered: core, reflector)
+  from   OpenMC [ 0.1133 -0.0725]   ours [ 0.1140 -0.0318]    (cell left: core, reflector)
+after (crossings that stay in the same root cell are not counted):
+  net    OpenMC 0.0408   ours 0.0415
+  to     OpenMC [-0.0725  0.1133]   ours [-0.0725  0.1140]
+  from   OpenMC [ 0.1133 -0.0725]   ours [ 0.1140 -0.0725]
+
+The extra 0.041 was the reflector's flights crossing the plane x = 4
+OUTSIDE the core's face (|y| > 4 or |z| > 3), where the reflector lies on
+both sides. OpenMC does not count those.
+
+# OpenMC 0.16 conventions measured with a two-cell slab (current on the
+# inner plane x = 0 and on the vacuum faces), 200,000 histories:
+  SurfaceFilter x CellFilter      the cell ENTERED (L->R crossings in R's bin)
+  SurfaceFilter x MaterialFilter  the material entered
+  CellFromFilter x SurfaceFilter  the cell LEFT
+  on a vacuum face                CellFilter and CellFromFilter both give the cell left
+  EnergyFilter, one group [0, 20 MeV]: every particle at 10 MeV (bins split at
+  9.99 MeV and 10.01 MeV put everything above and below respectively)

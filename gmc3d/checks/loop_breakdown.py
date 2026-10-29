@@ -60,10 +60,12 @@ HERE = Path(__file__).resolve().parent.parent
 @njit(cache=True)
 def _bench_descend(g, xs, ys, zs, us, vs, ws, want_near, reps):
     acc = 0.0
+    path = np.full(G.MAX_LEVELS, -1, np.int64)
     for _ in range(reps):
         for i in range(xs.size):
             cell, mat, near, t_ray, surf, at_root = G._descend(
-                g, xs[i], ys[i], zs[i], us[i], vs[i], ws[i], want_near, True)
+                g, xs[i], ys[i], zs[i], us[i], vs[i], ws[i], want_near, True,
+                path)
             acc += t_ray + near + cell + mat
     return acc
 
@@ -71,11 +73,14 @@ def _bench_descend(g, xs, ys, zs, us, vs, ws, want_near, reps):
 @njit(cache=True)
 def _bench_score(row, L, cells, mats, xs, ys, zs, us, vs, ws, steps, reps):
     acc = 0.0
+    path = np.full(G.MAX_LEVELS, -1, np.int64)
+    scr = T.scratch(G.MAX_LEVELS)
     for _ in range(reps):
         for i in range(xs.size):
-            T.score_segment(row, L, cells[i], mats[i], 0.1, 0.9, 1.0,
+            path[0] = cells[i]          # one level: enough for the timing
+            T.score_segment(row, L, cells[i], path, mats[i], 0.1, 0.9, 1.0,
                             xs[i], ys[i], zs[i], us[i], vs[i], ws[i],
-                            steps[i])
+                            steps[i], scr)
             acc += row[0]
     return acc
 
@@ -235,7 +240,8 @@ def main():
     d /= np.linalg.norm(d, axis=0)
     us, vs, ws = d
     L = T.compile_layout(pr.tallies, len(pr.cell_ids), len(pr.mats.ids),
-                         len(pr.geom.surf_kind))
+                         len(pr.geom.surf_kind),
+                         leaf=pr.geom.cell_fill_type <= G.FILL_VOID)
     row = np.zeros(L.n_entries)
     steps = np.full(n, 0.5)
     args = (pr.geom, sites["x"], sites["y"], sites["z"], us, vs, ws)

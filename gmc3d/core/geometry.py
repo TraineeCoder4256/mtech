@@ -106,8 +106,12 @@ def in_cell(g, cell, x, y, z):
 
 # ------------------------------------------------------------- the descent
 @njit(cache=True)
-def _descend(g, x, y, z, u, v, w, want_near, want_ray):
+def _descend(g, x, y, z, u, v, w, want_near, want_ray, path):
     """Walk from the root to the material cell holding (x, y, z).
+
+    path (MAX_LEVELS long) receives the cell at each level, root first,
+    then -1 after the deepest (what a tally's cell filter looks at: OpenMC
+    matches a cell at any level).
 
     Returns (cell, material, near, t_ray, ray_surface, ray_at_root):
       cell, material  the deepest cell and its material (VOID / LOST codes)
@@ -129,7 +133,11 @@ def _descend(g, x, y, z, u, v, w, want_near, want_ray):
                 cell = g.univ_cells[k]
                 break
         if cell < 0:
+            path[level] = -1
             return -1, LOST, 0.0, INF, -1, False
+        path[level] = cell
+        if level + 1 < MAX_LEVELS:
+            path[level + 1] = -1
 
         # ---- distances to this cell's surfaces
         s0 = g.cell_surf_start[cell]
@@ -194,6 +202,7 @@ def _descend(g, x, y, z, u, v, w, want_near, want_ray):
                                (iz * shp[1] + iy) * shp[0] + ix]
         else:
             if g.lat_outer[lat] < 0:
+                path[level + 1 if level + 1 < MAX_LEVELS else level] = -1
                 return -1, LOST, 0.0, INF, -1, False
             # outside the lattice's array: the outer universe, which ends
             # where the array begins
@@ -265,7 +274,8 @@ def _box_entry(x, y, z, u, v, w, ll, p, shp, three_d):
 @njit(cache=True)
 def locate(g, x, y, z):
     """(cell, material) holding the point; material is VOID or LOST if so."""
-    cell, mat, _, _, _, _ = _descend(g, x, y, z, 1.0, 0.0, 0.0, False, False)
+    cell, mat, _, _, _, _ = _descend(g, x, y, z, 1.0, 0.0, 0.0, False, False,
+                                     np.empty(MAX_LEVELS, np.int64))
     return cell, mat
 
 
@@ -273,14 +283,16 @@ def locate(g, x, y, z):
 def nearest_boundary(g, x, y, z):
     """(distance, cell, material): the distance field at the point."""
     cell, mat, near, _, _, _ = _descend(g, x, y, z, 1.0, 0.0, 0.0,
-                                        True, False)
+                                        True, False,
+                                        np.empty(MAX_LEVELS, np.int64))
     return near, cell, mat
 
 
 @njit(cache=True)
 def ray_boundary(g, x, y, z, u, v, w):
     """(distance, surface, at_root, cell, material) for a flight."""
-    cell, mat, _, t, s, root = _descend(g, x, y, z, u, v, w, False, True)
+    cell, mat, _, t, s, root = _descend(g, x, y, z, u, v, w, False, True,
+                                        np.empty(MAX_LEVELS, np.int64))
     return t, s, root, cell, mat
 
 

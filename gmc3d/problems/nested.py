@@ -8,10 +8,17 @@
 
 Exercises every level of the descent: lattice element lookup, element
 walls in the distance field, fill transforms, and the outer universe.
+
+Since v1.3 also tallies with several filters: cells filled with a lattice
+or a universe (scored at every level of a particle's path, as OpenMC
+does), mesh x material, cell x energy, and partial currents (cell-from x
+surface) through the core's +x face (inner) and the shell's (vacuum).
 """
 import openmc
 
 from . import common
+
+ALL_SCORES = ("flux", "absorption", "scatter", "total")
 
 
 def build():
@@ -56,6 +63,23 @@ def build():
             list(m.values()))),
         common.flux_tally("mesh", common.mesh_filter(
             (-10, -10, -10), (10, 10, 10), (10, 10, 10))),
+        # v1.3: filled cells at three levels on one path (core holds the
+        # lattice, holder the rotated universe, tilted-pin a material)
+        common.flux_tally("filled", openmc.CellFilter(
+            [cells[0], holder, inner_u.cells[min(inner_u.cells)],
+             cells[1]])),
+        common.flux_tally("mesh_x_material", common.mesh_filter(
+            (-4, -4, -3), (4, 4, 3), (4, 4, 3)), scores=ALL_SCORES),
+        common.flux_tally("cell_x_energy", openmc.CellFilter(
+            [cells[0], cells[1]]), scores=ALL_SCORES),
+        common.flux_tally("partial", openmc.CellFromFilter(
+            [cells[0], cells[1]]), scores=("current",)),
     ])
+    t = tallies[4]
+    t.filters = t.filters + [openmc.MaterialFilter(list(m.values()))]
+    t = tallies[5]
+    t.filters = t.filters + [openmc.EnergyFilter([0.0, 1.0e3, 20.0e6])]
+    t = tallies[6]          # partial currents: from core and reflector,
+    t.filters = t.filters + [openmc.SurfaceFilter([core.xmax, shell.xmax])]
     src = common.point_source((0.5, 0.5, 0.5))
     return openmc.Model(geometry, materials, common.settings(src), tallies)

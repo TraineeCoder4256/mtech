@@ -116,6 +116,8 @@ Particles = namedtuple("Particles", [
     "mu", "s",                        # the backend's answer (s in mfp)
     "w0",                             # weight at birth (roulette is
                                       # relative to it)
+    "path",                           # (n, MAX_LEVELS): a waiting
+                                      # particle's cell at every level
 ])
 
 Physics = namedtuple("Physics", [
@@ -198,8 +200,13 @@ def source_rng(seed, batch):
 
 # ------------------------------------------------------------ one history
 @njit(cache=True)
-def _track(i, g, ph, L, P, row, cnt):
-    """Run particle i until it dies or asks for a ball step."""
+def _track(i, g, ph, L, P, row, cnt, pth, last, to, univ, scr):
+    """Run particle i until it dies or asks for a ball step.
+
+    pth, last, to, univ (MAX_LEVELS each) and scr (tallies.scratch) are
+    the calling thread's work space: the cell at every level of the
+    particle's path now, at the last successful descent (for a surface
+    tally's cell-from), and on the far side of a crossing."""
     x, y, z = P.x[i], P.y[i], P.z[i]
     u, v, w = P.u[i], P.v[i], P.w[i]
     wgt = P.wgt[i]
@@ -212,7 +219,8 @@ def _track(i, g, ph, L, P, row, cnt):
         d = P.ball_d[i]
         s_cm = P.s[i] * d / P.ball_R[i]          # mfp -> cm
         flux = T._decayed(wgt, sa, 0.0, s_cm)
-        T.score_ball(row, L, cell, mat, sa, ss, flux)
+        path = P.path[i]
+        T.score_ball(row, L, cell, path, mat, sa, ss, flux, scr)
         if ph.mesh_profile:
             # K points of the walk share the flux (tallies.py, profile.py)
             k_pts = min(ph.k_max, max(1, int(np.ceil(
@@ -222,11 +230,12 @@ def _track(i, g, ph, L, P, row, cnt):
                            ph.prof_cdf, P.ball_R[i], sa / ss,
                            P.s[i], P.seed, i) * d / P.ball_R[i]  # in cm
                 px, py, pz = rng.isotropic(P.seed, i)
-                T.score_ball_mesh(row, L, sa, ss, flux / k_pts,
-                                  x + r * px, y + r * py, z + r * pz)
+                T.score_ball_mesh(row, L, cell, path, mat, sa, ss, flux / k_pts,
+                                  x + r * px, y + r * py, z + r * pz, scr)
             cnt[C_POINTS] += k_pts
         elif L.has_mesh:
-            T.score_ball_mesh(row, L, sa, ss, flux, x, y, z)
+            T.score_ball_mesh(row, L, cell, path, mat, sa, ss, flux, x, y,
+                              z, scr)
         wgt *= np.exp(-sa * s_cm)
         nx, ny, nz = rng.isotropic(P.seed, i)    # exit point
         x, y, z = x + d * nx, y + d * ny, z + d * nz
@@ -243,10 +252,12 @@ def _track(i, g, ph, L, P, row, cnt):
                 return
 
     rescues = 0
+    last_mat = G.LOST
+    last[0] = -1
     for _ in range(MAX_EVENTS):
         want_near = fresh and ph.ball_on
         cell, mat, near, t_ray, surf, at_root = G._descend(
-            g, x, y, z, u, v, w, want_near, True)
+            g, x, y, z, u, v, w, want_near, True, pth)
 
         if mat == G.LOST:
             # Just past a boundary surface that a lattice wall or an inner
@@ -268,7 +279,7 @@ def _track(i, g, ph, L, P, row, cnt):
                 if L.has_surface:
                     T.score_surface(row, L, k,
                                     _crossing_sign(g, k, x, y, z, u, v, w)
-                                    * wgt)
+                                    * wgt, last, last, last_mat, scr)
                 row[T.LEAKAGE] += wgt
                 P.status[i] = DEAD
                 return
@@ -277,6 +288,12 @@ def _track(i, g, ph, L, P, row, cnt):
                 z + 2.0 * TINY * w
             continue
         rescues = 0
+        if L.has_surface:
+            for lv in range(pth.size):
+                last[lv] = pth[lv]
+                if pth[lv] < 0:
+                    break
+            last_mat = mat
 
         ss = ph.sig_s[mat] if mat >= 0 else 0.0
         sa = ph.sig_a[mat] if mat >= 0 else 0.0
@@ -296,6 +313,10 @@ def _track(i, g, ph, L, P, row, cnt):
                     P.x[i], P.y[i], P.z[i] = x, y, z
                     P.wgt[i] = wgt
                     P.cell[i], P.mat[i] = cell, mat
+                    for lv in range(pth.size):
+                        P.path[i, lv] = pth[lv]
+                        if pth[lv] < 0:
+                            break
                     P.ball_R[i], P.ball_d[i] = R, room
                     P.status[i] = WAITING
                     return
@@ -309,8 +330,8 @@ def _track(i, g, ph, L, P, row, cnt):
             cnt[C_LOST] += 1              # flying off to infinity in a void
             P.status[i] = DEAD
             return
-        T.score_segment(row, L, cell, mat, sa, ss, wgt, x, y, z, u, v, w,
-                        step)
+        T.score_segment(row, L, cell, pth, mat, sa, ss, wgt, x, y, z, u, v,
+                        w, step, scr)
         wgt *= np.exp(-sa * step)
         x, y, z = x + step * u, y + step * v, z + step * w
         cnt[C_FLIGHT] += 1
@@ -322,9 +343,22 @@ def _track(i, g, ph, L, P, row, cnt):
         else:
             cnt[C_CROSS] += 1
             if at_root and surf >= 0 and L.has_surface:
-                T.score_surface(row, L, surf,
-                                _crossing_sign(g, surf, x, y, z, u, v, w)
-                                * wgt)
+                sgn = _crossing_sign(g, surf, x, y, z, u, v, w) * wgt
+                if g.surf_bc[surf] == G.BC_VACUUM:
+                    T.score_surface(row, L, surf, sgn, pth, pth, mat, scr)
+                else:
+                    # the cells on the far side (OpenMC's cell and
+                    # material filters see the cell entered).  A crossing
+                    # that stays in the same root cell is the surface's
+                    # extension beyond the cell's real boundary (the plane
+                    # of a box face, outside the face): OpenMC does not
+                    # count it, so neither does this (measured, v1.3).
+                    to[:] = -1
+                    m_to = G._path(g, x + TINY * u, y + TINY * v,
+                                   z + TINY * w, to, univ)
+                    if to[0] != pth[0]:
+                        T.score_surface(row, L, surf, sgn, pth, to, m_to,
+                                        scr)
             if at_root and g.surf_bc[surf] == G.BC_VACUUM:
                 row[T.LEAKAGE] += wgt
                 P.status[i] = DEAD
@@ -356,10 +390,16 @@ def _advance(g, ph, L, P, acc, cnt, nchunk):
     n = P.x.size
     per = (n + nchunk - 1) // nchunk
     for c in prange(nchunk):
+        pth = np.full(G.MAX_LEVELS, -1, np.int64)
+        last = np.full(G.MAX_LEVELS, -1, np.int64)
+        to = np.full(G.MAX_LEVELS, -1, np.int64)
+        univ = np.full(G.MAX_LEVELS, -1, np.int64)
+        scr = T.scratch(G.MAX_LEVELS)
         for i in range(c * per, min(n, (c + 1) * per)):
             st = P.status[i]
             if st == MOVING or st == READY:
-                _track(i, g, ph, L, P, acc[c], cnt[c])
+                _track(i, g, ph, L, P, acc[c], cnt[c], pth, last, to, univ,
+                       scr)
 
 
 # ------------------------------------------------------------- the driver
@@ -373,7 +413,8 @@ def physics(problem, backend=None, r_star=3.0, r_max=None,
     k_max = K_MAX if k_max is None else k_max
     g, m = problem.geom, problem.mats
     L = T.compile_layout(problem.tallies, len(problem.cell_ids),
-                         len(m.ids), len(g.surf_kind))
+                         len(m.ids), len(g.surf_kind),
+                         leaf=g.cell_fill_type <= G.FILL_VOID)
     use_profile = backend is not None and mesh_rule == "profile" and \
         L.has_mesh
     if backend is not None:
@@ -382,7 +423,7 @@ def physics(problem, backend=None, r_star=3.0, r_max=None,
         if r_star < backend.r_min:
             raise ValueError(f"r_star {r_star} is below the backend's "
                              f"smallest ball {backend.r_min}")
-    mesh_h = float(L.mesh_dw[L.kind == T.MESH].min()) if L.has_mesh \
+    mesh_h = float(L.mesh_dw[L.mesh_on].min()) if L.has_mesh \
         else 1.0
     if use_profile:
         prof = ball_profile.get()
@@ -407,7 +448,8 @@ def _particles(n):
     return Particles(f(), f(), f(), f(), f(), f(), f(),
                      np.zeros(n, np.uint64), np.zeros(n, np.int64),
                      np.zeros(n, np.bool_), np.zeros(n, np.int64),
-                     np.zeros(n, np.int64), f(), f(), f(), f(), f())
+                     np.zeros(n, np.int64), f(), f(), f(), f(), f(),
+                     np.full((n, G.MAX_LEVELS), -1, np.int64))
 
 
 def run(problem, particles=100_000, batches=20, seed=1, backend=None,

@@ -21,12 +21,15 @@ feature (S1-GEO-6), instead of being run wrongly:
                   sources with any spatial and angular distribution,
                   FileSource (.h5), MeshSource, and domain constraints
                   (see sources.py)
-    tallies       no filter, cell, material or mesh filters (1D, 2D or 3D
-                  RegularMesh, RectilinearMesh), scoring flux, absorption,
-                  scatter and total with the track-length estimator; or a
-                  surface filter on root-universe vacuum or transmission
-                  surfaces, scoring current (net weight crossing, +
-                  towards the positive side, as OpenMC defines it)
+    tallies       any combination of cell (at any level, filled cells
+                  too), material, mesh (1D, 2D or 3D RegularMesh,
+                  RectilinearMesh) and energy filters, scoring flux,
+                  absorption, scatter and total with the track-length
+                  estimator; or a surface filter on root-universe vacuum
+                  or transmission surfaces, alone or with cell, cell-from,
+                  material and energy filters, scoring current (weight
+                  crossing, + towards the positive side, as OpenMC
+                  defines it; with a cell-from filter, a partial current)
     settings      fixed-source runs.  Settings that change only the noise
                   or the run's length, never the expected answer (survival
                   biasing, weight windows, cutoffs, temperatures, tally
@@ -64,27 +67,59 @@ class Materials:
     sig_t: np.ndarray            # 1/cm
     sig_s: np.ndarray
     sig_a: np.ndarray
+    energy: float = 1.0          # eV: the group's midpoint, the energy
+                                 # OpenMC gives a multigroup particle
+                                 # (what an EnergyFilter sees)
+
+
+@dataclass
+class Filter:
+    """One OpenMC filter of a tally, as the solver uses it.
+
+    kind is 'cell', 'cellfrom', 'material', 'mesh', 'surface' or 'energy'.
+    bins are internal cell, material or surface indices; for 'energy' it
+    holds the one bin every particle falls in (one group: the group's
+    midpoint energy, as OpenMC does), or -1 if none.  For 'mesh', mesh
+    holds (lower_left, upper_right, dimension) of the bounding box, always
+    3 long (a 1D or 2D mesh gets one bin of +-tallies.BIG on each missing
+    axis), and edges the bin edges on each axis.
+    """
+    kind: str
+    nbins: int
+    bins: np.ndarray = field(default_factory=lambda: np.zeros(0, np.int64))
+    bin_ids: list = field(default_factory=list)   # OpenMC ids / energies
+    mesh: tuple = None
+    edges: list = None
 
 
 @dataclass
 class Tally:
     """One OpenMC tally, as the solver will fill it.
 
-    filter is 'total', 'cell', 'material', 'mesh' or 'surface'.  For 'mesh',
-    mesh holds (lower_left, upper_right, dimension) of the bounding box,
-    always 3 long (a 1D or 2D mesh gets one bin of +-tallies.BIG on each
-    missing axis), and edges the bin edges on each axis.  bins are
-    internal cell, material or surface indices (cell/material/surface
-    filters).
+    filters are its Filters in OpenMC's order; the combined bin of a score
+    is OpenMC's too: the LAST filter's bin varies fastest.  A tally with a
+    SurfaceFilter scores current at surface crossings; any other scores
+    flux-type scores along tracks.
+
+    filter names the filters for reports: 'total' (none), the kind of a
+    lone filter ('cell', 'mesh', ...), or the kinds joined by ' x '.  bins,
+    bin_ids, mesh and edges repeat a lone filter's (and mesh / edges the
+    mesh filter's of a combined tally), as before v1.3.
     """
     id: int
     name: str
     filter: str
     scores: list
+    filters: list = field(default_factory=list)
     bins: np.ndarray = field(default_factory=lambda: np.zeros(0, np.int64))
     bin_ids: list = field(default_factory=list)       # OpenMC ids of bins
     mesh: tuple = None
     edges: list = None
+
+    @property
+    def nbins(self):
+        return int(np.prod([f.nbins for f in self.filters])) \
+            if self.filters else 1
 
 
 @dataclass
@@ -172,6 +207,7 @@ def _materials(model):
     if lib.energy_groups.num_groups != 1:
         raise Unsupported(f"library has {lib.energy_groups.num_groups} "
                           f"groups; stage 1 handles 1 (multigroup is stage 3)")
+    edges = np.asarray(lib.energy_groups.group_edges, float)
     st, ss, sa = [], [], []
     for m in mats:
         macro = m._macroscopic          # OpenMC keeps it private
@@ -197,7 +233,8 @@ def _materials(model):
         ss.append(dens * sct)
         sa.append(dens * absn)
     return Materials([m.id for m in mats], [m.name for m in mats],
-                     np.array(st), np.array(ss), np.array(sa))
+                     np.array(st), np.array(ss), np.array(sa),
+                     0.5 * (edges[0] + edges[-1]))
 
 
 # ----------------------------------------------------------------- settings
@@ -283,67 +320,103 @@ def _check_tally(t, warn):
                     f"run early)")
 
 
-def _tallies(model, cell_index, mat_index, surf_index, root_surfs, warn):
+# OpenMC filter classes gmc3d accepts, by exact type (several of OpenMC's
+# other filters are subclasses of these and mean something else:
+# MeshSurfaceFilter and MeshBornFilter of MeshFilter, for instance).
+_FILTER_KIND = {openmc.CellFilter: "cell", openmc.CellFromFilter: "cellfrom",
+                openmc.MaterialFilter: "material", openmc.MeshFilter: "mesh",
+                openmc.SurfaceFilter: "surface",
+                openmc.EnergyFilter: "energy"}
+
+
+def _tallies(model, mats, cell_index, mat_index, surf_index, root_surfs,
+             warn):
     out = []
     for t in model.tallies:
-        scores = list(t.scores)
         _check_tally(t, warn)
-        if len(t.filters) > 1:
-            raise Unsupported(f"tally {t.id} has {len(t.filters)} filters; "
-                              f"stage 1 handles one")
-        f = t.filters[0] if t.filters else None
-        if isinstance(f, openmc.SurfaceFilter):
-            out.append(_surface_tally(t, f, model, surf_index, root_surfs))
-            continue
-        bad = set(scores) - set(SCORES)
-        if bad:
-            raise Unsupported(f"tally {t.id} scores {sorted(bad)}; stage 1 "
-                              f"handles {list(SCORES)} (and current "
-                              f"with a SurfaceFilter)")
-        tl = Tally(t.id, t.name, "total", scores)
-        if f is not None:
-            if isinstance(f, openmc.CellFilter):
-                tl.filter = "cell"
-                tl.bin_ids = [int(b) for b in f.bins]
-                all_cells = model.geometry.get_all_cells()
-                for cid in tl.bin_ids:
-                    if all_cells[cid].fill_type not in ("material", "void"):
-                        raise Unsupported(
-                            f"tally {t.id} filters on cell {cid}, which "
-                            f"holds a universe or lattice; stage 1 scores "
-                            f"material and void cells only")
-                tl.bins = np.array([cell_index[b] for b in tl.bin_ids])
-            elif isinstance(f, openmc.MaterialFilter):
-                tl.filter = "material"
-                tl.bin_ids = [int(b) for b in f.bins]
-                tl.bins = np.array([mat_index[b] for b in tl.bin_ids])
-            elif type(f) is openmc.MeshFilter:
-                tl.filter = "mesh"
-                tl.mesh, tl.edges = _mesh(t, f.mesh)
-            else:
-                raise Unsupported(f"tally {t.id} filter "
-                                  f"{type(f).__name__}; stage 1 handles "
-                                  f"Cell, Material, Surface and Mesh")
-        out.append(tl)
+        out.append(_tally(t, model, mats, cell_index, mat_index, surf_index,
+                          root_surfs))
     return out
 
 
-def _surface_tally(t, f, model, surf_index, root_surfs):
-    """A SurfaceFilter tally: net current through each listed surface.
+def _tally(t, model, mats, cell_index, mat_index, surf_index, root_surfs):
+    scores = list(t.scores)
+    kinds = []
+    for f in t.filters:
+        k = _FILTER_KIND.get(type(f))
+        if k is None:
+            raise Unsupported(
+                f"tally {t.id} filter {type(f).__name__}; gmc3d handles "
+                f"Cell, CellFrom (with a Surface filter), Material, Mesh, "
+                f"Surface and Energy filters")
+        if k in kinds:
+            raise Unsupported(f"tally {t.id} has two {type(f).__name__}s")
+        kinds.append(k)
+    surface = "surface" in kinds
+    if surface:
+        if scores != ["current"]:
+            raise Unsupported(f"tally {t.id} has a SurfaceFilter; gmc3d "
+                              f"scores only current there, alone")
+        if "mesh" in kinds:
+            raise Unsupported(f"tally {t.id}: a SurfaceFilter with a "
+                              f"MeshFilter (current through mesh surfaces "
+                              f"is MeshSurfaceFilter's job, not handled)")
+    else:
+        bad = set(scores) - set(SCORES)
+        if bad:
+            raise Unsupported(f"tally {t.id} scores {sorted(bad)}; gmc3d "
+                              f"handles {list(SCORES)} (and current "
+                              f"with a SurfaceFilter)")
+        if "cellfrom" in kinds:
+            raise Unsupported(f"tally {t.id}: a CellFromFilter without a "
+                              f"SurfaceFilter (the cell a particle last "
+                              f"left, along a track) is not handled; use "
+                              f"it with a SurfaceFilter for partial "
+                              f"currents")
+    filters = [_filter(t, f, k, model, mats, cell_index, mat_index,
+                       surf_index, root_surfs)
+               for f, k in zip(t.filters, kinds)]
+    tl = Tally(t.id, t.name, "total" if not kinds else " x ".join(kinds),
+               scores, filters)
+    if len(filters) == 1:
+        tl.bins, tl.bin_ids = filters[0].bins, filters[0].bin_ids
+    for f in filters:
+        if f.kind == "mesh":
+            tl.mesh, tl.edges = f.mesh, f.edges
+    return tl
 
-    Only surfaces of the root universe are accepted (inside a translated
-    or rotated universe the crossing direction would need the local
-    frame), and not reflective ones (a reflection is a crossing that comes
-    straight back).  Balls never cross a surface -- a ball lies inside one
-    cell -- so every crossing is an ordinary flight and the tally is exact
-    whatever the ball backend."""
-    if list(t.scores) != ["current"]:
-        raise Unsupported(f"tally {t.id} has a SurfaceFilter; stage 1 "
-                          f"scores only current there, alone")
+
+def _filter(t, f, kind, model, mats, cell_index, mat_index, surf_index,
+            root_surfs):
+    if kind in ("cell", "cellfrom"):
+        # Cells at ANY level count, filled ones included: a filled cell
+        # scores whatever happens inside it (OpenMC's rule; transport.py
+        # passes the cell at every level of the particle's path).
+        ids = [int(b) for b in f.bins]
+        return Filter(kind, len(ids), np.array([cell_index[b] for b in ids],
+                                               np.int64), ids)
+    if kind == "material":
+        ids = [int(b) for b in f.bins]
+        return Filter(kind, len(ids), np.array([mat_index[b] for b in ids],
+                                               np.int64), ids)
+    if kind == "mesh":
+        box, edges = _mesh(t, f.mesh)
+        return Filter(kind, int(np.prod(box[2])), mesh=box, edges=edges)
+    if kind == "energy":
+        e = np.asarray(f.values, float)
+        hit = int(np.searchsorted(e, mats.energy, side="right")) - 1
+        if not 0 <= hit < e.size - 1:
+            hit = -1                      # the group lies outside every bin
+        return Filter(kind, e.size - 1, np.array([hit], np.int64), list(e))
+    # surface: only surfaces of the root universe (inside a translated or
+    # rotated universe the crossing direction would need the local frame),
+    # and not reflective ones (a reflection is a crossing that comes
+    # straight back).  Balls never cross a surface -- a ball lies inside
+    # one cell -- so every crossing is an ordinary flight and the tally is
+    # exact whatever the ball backend.
     all_surfs = model.geometry.get_all_surfaces()
-    tl = Tally(t.id, t.name, "surface", ["current"])
-    tl.bin_ids = [int(b) for b in f.bins]
-    for sid in tl.bin_ids:
+    ids = [int(b) for b in f.bins]
+    for sid in ids:
         if sid not in root_surfs:
             raise Unsupported(f"tally {t.id} filters on surface {sid}, "
                               f"which is not a surface of the root "
@@ -351,8 +424,8 @@ def _surface_tally(t, f, model, surf_index, root_surfs):
         if all_surfs[sid].boundary_type == "reflective":
             raise Unsupported(f"tally {t.id} filters on surface {sid}, "
                               f"which is reflective")
-    tl.bins = np.array([surf_index[b] for b in tl.bin_ids], np.int64)
-    return tl
+    return Filter(kind, len(ids), np.array([surf_index[b] for b in ids],
+                                           np.int64), ids)
 
 
 # ------------------------------------------------------------------- load
@@ -451,8 +524,8 @@ def load(model):
     for c in geo.root_universe.cells.values():
         _region_tokens(c.region, surf_index, [], root_surfs)
     root_surfs = {surfs[i].id for i in root_surfs}
-    tallies = _tallies(model, cell_index, mat_index, surf_index, root_surfs,
-                       warn)
+    tallies = _tallies(model, mats, cell_index, mat_index, surf_index,
+                       root_surfs, warn)
     src = sources.make(model, geom, cell_index, mat_index, univ_index,
                        Unsupported)
     warn += src.warnings

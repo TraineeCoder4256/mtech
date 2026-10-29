@@ -7,6 +7,39 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v1.3.0 (29 Oct 2026): tallies with several filters
+
+- **Several filters per tally**, combined as OpenMC does (the last
+  filter's bin varies fastest), so results line up with OpenMC's
+  `tally.mean` row for row. Track tallies: Cell, Material, Mesh, Energy in
+  any mix. Current tallies: Surface with Cell, CellFrom (partial
+  currents), Material, Energy.
+- **Cells filled with a universe or lattice can be tallied.** The descent
+  now records the cell at every level, and a cell filter matches at any
+  level, as in OpenMC (a filled cell and a cell inside it both score).
+  Ball steps keep the path of the ball's centre.
+- **EnergyFilter**: one group, so every particle sits at the group's
+  midpoint, as OpenMC does (measured).
+- **Bug fixed (since v1.1): current through an inner surface** counted
+  flights crossing the surface's plane outside the cell's real boundary.
+  Nested core face: 0.0821 before, 0.0415 now, OpenMC 0.0408. Only vacuum
+  faces had been validated, so no earlier result changes.
+- Conventions measured in OpenMC 0.16: at a crossing a cell / material
+  filter sees the cell entered, a cell-from filter the cell left; on a
+  vacuum face both see the cell left.
+- Refused, with a message: other filter types (Universe, CellInstance,
+  ...), two filters of one kind, CellFrom on a track tally, Surface with
+  Mesh.
+- **Speed: plain MC 5-16% slower than v1.2** (sphere, cask). A 10x
+  slowdown in the first build (a constant negative array index in Numba)
+  was found and fixed, and one-filter tallies take a shortcut; the rest
+  is an open check in `GAPS.md`.
+- New tallies on nested (filled cells, mesh x material, cell x energy,
+  partial currents) and slab (face currents by cell and cell-from).
+  Validate: every new tally passes; all other results bit-identical to
+  v1.2 at the same seed (`runs/2026-10-29/v1.3/`).
+- 10 new unit tests (92 in total).
+
 ## v1.2.0 (29 Oct 2026): every OpenMC source
 
 - **New `core/sources.py`.** Before each batch the source sites (position,

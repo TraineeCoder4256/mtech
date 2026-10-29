@@ -1,0 +1,17 @@
+# v1.2.0 (commit 0013942, a git worktree) vs v1.3.0, plain MC, same container,
+# same session, run back to back. 500,000 histories (100,000 x 5), best of 3
+# runs after a compile run. Script: transport.run(problem, 100_000, 5, seed=9+k).
+
+problem / tallies                  v1.2.0    v1.3.0 first build    v1.3.0 pushed
+sphere, all tallies                3.68 s    4.84 s                4.10 s   (3.89 s for v1.2 in the same sitting)
+cask, all tallies                 10.81 s   15.68 s               13.50 s   (11.64 s for v1.2 in the same sitting)
+nested, all tallies               10.95 s   18.43 s (4 more tallies in v1.3; not comparable)
+sphere, no tallies                 2.29 s    2.62 s
+cask, no tallies                   5.01 s    4.96 s
+cask, total+cell+material          5.36 s                          5.93 s
+cask, plan2d+duct_grid (meshes)    9.51 s                         10.73 s
+
+Microbenchmark of tallies._combos on its own (1M calls, sphere layout):
+  first build 500-750 ns per call; with the surface index guarded
+  (surf >= 0 before f_lut[t, j, surf]) 63 ns.  A constant negative index
+  there made Numba's code about 10x slower.

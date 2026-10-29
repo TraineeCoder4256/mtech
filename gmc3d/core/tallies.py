@@ -1,7 +1,8 @@
 """Scoring: where flux and absorption are recorded, and their error bars.
 
-Used by: transport.py (calls `score_segment` after every flight and
-`score_ball` after every ball step).
+Used by: transport.py (calls `score_segment` after every flight,
+`score_ball` / `score_ball_mesh` after every ball step and
+`score_surface` at root-surface crossings).
 Built from: the Tally list made by openmc_import.py.
 Read by: output.py and checks/ (via `Results`).
 
@@ -79,6 +80,19 @@ grow with G.
 `checks/error_bars.py` compares the two against the spread of many
 independent runs.
 
+SEVERAL FILTERS (v1.3).  A tally's filters each give a bin, and the
+combined bin is their weighted sum, the last filter varying fastest:
+OpenMC's order, so our (bins, 4) array lines up with its tally.mean row
+for row.  Along one flight the cell, material and energy bins are fixed,
+so `_combos` works them out once and the mesh walk adds its voxel on top.
+A cell filter looks at the cell at EVERY level of the particle's path (a
+cell filled with a universe or lattice scores whatever happens inside
+it), as OpenMC does; if it lists cells on two levels of one path, both
+score.  A tally with a surface filter scores current at crossings, where
+a cell or material filter sees the cell entered (on a vacuum boundary,
+the cell left) and a cell-from filter the cell left -- partial currents.
+These conventions were measured in OpenMC 0.16, 29 Oct 2026.
+
 Mesh bins are numbered with x fastest, then y, then z -- OpenMC's order.
 Every mesh is stored as its bin edges on each axis, so regular and
 rectilinear meshes share one grid walk.  A 1D or 2D regular mesh has one
@@ -93,9 +107,18 @@ from dataclasses import dataclass
 import numpy as np
 from numba import njit
 
-TOTAL, CELL, MATERIAL, MESH, SURFACE = 0, 1, 2, 3, 4
-_KIND = {"total": TOTAL, "cell": CELL, "material": MATERIAL, "mesh": MESH,
-         "surface": SURFACE}
+VOLUME, SURFACE = 0, 1            # tally kinds: track or crossing scores
+F_CELL, F_CELLFROM, F_MAT, F_MESH, F_SURF, F_ENERGY = range(1, 7)
+_FKIND = {"cell": F_CELL, "cellfrom": F_CELLFROM, "material": F_MAT,
+          "mesh": F_MESH, "surface": F_SURF, "energy": F_ENERGY}
+MAX_FILTERS = 6                   # one of each kind at most
+# Shortcuts for the common tallies (all of v1.2's), which skip `_combos`:
+# no filter but a mesh; one cell filter on material / void cells only (it
+# can match only the deepest cell); one material filter.
+FAST_NONE, FAST_LEAF, FAST_MAT, GENERAL = 0, 1, 2, 3
+MAX_COMBOS = 256                  # combined bins one event can score in:
+                                  # a cell and a cell-from filter, each
+                                  # matching at most every level (16 x 16)
 SCORES = ("flux", "absorption", "scatter", "total")   # columns, in order
 NS = len(SCORES)                  # entries per bin
 LEAKAGE = 0                       # index of the leakage entry
@@ -104,67 +127,101 @@ BIG = 1.0e100                     # edge of a mesh's missing axis
 
 # The compiled form the Numba kernels read.
 Layout = namedtuple("Layout", [
-    "kind", "offset",            # per tally: filter kind, first entry
-    "cell_bin", "mat_bin",       # per tally x cell / material: bin or -1
+    "kind", "offset",            # per tally: VOLUME / SURFACE, first entry
+    "nf", "f_kind", "f_stride",  # per tally x filter: kind, bin stride
+    "f_lut",                     # per tally x filter x cell / material /
+                                 # surface index: that filter's bin, or -1
+                                 # (an energy filter's one bin at [.., 0])
+    "fast", "fast_lut",          # per tally: FAST_* shortcut; per tally x
+                                 # cell (FAST_LEAF) or material (FAST_MAT):
+                                 # the combined bin, or -1
+    "mesh_on", "mesh_stride",    # per tally: has a mesh filter, its stride
     "mesh_ll", "mesh_dw", "mesh_dim",   # per tally x axis: first edge,
                                         # SMALLEST bin width, bin count
     "mesh_edges", "mesh_uniform",       # per tally x axis: edges, regular?
-    "surf_bin",                  # per tally x surface: bin or -1
     "has_mesh", "has_surface",   # any tally of that kind (skip work if not)
     "n_entries",                 # length of a row of acc
 ])
 
 
-def compile_layout(tallies, n_cells, n_mats, n_surfs=1):
-    """Tally list -> Layout.  Bin b of tally t is at offset[t] + NS b.
-    (A surface bin keeps the same layout: current, then unused zeros.)"""
+@njit(cache=True)
+def scratch(levels):
+    """Per-thread work space for the kernels: MAX_COMBOS combined bins,
+    then room for one filter's matches (one per geometry level)."""
+    return np.empty(MAX_COMBOS + levels, np.int64)
+
+
+def compile_layout(tallies, n_cells, n_mats, n_surfs=1, leaf=None):
+    """Tally list -> Layout.  Combined bin b of tally t is at
+    offset[t] + NS b, b = sum over filters of (filter bin) x stride, the
+    last filter's stride 1 (OpenMC's order).  (A surface tally keeps the
+    same layout: current, then unused zeros.)"""
     nt = max(len(tallies), 1)
-    kind = np.zeros(nt, np.int64)
+    kind = np.full(nt, -1, np.int64)
     offset = np.zeros(nt, np.int64)
-    cell_bin = np.full((nt, max(n_cells, 1)), -1, np.int64)
-    mat_bin = np.full((nt, max(n_mats, 1)), -1, np.int64)
+    nf = np.zeros(nt, np.int64)
+    f_kind = np.zeros((nt, MAX_FILTERS), np.int64)
+    f_stride = np.zeros((nt, MAX_FILTERS), np.int64)
+    f_lut = np.full((nt, MAX_FILTERS, max(n_cells, n_mats, n_surfs, 1)), -1,
+                    np.int64)
+    fast = np.full(nt, GENERAL, np.int64)
+    fast_lut = np.full((nt, max(n_cells, n_mats, 1)), -1, np.int64)
+    mesh_on = np.zeros(nt, np.bool_)
+    mesh_stride = np.zeros(nt, np.int64)
     mesh_ll = np.zeros((nt, 3))
     mesh_dw = np.ones((nt, 3))
     mesh_dim = np.ones((nt, 3), np.int64)
     edges = [[np.array([-BIG, BIG])] * 3 for _ in range(nt)]
     mesh_uniform = np.ones((nt, 3), np.bool_)
-    surf_bin = np.full((nt, max(n_surfs, 1)), -1, np.int64)
     pos = 1                                       # entry 0 is leakage
     for t, tl in enumerate(tallies):
-        kind[t] = _KIND[tl.filter]
+        fs = tl.filters
+        kind[t] = SURFACE if any(f.kind == "surface" for f in fs) \
+            else VOLUME
         offset[t] = pos
-        if tl.filter == "total":
-            nb = 1
-        elif tl.filter == "cell":
-            nb = len(tl.bins)
-            cell_bin[t, tl.bins] = np.arange(nb)
-        elif tl.filter == "material":
-            nb = len(tl.bins)
-            mat_bin[t, tl.bins] = np.arange(nb)
-        elif tl.filter == "surface":
-            nb = len(tl.bins)
-            surf_bin[t, tl.bins] = np.arange(nb)
-        else:
-            for a, e in enumerate(tl.edges):
-                e = np.asarray(e, float)
-                w = np.diff(e)
-                edges[t][a] = e
-                mesh_ll[t, a], mesh_dim[t, a] = e[0], e.size - 1
-                mesh_dw[t, a] = w.min()
-                mesh_uniform[t, a] = np.allclose(w, w[0], rtol=1e-12)
-            nb = int(np.prod(mesh_dim[t]))
-        pos += NS * nb
-    if not tallies:
-        kind[0] = -1
-    kinds = [tl.filter for tl in tallies]
+        nf[t] = len(fs)
+        stride = 1
+        for j in range(len(fs) - 1, -1, -1):     # last filter fastest
+            f = fs[j]
+            f_kind[t, j], f_stride[t, j] = _FKIND[f.kind], stride
+            if f.kind == "mesh":
+                mesh_on[t], mesh_stride[t] = True, stride
+                for a, e in enumerate(f.edges):
+                    e = np.asarray(e, float)
+                    w = np.diff(e)
+                    edges[t][a] = e
+                    mesh_ll[t, a], mesh_dim[t, a] = e[0], e.size - 1
+                    mesh_dw[t, a] = w.min()
+                    mesh_uniform[t, a] = np.allclose(w, w[0], rtol=1e-12)
+            elif f.kind == "energy":
+                f_lut[t, j, 0] = f.bins[0]
+            else:
+                f_lut[t, j, f.bins] = np.arange(f.nbins)
+            stride *= f.nbins
+        other = [j for j, f in enumerate(fs) if f.kind != "mesh"]
+        if kind[t] == VOLUME and not other:
+            fast[t] = FAST_NONE
+        elif kind[t] == VOLUME and len(other) == 1:
+            f = fs[other[0]]
+            j = other[0]
+            if f.kind == "material":
+                fast[t] = FAST_MAT
+            elif f.kind == "cell" and (leaf is None or
+                                       all(leaf[b] for b in f.bins)):
+                fast[t] = FAST_LEAF
+            if fast[t] != GENERAL:
+                fast_lut[t, f.bins] = np.arange(f.nbins) * f_stride[t, j]
+        pos += NS * stride
     n_edge = max(e.size for row in edges for e in row)
     mesh_edges = np.full((nt, 3, n_edge), BIG)
     for t in range(nt):
         for a in range(3):
             mesh_edges[t, a, :edges[t][a].size] = edges[t][a]
-    return Layout(kind, offset, cell_bin, mat_bin, mesh_ll, mesh_dw,
-                  mesh_dim, mesh_edges, mesh_uniform, surf_bin,
-                  "mesh" in kinds, "surface" in kinds, pos)
+    return Layout(kind, offset, nf, f_kind, f_stride, f_lut, fast, fast_lut,
+                  mesh_on,
+                  mesh_stride, mesh_ll, mesh_dw, mesh_dim, mesh_edges,
+                  mesh_uniform, bool(mesh_on.any()),
+                  bool((kind == SURFACE).any()), pos)
 
 
 # ------------------------------------------------------------ the kernels
@@ -219,11 +276,94 @@ def _next_wall(L, t, a, i, s, q, d):
     return (e[i + 1] - q) / d if s > 0 else (e[i] - q) / d
 
 
+@njit(cache=True, inline="always")
+def _fast(L, t, f, cell, mat):
+    """Combined bin (without the mesh's part) of a FAST tally, or -1."""
+    if f == FAST_NONE:
+        return 0
+    k = cell if f == FAST_LEAF else mat
+    return L.fast_lut[t, k] if k >= 0 else -1
+
+
 @njit(cache=True)
-def _mesh_segment(row, L, t, sa, ss, w, x, y, z, u, v, ww, length):
+def _combos(L, t, path, frm, mat, surf, scr):
+    """The combined bins (without the mesh's part) tally t scores an
+    event in: written to scr[:n], n returned (0: the event is not in the
+    tally).
+
+    path / frm   the cell at each level, root first, -1 after the deepest:
+                 where the event is (for a crossing: the cell entered) and,
+                 for a crossing, the cell left
+    mat          the material there (< 0 for void)
+    surf         the surface crossed (crossings only)
+
+    A cell filter can match at several levels at once (a filled cell and
+    a cell inside it, both listed): OpenMC then scores every match, and so
+    does this, which is why one event can have several combined bins.
+    """
+    scr[0] = 0
+    n = 1
+    m0 = MAX_COMBOS
+    for j in range(L.nf[t]):
+        k = L.f_kind[t, j]
+        st = L.f_stride[t, j]
+        if k == F_MESH:
+            continue
+        if k == F_CELL or k == F_CELLFROM:
+            # The loop is written out twice on purpose.  Choosing the array
+            # (`path if ... else frm`) or calling a helper made Numba count
+            # references on every call: 0.3-0.7 us per call, more than all
+            # the rest of the scoring (measured, v1.3).
+            m = 0
+            if k == F_CELL:
+                for lv in range(path.size):
+                    c = path[lv]
+                    if c < 0:
+                        break
+                    b = L.f_lut[t, j, c]
+                    if b >= 0:
+                        scr[m0 + m] = b
+                        m += 1
+            else:
+                for lv in range(frm.size):
+                    c = frm[lv]
+                    if c < 0:
+                        break
+                    b = L.f_lut[t, j, c]
+                    if b >= 0:
+                        scr[m0 + m] = b
+                        m += 1
+            if m == 0:
+                return 0
+            for q in range(n):
+                base = scr[q]
+                for a in range(m - 1, -1, -1):
+                    scr[a * n + q] = base + st * scr[m0 + a]
+            n *= m
+            continue
+        if k == F_MAT:
+            b = L.f_lut[t, j, mat] if mat >= 0 else -1
+        elif k == F_SURF:
+            # (guarded: track events pass surf = -1, and a constant
+            # negative index here made the whole function ~10x slower)
+            b = L.f_lut[t, j, surf] if surf >= 0 else -1
+        else:                                   # F_ENERGY
+            b = L.f_lut[t, j, 0]
+        if b < 0:
+            return 0
+        for q in range(n):
+            scr[q] += st * b
+    return n
+
+
+@njit(cache=True)
+def _mesh_segment(row, L, t, base, sa, ss, w, x, y, z, u, v, ww, length):
     """Spread one flight over the voxels it crosses (a 3D DDA: step from
-    voxel wall to voxel wall, depositing each piece's track length)."""
+    voxel wall to voxel wall, depositing each piece's track length).
+    base is the entry of the tally's mesh bin 0 for this event's other
+    filters."""
     dim = L.mesh_dim[t]
+    ms = NS * L.mesh_stride[t]
     # clip the segment to the mesh box (slab method)
     t0, t1 = 0.0, length
     for a in range(3):
@@ -248,13 +388,12 @@ def _mesh_segment(row, L, t, sa, ss, w, x, y, z, u, v, ww, length):
     nx_ += t0
     ny_ += t0
     nz_ += t0
-    base = L.offset[t]
     tc = t0
     while tc < t1:
         te = min(nx_, ny_, nz_, t1)
         if te > tc:
             b = (iz * dim[1] + iy) * dim[0] + ix
-            _add(row, base + NS * b, _decayed(w, sa, tc, te), sa, ss)
+            _add(row, base + ms * b, _decayed(w, sa, tc, te), sa, ss)
         tc = te
         if te >= t1:
             return
@@ -276,73 +415,88 @@ def _mesh_segment(row, L, t, sa, ss, w, x, y, z, u, v, ww, length):
 
 
 @njit(cache=True)
-def score_segment(row, L, cell, mat, sa, ss, w, x, y, z, u, v, ww,
-                  length):
-    """A flight of `length` from (x,y,z) along (u,v,ww) in `cell`/`mat`,
-    starting with weight w, in a material with absorption sa and
-    scattering ss."""
+def score_segment(row, L, cell, path, mat, sa, ss, w, x, y, z, u, v, ww,
+                  length, scr):
+    """A flight of `length` from (x,y,z) along (u,v,ww), in cell `cell`
+    (the deepest; `path` holds every level) and material `mat`, starting
+    with weight w, in a material with absorption sa and scattering ss."""
     flux = _decayed(w, sa, 0.0, length)
     for t in range(L.kind.size):
-        k = L.kind[t]
-        if k == TOTAL:
-            _add(row, L.offset[t], flux, sa, ss)
-        elif k == CELL:
-            b = L.cell_bin[t, cell]
-            if b >= 0:
-                _add(row, L.offset[t] + NS * b, flux, sa, ss)
-        elif k == MATERIAL:
-            if mat >= 0:
-                b = L.mat_bin[t, mat]
-                if b >= 0:
-                    _add(row, L.offset[t] + NS * b, flux, sa, ss)
-        elif k == MESH:
-            _mesh_segment(row, L, t, sa, ss, w, x, y, z, u, v, ww, length)
+        if L.kind[t] != VOLUME:
+            continue
+        f = L.fast[t]
+        if f != GENERAL:
+            c = _fast(L, t, f, cell, mat)
+            n = 1 if c >= 0 else 0
+        else:
+            n = _combos(L, t, path, path, mat, -1, scr)
+        for q in range(n):
+            if L.fast[t] == GENERAL:
+                c = scr[q]
+            base = L.offset[t] + NS * c
+            if L.mesh_on[t]:
+                _mesh_segment(row, L, t, base, sa, ss, w, x, y, z, u, v, ww,
+                              length)
+            else:
+                _add(row, base, flux, sa, ss)
 
 
 @njit(cache=True)
-def score_surface(row, L, surf, signed_w):
+def score_surface(row, L, surf, signed_w, frm, to, mat_to, scr):
     """A flight crossing surface `surf` with weight +-w (sign: towards
-    the positive side)."""
+    the positive side), leaving the cells `frm` for the cells `to` (in
+    material mat_to).  On a vacuum boundary to = frm: OpenMC's cell filter
+    sees the cell the particle leaves, as there is no other."""
     for t in range(L.kind.size):
-        if L.kind[t] == SURFACE:
-            b = L.surf_bin[t, surf]
-            if b >= 0:
-                row[L.offset[t] + NS * b] += signed_w
+        if L.kind[t] != SURFACE:
+            continue
+        n = _combos(L, t, to, frm, mat_to, surf, scr)
+        for q in range(n):
+            row[L.offset[t] + NS * scr[q]] += signed_w
 
 
 @njit(cache=True)
-def score_ball(row, L, cell, mat, sa, ss, flux):
-    """A ball step that deposited `flux` in total: total, cell and
-    material tallies (exact; the ball is inside one cell).  Mesh tallies
-    are scored by `score_ball_mesh`, at points transport.py chooses."""
+def score_ball(row, L, cell, path, mat, sa, ss, flux, scr):
+    """A ball step that deposited `flux` in total: every track tally
+    without a mesh (exact; the ball is inside one cell at every level).
+    Mesh tallies are scored by `score_ball_mesh`, at points transport.py
+    chooses."""
     for t in range(L.kind.size):
-        k = L.kind[t]
-        if k == TOTAL:
-            _add(row, L.offset[t], flux, sa, ss)
-        elif k == CELL:
-            b = L.cell_bin[t, cell]
-            if b >= 0:
-                _add(row, L.offset[t] + NS * b, flux, sa, ss)
-        elif k == MATERIAL:
-            b = L.mat_bin[t, mat]
-            if b >= 0:
-                _add(row, L.offset[t] + NS * b, flux, sa, ss)
+        if L.kind[t] != VOLUME or L.mesh_on[t]:
+            continue
+        if L.fast[t] != GENERAL:
+            c = _fast(L, t, L.fast[t], cell, mat)
+            if c >= 0:
+                _add(row, L.offset[t] + NS * c, flux, sa, ss)
+            continue
+        n = _combos(L, t, path, path, mat, -1, scr)
+        for q in range(n):
+            _add(row, L.offset[t] + NS * scr[q], flux, sa, ss)
 
 
 @njit(cache=True)
-def score_ball_mesh(row, L, sa, ss, flux, x, y, z):
-    """`flux` of a ball into the voxel holding (x, y, z), in every mesh:
+def score_ball_mesh(row, L, cell, path, mat, sa, ss, flux, x, y, z, scr):
+    """`flux` of a ball into the voxel holding (x, y, z), in every mesh
+    tally (and its other filters' bins for the ball's cell and material):
     the ball's centre under 'cap', a drawn point of its walk under
     'profile' (see transport.py)."""
     for t in range(L.kind.size):
-        if L.kind[t] == MESH:
-            dim = L.mesh_dim[t]
-            ix = _bin(L, t, 0, x)
-            iy = _bin(L, t, 1, y)
-            iz = _bin(L, t, 2, z)
-            if 0 <= ix < dim[0] and 0 <= iy < dim[1] and 0 <= iz < dim[2]:
-                b = (iz * dim[1] + iy) * dim[0] + ix
-                _add(row, L.offset[t] + NS * b, flux, sa, ss)
+        if not L.mesh_on[t]:
+            continue
+        dim = L.mesh_dim[t]
+        ix = _bin(L, t, 0, x)
+        iy = _bin(L, t, 1, y)
+        iz = _bin(L, t, 2, z)
+        if 0 <= ix < dim[0] and 0 <= iy < dim[1] and 0 <= iz < dim[2]:
+            b = L.mesh_stride[t] * ((iz * dim[1] + iy) * dim[0] + ix)
+            if L.fast[t] != GENERAL:
+                c = _fast(L, t, L.fast[t], cell, mat)
+                if c >= 0:
+                    _add(row, L.offset[t] + NS * (c + b), flux, sa, ss)
+                continue
+            n = _combos(L, t, path, path, mat, -1, scr)
+            for q in range(n):
+                _add(row, L.offset[t] + NS * (scr[q] + b), flux, sa, ss)
 
 
 @njit(cache=True)
@@ -352,7 +506,7 @@ def mesh_room(L, x, y, z):
     reach the mesh at all."""
     room = INF
     for t in range(L.kind.size):
-        if L.kind[t] != MESH:
+        if not L.mesh_on[t]:
             continue
         dim = L.mesh_dim[t]
         p = (x, y, z)
@@ -480,14 +634,12 @@ class Accumulator:
         out = {}
         for t, tl in enumerate(tallies):
             a = self.layout.offset[t]
-            nb = {"total": 1, "cell": len(tl.bins),
-                  "material": len(tl.bins),
-                  "surface": len(tl.bins)}.get(
-                tl.filter, int(np.prod(tl.mesh[2])) if tl.mesh else 1)
+            nb = tl.nbins
             out[tl.name or f"tally{tl.id}"] = {
                 "id": tl.id, "filter": tl.filter, "bin_ids": tl.bin_ids,
                 "mesh": tl.mesh, "scores": tl.scores,
                 "edges": tl.edges,
+                "filters": [(f.kind, f.nbins) for f in tl.filters],
                 "mean": mean[a:a + NS * nb].reshape(nb, NS),
                 "se": se[a:a + NS * nb].reshape(nb, NS)}
         _, se_b = self.mean_se_batches()
