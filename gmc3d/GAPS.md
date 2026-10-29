@@ -15,7 +15,7 @@ Columns:
   the model work they belong to.
 - **plan**: the push in `V1_PLAN.md` that closes it, or "hold" / "later".
 
-Last updated: v1.1.3 (29 Oct 2026).
+Last updated: v1.2.0 (29 Oct 2026).
 
 ## Geometry (left in v1.0)
 
@@ -32,16 +32,20 @@ Last updated: v1.1.3 (29 Oct 2026).
 | Cell tallies on cells filled with a universe or lattice | refused | S | no | v1.3 |
 | DAGMC / CAD geometry | refused | L | no, but large engineering (BVH distance field) | later |
 
-## Source (left in v1.0)
+## Source (what v1.2 leaves)
+
+Since v1.2 every OpenMC source kind is read except the rows below
+(`core/sources.py`).
 
 | gap | shows as | size | model change? | plan |
 |---|---|---|---|---|
-| `CartesianIndependent`, `SphericalIndependent`, `CylindricalIndependent` | refused | S | no: sources only set where particles start | v1.2 |
-| `PointCloud`, `MeshSpatial` | refused | S | no | v1.2 |
-| `PolarAzimuthal` angle | refused | S | no | v1.2 |
-| `FileSource`, `MeshSource` | refused | M | no | v1.2 |
-| Source `constraints` (born only in given cells, materials, universes) | **SILENT** | S | no | v1.2 |
 | `CompiledSource` (user C++ code) | refused | L | no, but it is someone else's compiled code | stays refused |
+| `FileSource` in MCPL format (`.mcpl`) | refused (v1.2) | S | no | later |
+| `MeshSpatial` / `MeshSource` on an `UnstructuredMesh`, or a 1D/2D `RegularMesh` | refused (v1.2) | M (unstructured) / S | no | later |
+| `Isotropic` angle with a `bias` | refused (v1.2) | S | no | later |
+| Source `energy_bounds`, `time_bounds` constraints | warned, not applied (v1.2); OpenMC 0.16 in multigroup mode does not apply them either (measured) | - | no; energy bounds matter at Stage 3 | Stage 3 |
+| `rejection_strategy: 'kill'` | warned, acts as 'resample' (v1.2), as OpenMC 0.16 does for domains (measured) | S | no | later, if OpenMC changes |
+| `PointCloud` / `MeshSpatial` `bias` | built (v1.2), checked only by unit test: OpenMC 0.16 refuses the XML its own Python writes for it, so no OpenMC comparison | - | no | when OpenMC fixes it |
 | Source energy | ignored (one group) | - | YES at Stage 3 (energy becomes a network input) | Stage 3 |
 
 ## Tallies (left in v1.0 and v1.1)
@@ -97,5 +101,4 @@ Last updated: v1.1.3 (29 Oct 2026).
 
 | item | since | note |
 |---|---|---|
-| Nested leakage z about -3.2 for plain MC and exact balls (seed 101); +0.04 with seed 105 | v1.1 validate | same pattern on 13 Oct; recheck at 10M+ histories |
 | No race against OpenMC with weight windows | v1.0 | the fair comparison for shielding claims |

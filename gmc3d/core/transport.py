@@ -13,7 +13,8 @@ instead its weight decays continuously, w -> w exp(-sigma_a l) over a path
 l ("implicit capture").  So the walk itself is a pure scatterer's walk, and
 absorption is bookkeeping on top.  When the weight drops below `w_cut`,
 Russian roulette either kills it or restores it to `w_surv` (keeping the
-expected weight unchanged).
+expected weight unchanged).  Both are relative to the particle's weight at
+birth, which is 1 unless the source gives weights (sources.py).
 
 THE BALL STEP.  Right after a scatter, the new direction is isotropic and
 the particle has no memory of where it came from.  If the nearest surface
@@ -113,6 +114,8 @@ Particles = namedtuple("Particles", [
     "cell", "mat",                    # where a waiting particle is
     "ball_R", "ball_d",               # its ball, in mfp and in cm
     "mu", "s",                        # the backend's answer (s in mfp)
+    "w0",                             # weight at birth (roulette is
+                                      # relative to it)
 ])
 
 Physics = namedtuple("Physics", [
@@ -126,10 +129,6 @@ Physics = namedtuple("Physics", [
     "prof_log_r", "prof_log1p_ell", "prof_f_unsc", "prof_cdf",
                                       # ball/profile.py's table
 ])
-
-SourceArrays = namedtuple("SourceArrays", [
-    "kind", "lo", "hi", "mono", "direction", "cdf"])
-
 
 # ------------------------------------------------------------- directions
 @njit(cache=True, inline="always")
@@ -168,54 +167,33 @@ def _crossing_sign(g, k, x, y, z, u, v, w):
 
 
 # ----------------------------------------------------------------- source
-@njit(cache=True)
-def _birth_one(g, src, P, i):
-    """Sample particle i from the source.  Returns False if no valid
-    position was found (a source outside the geometry)."""
-    xi = rng.rand(P.seed, i)
-    j = 0
-    while j < src.cdf.size - 1 and xi > src.cdf[j]:
-        j += 1
-    found = False
-    for _ in range(1000):
-        if src.kind[j] == 0:
-            x, y, z = src.lo[j, 0], src.lo[j, 1], src.lo[j, 2]
-        else:
-            x = src.lo[j, 0] + (src.hi[j, 0] - src.lo[j, 0]) * \
-                rng.rand(P.seed, i)
-            y = src.lo[j, 1] + (src.hi[j, 1] - src.lo[j, 1]) * \
-                rng.rand(P.seed, i)
-            z = src.lo[j, 2] + (src.hi[j, 2] - src.lo[j, 2]) * \
-                rng.rand(P.seed, i)
-        _, mat = G.locate(g, x, y, z)
-        if mat != G.LOST:
-            found = True
-            break
-    if not found:
-        return False
-    if src.mono[j]:
-        u, v, w = src.direction[j, 0], src.direction[j, 1], \
-            src.direction[j, 2]
-    else:
-        u, v, w = rng.isotropic(P.seed, i)
-    P.x[i], P.y[i], P.z[i] = x, y, z
-    P.u[i], P.v[i], P.w[i] = u, v, w
-    P.wgt[i] = 1.0
-    P.fresh[i] = not src.mono[j]       # isotropic birth = like a scatter
-    P.status[i] = MOVING
-    return True
-
-
 @njit(cache=True, parallel=True)
-def _birth(g, src, P, cnt, nchunk):
+def _birth(xyz, uvw, wgt, iso, P, cnt, nchunk):
+    """Start every particle from its source site (sources.py drew them)."""
     n = P.x.size
     per = (n + nchunk - 1) // nchunk
     for c in prange(nchunk):
         for i in range(c * per, min(n, (c + 1) * per)):
             cnt[c, C_HIST] += 1
-            if not _birth_one(g, src, P, i):
-                P.status[i] = DEAD
-                cnt[c, C_LOST] += 1
+            _start(P, i, xyz, uvw, wgt, iso)   # a call, not inlined: a
+            # parallel loop that writes a namedtuple's arrays directly loses
+            # the writes (seen with numba here, 29 Oct 2026)
+
+
+@njit(cache=True)
+def _start(P, i, xyz, uvw, wgt, iso):
+    P.x[i], P.y[i], P.z[i] = xyz[i, 0], xyz[i, 1], xyz[i, 2]
+    P.u[i], P.v[i], P.w[i] = uvw[i, 0], uvw[i, 1], uvw[i, 2]
+    P.wgt[i] = wgt[i]
+    P.w0[i] = wgt[i]
+    P.fresh[i] = iso[i]        # isotropic birth = like a scatter
+    P.status[i] = MOVING
+
+
+def source_rng(seed, batch):
+    """The source's random numbers for one batch (numpy, independent of
+    the particles' own streams)."""
+    return np.random.default_rng([int(seed), int(batch), 0x5EED])
 
 
 # ------------------------------------------------------------ one history
@@ -256,9 +234,9 @@ def _track(i, g, ph, L, P, row, cnt):
                          2.0 * np.pi * rng.rand(P.seed, i))
         fresh = False
         cnt[C_BALL] += 1
-        if wgt < ph.w_cut:
-            if rng.rand(P.seed, i) < wgt / ph.w_surv:
-                wgt = ph.w_surv
+        if wgt < ph.w_cut * P.w0[i]:
+            if rng.rand(P.seed, i) < wgt / (ph.w_surv * P.w0[i]):
+                wgt = ph.w_surv * P.w0[i]
             else:
                 cnt[C_RKILL] += 1
                 P.status[i] = DEAD
@@ -355,9 +333,9 @@ def _track(i, g, ph, L, P, row, cnt):
                 u, v, w = _reflect(g, surf, x, y, z, u, v, w)
             x, y, z = x + TINY * u, y + TINY * v, z + TINY * w
 
-        if wgt < ph.w_cut:
-            if rng.rand(P.seed, i) < wgt / ph.w_surv:
-                wgt = ph.w_surv
+        if wgt < ph.w_cut * P.w0[i]:
+            if rng.rand(P.seed, i) < wgt / (ph.w_surv * P.w0[i]):
+                wgt = ph.w_surv * P.w0[i]
             else:
                 cnt[C_RKILL] += 1
                 P.status[i] = DEAD
@@ -429,7 +407,7 @@ def _particles(n):
     return Particles(f(), f(), f(), f(), f(), f(), f(),
                      np.zeros(n, np.uint64), np.zeros(n, np.int64),
                      np.zeros(n, np.bool_), np.zeros(n, np.int64),
-                     np.zeros(n, np.int64), f(), f(), f(), f())
+                     np.zeros(n, np.int64), f(), f(), f(), f(), f())
 
 
 def run(problem, particles=100_000, batches=20, seed=1, backend=None,
@@ -449,20 +427,20 @@ def run(problem, particles=100_000, batches=20, seed=1, backend=None,
     g = problem.geom
     ph, L, r_max = physics(problem, backend, r_star, r_max, mesh_rule,
                            w_cut, w_surv, k_max)
-    s = problem.source
-    src = SourceArrays(s.kind, s.lo, s.hi, s.mono.astype(np.bool_),
-                       s.direction, s.cdf)
     accum = T.Accumulator(L)
     cnt = np.zeros((nchunk, len(COUNTERS)), np.int64)
     t_track = t_backend = 0.0
     calls = 0
+    redrawn = 0
 
     for b in range(batches):
         P = _particles(particles)
         P.seed[:] = rng.streams(np.uint64(seed), b * particles, particles)
         acc = np.zeros((nchunk, L.n_entries))
         t0 = time.perf_counter()
-        _birth(g, src, P, cnt, nchunk)
+        sites = problem.source.sample(particles, source_rng(seed, b))
+        redrawn += sites.redrawn
+        _birth(sites.xyz, sites.uvw, sites.wgt, sites.iso, P, cnt, nchunk)
         while True:
             _advance(g, ph, L, P, acc, cnt, nchunk)
             t1 = time.perf_counter()
@@ -476,6 +454,9 @@ def run(problem, particles=100_000, batches=20, seed=1, backend=None,
             calls += 1
             t0 = time.perf_counter()
             t_backend += t0 - t1
+        # OpenMC's leakage is per unit of source weight, its tallies per
+        # source particle (sources.py); the same here
+        acc[:, T.LEAKAGE] *= particles / sites.wgt.sum()
         accum.add_batch(acc, particles)
         if verbose:
             mean, se = accum.mean_se()
@@ -484,6 +465,7 @@ def run(problem, particles=100_000, batches=20, seed=1, backend=None,
 
     counters = dict(zip(COUNTERS, cnt.sum(axis=0).tolist()))
     counters["backend_calls"] = calls
+    counters["source_redrawn"] = redrawn
     timing = {"transport_s": t_track, "backend_s": t_backend}
     settings = dict(particles=particles, batches=batches, seed=seed,
                     backend=getattr(backend, "name", None), r_star=r_star,

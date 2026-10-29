@@ -6,7 +6,7 @@ None of them needs the trained network to change (checked item by item;
 see the "model change?" column in `GAPS.md`), so none waits on model work.
 
 Status: proposed 27 Oct 2026; Phani gave the go on 29 Oct 2026. v1.1.3
-is done; v1.2 (sources) is next.
+and v1.2.0 (sources) are done; v1.3 (multi-filter tallies) is next.
 
 Numbering (Phani, 29 Oct 2026): v1.1.x is the mesh work and the easy
 tally items; each later area gets its own minor version (v1.2 sources,
@@ -40,7 +40,7 @@ refused (they only stop a run early), and `MeshSurfaceFilter` /
 | Scores `total` and `scatter` (sigma_t and sigma_s times flux) | same track-length estimator as absorption | vs OpenMC, slab |
 | 1D and 2D `RegularMesh`, `RectilinearMesh` | the same grid walk; missing axes are infinite; rectilinear edges looked up by binary search. The v1.1 ball rule works unchanged | vs OpenMC, new mesh tallies on the slab and cask |
 
-## v1.2: sources, all of OpenMC's spatial and angle distributions
+## v1.2 (done, v1.2.0): sources, all of OpenMC's spatial and angle distributions
 
 One mechanism instead of one case per type. Before each batch, Python
 samples the source sites (position, direction) from the model's own OpenMC

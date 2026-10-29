@@ -110,9 +110,6 @@ def run_split(problem, particles, batches, seed, backend, r_star,
     """
     g, m = problem.geom, problem.mats
     ph, L, _ = TR.physics(problem, backend, r_star, None, mesh_rule)
-    s = problem.source
-    src = TR.SourceArrays(s.kind, s.lo, s.hi, s.mono.astype(np.bool_),
-                          s.direction, s.cdf)
     accum = T.Accumulator(L)
     cnt = np.zeros((nchunk, len(TR.COUNTERS)), np.int64)
     ph_t = dict(allocate=0.0, birth=0.0, advance=0.0, gather=0.0,
@@ -129,7 +126,8 @@ def run_split(problem, particles, batches, seed, backend, r_star,
         ph_t["allocate"] += time.perf_counter() - t
 
         t = time.perf_counter()
-        TR._birth(g, src, P, cnt, nchunk)
+        st = problem.source.sample(particles, TR.source_rng(seed, b))
+        TR._birth(st.xyz, st.uvw, st.wgt, st.iso, P, cnt, nchunk)
         ph_t["birth"] += time.perf_counter() - t
 
         while True:

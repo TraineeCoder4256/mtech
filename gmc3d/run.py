@@ -33,6 +33,7 @@ from ball import network, table                              # noqa: E402
 from ball.oracle import Oracle                                # noqa: E402
 from checks import ball_metrics, compare, measure, openmc_ref  # noqa: E402
 from checks import flux_maps, mesh_profile, race, validate    # noqa: E402
+from checks import source_check                               # noqa: E402
 from core import openmc_import, output, transport             # noqa: E402
 from problems import PROBLEMS                                 # noqa: E402
 from core.tallies import SCORES                               # noqa: E402
@@ -193,6 +194,14 @@ def cmd_maps(args, log):
     return "maps"
 
 
+def cmd_sourcecheck(args, log):
+    res = source_check.run(DATA / "openmc", args.particles, args.batches,
+                           seed=args.seed, names=args.cases or None, log=log)
+    (out_dir(args) / "sourcecheck.json").write_text(
+        json.dumps(output._plain(res), indent=1))
+    return "sourcecheck"
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawTextHelpFormatter)
@@ -248,6 +257,11 @@ def main():
 
     s = sub.add_parser("meshcheck")
     common(s)
+
+    s = sub.add_parser("sourcecheck")
+    s.add_argument("cases", nargs="*", help=" ".join(source_check.CASES))
+    common(s)
+    s.set_defaults(seed=5)
 
     s = sub.add_parser("maps")
     s.add_argument("problems", nargs="*")

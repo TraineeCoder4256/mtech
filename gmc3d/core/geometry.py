@@ -312,3 +312,78 @@ def _nearest_many(g, pts):
     for i in range(n):
         out[i], _, _ = nearest_boundary(g, pts[i, 0], pts[i, 1], pts[i, 2])
     return out
+
+
+def paths_many(g, pts):
+    """For an (n, 3) array of points: the cell and the universe at every
+    level from the root down (padded with -1), and the deepest material.
+    Used to check source constraints, which OpenMC applies to a cell or
+    universe at ANY level of the point's path, and to the material at the
+    deepest one."""
+    return _paths_many(g, np.ascontiguousarray(pts, np.float64))
+
+
+@njit(cache=True)
+def _paths_many(g, pts):
+    n = pts.shape[0]
+    cells = np.full((n, MAX_LEVELS), -1, np.int64)
+    univs = np.full((n, MAX_LEVELS), -1, np.int64)
+    mats = np.full(n, LOST, np.int64)
+    for i in range(n):
+        mats[i] = _path(g, pts[i, 0], pts[i, 1], pts[i, 2], cells[i],
+                        univs[i])
+    return cells, univs, mats
+
+
+@njit(cache=True)
+def _path(g, x, y, z, cells, univs):
+    """The descent of `_descend` for a point only, recording each level's
+    universe and cell.  Returns the deepest material (VOID / LOST)."""
+    univ = g.root
+    for level in range(MAX_LEVELS):
+        univs[level] = univ
+        cell = -1
+        c0 = g.univ_cell_start[univ]
+        for k in range(c0, c0 + g.univ_cell_len[univ]):
+            if in_cell(g, g.univ_cells[k], x, y, z):
+                cell = g.univ_cells[k]
+                break
+        if cell < 0:
+            return LOST
+        cells[level] = cell
+        ft = g.cell_fill_type[cell]
+        if ft == FILL_MATERIAL:
+            return g.cell_fill[cell]
+        if ft == FILL_VOID:
+            return VOID
+        x, y, z = (x - g.cell_trans[cell, 0], y - g.cell_trans[cell, 1],
+                   z - g.cell_trans[cell, 2])
+        R = g.cell_rot[cell]
+        x, y, z = (R[0, 0] * x + R[0, 1] * y + R[0, 2] * z,
+                   R[1, 0] * x + R[1, 1] * y + R[1, 2] * z,
+                   R[2, 0] * x + R[2, 1] * y + R[2, 2] * z)
+        if ft == FILL_UNIVERSE:
+            univ = g.cell_fill[cell]
+            continue
+        lat = g.cell_fill[cell]
+        ll, p, shp = g.lat_ll[lat], g.lat_pitch[lat], g.lat_shape[lat]
+        three_d = g.lat_ndim[lat] == 3
+        ix = int(np.floor((x - ll[0]) / p[0]))
+        iy = int(np.floor((y - ll[1]) / p[1]))
+        iz = int(np.floor((z - ll[2]) / p[2])) if three_d else 0
+        if (0 <= ix < shp[0]) and (0 <= iy < shp[1]) and (0 <= iz < shp[2]):
+            univ = g.lat_univs[g.lat_univ_start[lat] +
+                               (iz * shp[1] + iy) * shp[0] + ix]
+            x = x - (ll[0] + (ix + 0.5) * p[0])
+            y = y - (ll[1] + (iy + 0.5) * p[1])
+            if three_d:
+                z = z - (ll[2] + (iz + 0.5) * p[2])
+        else:
+            if g.lat_outer[lat] < 0:
+                return LOST
+            univ = g.lat_outer[lat]
+            x = x - (ll[0] + (ix + 0.5) * p[0])
+            y = y - (ll[1] + (iy + 0.5) * p[1])
+            if three_d:
+                z = z - (ll[2] + (iz + 0.5) * p[2])
+    return LOST

@@ -17,7 +17,10 @@ feature (S1-GEO-6), instead of being run wrongly:
                   with translation and rotation
     materials     one energy group, isotropic scattering, no fission,
                   from an OpenMC multigroup library (Macroscopic data)
-    sources       point or box, isotropic or one direction
+    sources       every OpenMC source except CompiledSource: independent
+                  sources with any spatial and angular distribution,
+                  FileSource (.h5), MeshSource, and domain constraints
+                  (see sources.py)
     tallies       no filter, cell, material or mesh filters (1D, 2D or 3D
                   RegularMesh, RectilinearMesh), scoring flux, absorption,
                   scatter and total with the track-length estimator; or a
@@ -39,6 +42,7 @@ import numpy as np
 import openmc
 
 from . import geometry as G
+from . import sources
 from . import surfaces as S
 
 
@@ -60,18 +64,6 @@ class Materials:
     sig_t: np.ndarray            # 1/cm
     sig_s: np.ndarray
     sig_a: np.ndarray
-
-
-@dataclass
-class Source:
-    """Where particles are born and which way they go (one or more parts,
-    each chosen with probability proportional to its strength)."""
-    kind: np.ndarray             # 0 point, 1 box
-    lo: np.ndarray               # (n, 3) point, or box lower corner
-    hi: np.ndarray               # (n, 3) box upper corner (= lo for a point)
-    mono: np.ndarray             # 1 if one direction, 0 if isotropic
-    direction: np.ndarray        # (n, 3) unit vector when mono
-    cdf: np.ndarray              # cumulative strength, last entry 1
 
 
 @dataclass
@@ -100,7 +92,7 @@ class Problem:
     model: openmc.Model          # the original, for the OpenMC run
     geom: G.Geometry
     mats: Materials
-    source: Source
+    source: sources.SourceSampler
     tallies: list
     cell_ids: np.ndarray         # OpenMC id of each internal cell index
     cell_names: list
@@ -208,48 +200,13 @@ def _materials(model):
                      np.array(st), np.array(ss), np.array(sa))
 
 
-# ------------------------------------------------------------------ source
-def _source(model):
-    srcs = model.settings.source
-    srcs = srcs if isinstance(srcs, (list, tuple)) else [srcs]
-    kind, lo, hi, mono, dirn, w = [], [], [], [], [], []
-    for s in srcs:
-        if not isinstance(s, openmc.IndependentSource):
-            raise Unsupported(f"source type {type(s).__name__}")
-        sp = s.space
-        if isinstance(sp, openmc.stats.Point):
-            kind.append(0)
-            lo.append(sp.xyz)
-            hi.append(sp.xyz)
-        elif isinstance(sp, openmc.stats.Box):
-            kind.append(1)
-            lo.append(sp.lower_left)
-            hi.append(sp.upper_right)
-        else:
-            raise Unsupported(f"source space {type(sp).__name__}; stage 1 "
-                              f"handles Point and Box")
-        an = s.angle
-        if an is None or isinstance(an, openmc.stats.Isotropic):
-            mono.append(0)
-            dirn.append((1.0, 0.0, 0.0))
-        elif isinstance(an, openmc.stats.Monodirectional):
-            d = np.asarray(an.reference_uvw, float)
-            mono.append(1)
-            dirn.append(d / np.linalg.norm(d))
-        else:
-            raise Unsupported(f"source angle {type(an).__name__}")
-        w.append(s.strength)
-    cdf = np.cumsum(w) / np.sum(w)
-    return Source(np.array(kind), np.array(lo, float), np.array(hi, float),
-                  np.array(mono), np.array(dirn, float), cdf)
-
-
 # ----------------------------------------------------------------- settings
 # Settings elements (as OpenMC writes them to settings.xml) that gmc3d
 # reads.  Everything else present in a model is either refused below or
 # named in a warning.
 _SETTINGS_USED = {"run_mode", "particles", "batches", "source",
-                  "energy_mode", "seed"}
+                  "energy_mode", "seed",
+                  "mesh"}          # meshes a MeshSpatial / MeshSource uses
 # Settings that only say where OpenMC writes its own files or how much it
 # prints: no effect on any answer and nothing for gmc3d to do, so no
 # warning either.
@@ -496,8 +453,11 @@ def load(model):
     root_surfs = {surfs[i].id for i in root_surfs}
     tallies = _tallies(model, cell_index, mat_index, surf_index, root_surfs,
                        warn)
+    src = sources.make(model, geom, cell_index, mat_index, univ_index,
+                       Unsupported)
+    warn += src.warnings
     for line in warn:
         warnings.warn(line, IgnoredSetting, stacklevel=2)
-    return Problem(model, geom, mats, _source(model), tallies,
+    return Problem(model, geom, mats, src, tallies,
                    np.array([c.id for c in cells]), [c.name for c in cells],
                    warn)

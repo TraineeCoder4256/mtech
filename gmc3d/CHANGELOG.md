@@ -7,6 +7,35 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v1.2.0 (29 Oct 2026): every OpenMC source
+
+- **New `core/sources.py`.** Before each batch the source sites (position,
+  direction, weight) are drawn in Python from the model's own OpenMC
+  objects, and transport starts from that list. Spaces: `Point`, `Box`,
+  `CartesianIndependent`, `CylindricalIndependent`,
+  `SphericalIndependent`, `PointCloud`, `MeshSpatial` (regular 3D,
+  rectilinear, cylindrical and spherical meshes). Angles: `Isotropic`,
+  `Monodirectional`, `PolarAzimuthal`. Sources: `IndependentSource`,
+  `MeshSource`, `FileSource` (.h5), and lists of several sources.
+  Biased distributions give each site the matching weight.
+- **Constraints** on cells, materials or universes at any depth, by
+  drawing again, as OpenMC does. `energy_bounds`, `time_bounds` and
+  `rejection_strategy = "kill"` are warned (they do nothing here, or in
+  OpenMC 0.16 either).
+- **Source strengths now count (silent bug before v1.2).** Each site weighs
+  the sum of all strengths and leakage is per unit of source weight, as
+  measured in OpenMC. Before, a source with strength 3 gave tallies a third
+  of OpenMC's.
+- **Russian roulette is relative to the birth weight**, so a site born
+  with weight 2 is treated like one born with weight 1.
+- Refused, with a message: `CompiledSource`, mcpl files, non-neutron
+  particles, fissionable constraints, a bias on `Isotropic`.
+- `python run.py sourcecheck`: 11 source cases against OpenMC, all PASS
+  (one borderline mesh chi2 on the first seed, gone on two more).
+  Validate: all six problems PASS after rechecks; the nested open check
+  from v1.1 is closed at 10M histories (`runs/2026-10-29/v1.2/`).
+- 20 new unit tests (82 in total).
+
 ## v1.1.3 (29 Oct 2026): no silent settings, more scores, more mesh shapes
 
 - **Nothing in the input is ignored silently any more (settings and
