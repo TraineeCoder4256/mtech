@@ -1,0 +1,52 @@
+{
+ "slab": {
+  "ours_s": 5.044188319999989,
+  "openmc_implicit_s": 3.6712318490000007,
+  "ratio": 1.373977053880148,
+  "flights": 11298905,
+  "flights_per_history": 22.59781,
+  "ns_per_flight": 446.431607310619,
+  "ours_leakage": 0.8610525771619442,
+  "openmc_leakage": 0.8603963306844575
+ },
+ "cask": {
+  "ours_s": 9.38873110999998,
+  "openmc_implicit_s": 7.463718085999995,
+  "ratio": 1.257916095144431,
+  "flights": 20003652,
+  "flights_per_history": 40.007304,
+  "ns_per_flight": 469.3508520344176,
+  "ours_leakage": 0.0023631861743579337,
+  "openmc_leakage": 0.002322007102770053
+ },
+ "lattice3d": {
+  "ours_s": 3.0036706580000327,
+  "openmc_implicit_s": 1.070258232,
+  "ratio": 2.8064915253088496,
+  "flights": 4083036,
+  "flights_per_history": 8.166072,
+  "ns_per_flight": 735.6463812711994,
+  "ours_leakage": 0.03314471861152376,
+  "openmc_leakage": 0.033345999981414
+ },
+ "hexcore": {
+  "ours_s": 13.582283377000067,
+  "openmc_implicit_s": 7.761307598000007,
+  "ratio": 1.7499993661506281,
+  "flights": 25606317,
+  "flights_per_history": 51.212634,
+  "ns_per_flight": 530.4270573936918,
+  "ours_leakage": 0.07941561892361952,
+  "openmc_leakage": 0.07956408921975192
+ },
+ "sector": {
+  "ours_s": 30.822585425999932,
+  "openmc_implicit_s": 19.60724917599998,
+  "ratio": 1.5719994757718463,
+  "flights": 45732992,
+  "flights_per_history": 91.465984,
+  "ns_per_flight": 673.968268378328,
+  "ours_leakage": 0.10708858177951645,
+  "openmc_leakage": 0.10740341880188926
+ }
+}

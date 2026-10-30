@@ -1,0 +1,32 @@
+{
+ "sphere": {
+  "with_tallies_s": 2.3099184689999674,
+  "no_tallies_s": 1.596920271999977,
+  "tally_cost_s": 0.7129981969999903,
+  "locate_ns": 741.3082099998293,
+  "locate_points": 5000,
+  "flights": 9288904,
+  "leakage": 0.03185931742013527,
+  "ns_per_flight_no_tallies": 171.91697448912996
+ },
+ "cask": {
+  "with_tallies_s": 7.20698143300001,
+  "no_tallies_s": 3.2638261409999814,
+  "tally_cost_s": 3.9431552920000286,
+  "locate_ns": 780.6976949999012,
+  "locate_points": 5000,
+  "flights": 20049588,
+  "leakage": 0.002358955157319815,
+  "ns_per_flight_no_tallies": 162.787691248318
+ },
+ "slab": {
+  "with_tallies_s": 3.7703508669999906,
+  "no_tallies_s": 2.2551290240000412,
+  "tally_cost_s": 1.5152218429999493,
+  "locate_ns": 992.6556249996565,
+  "locate_points": 5000,
+  "flights": 11319193,
+  "leakage": 0.8609908214109232,
+  "ns_per_flight_no_tallies": 199.23054797281407
+ }
+}
