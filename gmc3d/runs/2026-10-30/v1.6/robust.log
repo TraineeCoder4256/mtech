@@ -1,0 +1,39 @@
+  model  0  REFUSED      0 s  1 object(s) ['sphere'], 3 materials, faces x/y/z ['reflective', 'vacuum', 'vacuum'], source point/iso, tallies ['total', 'cells', 'mats', 'mesh'], UNSUPPORTED albedo
+             surface 3 has albedo 0.5; gmc3d handles albedo 1 only
+  model  1  PASS         7 s  2 object(s) ['tiltcyl', 'cone'], 4 materials, faces x/y/z ['vacuum', 'vacuum', 'vacuum'], source point/mono, tallies ['total', 'cells', 'mats', 'mesh', 'sph', 'faces']
+  model  2  PASS         6 s  1 object(s) ['tiltcyl'], 2 materials, faces x/y/z ['vacuum', 'reflective', 'white'], source box/cone, tallies ['total', 'cells', 'mats', 'mesh', 'cyl']
+  model  3  PASS         6 s  2 object(s) ['shell', 'zcyl'], 4 materials, faces x/y/z ['vacuum', 'vacuum', 'reflective'], source shell/cone, tallies ['total', 'cells', 'mats', 'mesh', 'faces']
+  model  4  REFUSED      0 s  3 object(s) ['sphere', 'torus', 'cone'], 2 materials, faces x/y/z ['white', 'vacuum', 'vacuum'], source box/iso, tallies ['total', 'cells', 'mats', 'mesh', 'faces'], UNSUPPORTED collision
+             tally 21 asks for the 'collision' estimator; gmc3d scores track length only (inside a ball the collisions are not seen)
+  model  5  PASS         5 s  2 object(s) ['zcyl', 'box'], 2 materials, faces x/y/z ['vacuum', 'reflective', 'periodic'], source box/cone, tallies ['total', 'cells', 'mats', 'mesh', 'faces']
+  model  6  PASS         5 s  1 object(s) ['cone'], 2 materials, faces x/y/z ['periodic', 'vacuum', 'white'], source point/iso, tallies ['total', 'cells', 'mats', 'mesh', 'sph']
+  model  7  PASS        16 s  2 object(s) ['cone', 'lattice'], 2 materials, faces x/y/z ['white', 'vacuum', 'vacuum'], source box/iso, tallies ['total', 'cells', 'mats', 'mesh', 'cyl', 'sph', 'meshsurf']
+  model  8  PASS        12 s  2 object(s) ['lattice', 'lattice'], 4 materials, faces x/y/z ['periodic', 'vacuum', 'vacuum'], source shell/iso, tallies ['total', 'cells', 'mats', 'mesh', 'cyl', 'sph']
+  model  9  PASS        13 s  1 object(s) ['box'], 3 materials, faces x/y/z ['vacuum', 'periodic', 'reflective'], source point/iso + constraint, tallies ['total', 'cells', 'mats', 'mesh', 'cyl', 'meshsurf']
+  model 10  PASS         7 s  4 object(s) ['shell', 'lattice', 'sphere', 'tiltcyl'], 2 materials, faces x/y/z ['white', 'periodic', 'vacuum'], source shell/iso + constraint, tallies ['total', 'cells', 'mats', 'mesh', 'sph', 'meshsurf']
+  model 11  PASS         4 s  1 object(s) ['zcyl'], 3 materials, faces x/y/z ['white', 'vacuum', 'vacuum'], source shell/cone, tallies ['total', 'cells', 'mats', 'mesh']
+  model 12: FAIL at 1x (mesh/absorption chi2/dof 1.511 over 96 bins (p 9.1e-04)), rerunning at 5x histories
+  model 12  PASS        16 s  2 object(s) ['torus', 'shell'], 4 materials, faces x/y/z ['vacuum', 'vacuum', 'vacuum'], source point/mono, tallies ['total', 'cells', 'mats', 'mesh']
+  model 13  REFUSED      0 s  1 object(s) ['zcyl'], 4 materials, faces x/y/z ['vacuum', 'white', 'vacuum'], source box/mono, tallies ['total', 'cells', 'mats', 'mesh', 'meshsurf', 'cell_e'], UNSUPPORTED horn
+             surface 178: torus with c = 0.4 >= a = 0.2 (the tube meets the axis: a horn or spindle torus) is not handled
+  model 14  PASS         4 s  1 object(s) ['lattice'], 4 materials, faces x/y/z ['vacuum', 'vacuum', 'vacuum'], source point/cone, tallies ['total', 'cells', 'mats', 'mesh', 'cyl', 'sph', 'cell_e']
+  model 15  PASS        86 s  3 object(s) ['shell', 'torus', 'box'], 4 materials, faces x/y/z ['reflective', 'periodic', 'vacuum'], source point/iso + constraint, tallies ['total', 'cells', 'mats', 'mesh', 'sph', 'faces', 'meshsurf']
+  model 16  PASS        19 s  4 object(s) ['sphere', 'zcyl', 'sphere', 'shell'], 2 materials, faces x/y/z ['reflective', 'vacuum', 'reflective'], source point/iso, tallies ['total', 'cells', 'mats', 'mesh', 'cyl', 'sph', 'faces', 'cell_e']
+  model 17  PASS        13 s  1 object(s) ['sphere'], 4 materials, faces x/y/z ['periodic', 'reflective', 'vacuum'], source shell/cone, tallies ['total', 'cells', 'mats', 'mesh', 'faces', 'cell_e']
+  model 18  PASS         6 s  4 object(s) ['lattice', 'cone', 'tiltcyl', 'shell'], 3 materials, faces x/y/z ['vacuum', 'vacuum', 'periodic'], source shell/mono + constraint, tallies ['total', 'cells', 'mats', 'mesh', 'faces', 'cell_e']
+  model 19  PASS         4 s  2 object(s) ['sphere', 'shell'], 4 materials, faces x/y/z ['reflective', 'reflective', 'vacuum'], source shell/iso, tallies ['total', 'cells', 'mats', 'mesh']
+  model 20  PASS         5 s  2 object(s) ['tiltcyl', 'lattice'], 4 materials, faces x/y/z ['vacuum', 'periodic', 'white'], source point/iso, tallies ['total', 'cells', 'mats', 'mesh', 'faces']
+  model 21  PASS        11 s  3 object(s) ['cone', 'box', 'sphere'], 3 materials, faces x/y/z ['vacuum', 'vacuum', 'vacuum'], source shell/mono, tallies ['total', 'cells', 'mats', 'mesh', 'sph', 'faces']
+  model 22  REFUSED      0 s  2 object(s) ['torus', 'cone'], 2 materials, faces x/y/z ['periodic', 'vacuum', 'white'], source box/iso, tallies ['total', 'cells', 'mats', 'mesh', 'cyl', 'cell_e'], UNSUPPORTED collision
+             tally 128 asks for the 'collision' estimator; gmc3d scores track length only (inside a ball the collisions are not seen)
+  model 23  PASS         6 s  3 object(s) ['sphere', 'box', 'zcyl'], 3 materials, faces x/y/z ['vacuum', 'vacuum', 'white'], source point/iso, tallies ['total', 'cells', 'mats', 'mesh']
+  model 24  PASS         4 s  1 object(s) ['lattice'], 2 materials, faces x/y/z ['vacuum', 'vacuum', 'white'], source shell/iso, tallies ['total', 'cells', 'mats', 'mesh']
+  model 25  PASS        11 s  3 object(s) ['box', 'tiltcyl', 'cone'], 2 materials, faces x/y/z ['periodic', 'vacuum', 'white'], source shell/iso, tallies ['total', 'cells', 'mats', 'mesh', 'faces', 'meshsurf']
+  model 26: FAIL at 1x (mesh/flux chi2/dof 3.093 over 93 bins (p 9.5e-22); mesh/absorption chi2/dof 3.094 over 93 bins (p 9.2e-22); faces/current chi2/dof 4.760 over 6 bins (p 7.4e-05); mesh/flux chi2/dof 3.488 over 93 bins (p 2.3e-27); mesh/absorption chi2/dof 3.492 over 93 bins (p 2.0e-27); faces/current chi2/dof 4.752 over 6 bins (p 7.5e-05)), rerunning at 5x histories
+  model 26  PASS        10 s  1 object(s) ['sphere'], 3 materials, faces x/y/z ['vacuum', 'vacuum', 'periodic'], source point/iso, tallies ['total', 'cells', 'mats', 'mesh', 'faces', 'cell_e']
+  model 27  PASS         6 s  2 object(s) ['tiltcyl', 'cone'], 3 materials, faces x/y/z ['white', 'vacuum', 'white'], source box/iso, tallies ['total', 'cells', 'mats', 'mesh', 'cyl', 'sph', 'faces']
+  model 28  REFUSED      0 s  2 object(s) ['sphere', 'box'], 4 materials, faces x/y/z ['vacuum', 'vacuum', 'vacuum'], source box/iso, tallies ['total', 'cells', 'mats', 'mesh', 'faces', 'cell_e'], UNSUPPORTED fission
+             tally 168 scores ['fission']; gmc3d handles ['flux', 'absorption', 'scatter', 'total'] (and current with a SurfaceFilter)
+  model 29  PASS         4 s  1 object(s) ['box'], 3 materials, faces x/y/z ['vacuum', 'vacuum', 'white'], source shell/iso + constraint, tallies ['total', 'cells', 'mats', 'mesh', 'cyl', 'faces', 'meshsurf']
+
+== robustness: 25 PASS, 5 refused cleanly, 0 FAIL, 0 ERROR of 30 models

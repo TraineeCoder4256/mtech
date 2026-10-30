@@ -42,6 +42,16 @@ from . import analytic, compare, openmc_ref
 PROBLEM_ORDER = ("sphere", "slab", "curved", "nested", "lattice3d")
 VALIDATE_ORDER = PROBLEM_ORDER + ("cask", "tilted", "hexcore",
                                    "sector")
+# OpenMC histories for the reference, as a multiple of ours (v1.6: Phani
+# asked for the slab's at 10x).  It does NOT settle the slab's depth item:
+# with it, plain MC at seed 1 still fails (chi2/dof 2.16).  The cause is
+# the rule, not the reference: the slab's depth bins are strongly
+# correlated (neighbours +0.88, about 6 independent bins among 60), so one
+# 2-sigma shift of the whole profile (seed 1's total flux is 2.15 sigma
+# low) shows as 60 surprises, and its chi2/dof spreads with sd 0.64, not
+# the 0.18 the rule assumes (runs/2026-10-30/v1.6/slab_corr.log,
+# neff_probe.log).  A rule that counts effective bins passes it (p 0.04).
+REF_SCALE = {"slab": 10}
 P_FAIL = 1.0e-3
 Z1_MAX = float(stats.norm.isf(P_FAIL / 2))          # 3.29
 REF_BATCHES = 400
@@ -83,8 +93,11 @@ def suite(workdir, particles=100_000, batches=20, seed=5, names=None,
         pr = openmc_import.load(model)
         t = time.perf_counter()
         n = particles * batches
-        ref = openmc_ref.run(model, f"{workdir}/openmc_{name}",
-                             n // REF_BATCHES, REF_BATCHES, seed=seed + 100)
+        k = REF_SCALE.get(name, 1)
+        ref = openmc_ref.run(model, f"{workdir}/openmc_{name}" +
+                             (f"_x{k}" if k > 1 else ""),
+                             n // REF_BATCHES, k * REF_BATCHES,
+                             seed=seed + 100)
         t_ref = time.perf_counter() - t
         mc = transport.run(pr, particles, batches, seed=seed)
         orc = Oracle()

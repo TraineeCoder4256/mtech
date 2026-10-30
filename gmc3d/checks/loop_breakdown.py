@@ -128,6 +128,7 @@ def run_split(problem, particles, batches, seed, backend, r_star,
         P = TR._particles(particles)
         P.seed[:] = rng.streams(np.uint64(seed), b * particles, particles)
         acc = np.zeros((nchunk, L.n_entries))
+        D = TR._no_detectors(L.n_entries, len(problem.mats.ids))
         ph_t["allocate"] += time.perf_counter() - t
 
         t = time.perf_counter()
@@ -137,7 +138,7 @@ def run_split(problem, particles, batches, seed, backend, r_star,
 
         while True:
             t = time.perf_counter()
-            TR._advance(g, ph, L, X, P, acc, cnt, nchunk)
+            TR._advance(g, ph, L, X, D, P, acc, cnt, nchunk)
             ph_t["advance"] += time.perf_counter() - t
 
             t = time.perf_counter()

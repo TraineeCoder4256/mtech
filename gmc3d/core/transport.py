@@ -88,6 +88,7 @@ import time
 import numpy as np
 from numba import njit, prange
 
+from . import detectors as DT
 from . import geometry as G
 from . import rng
 from . import surfaces as S
@@ -131,6 +132,23 @@ Physics = namedtuple("Physics", [
     "prof_log_r", "prof_log1p_ell", "prof_f_unsc", "prof_cdf",
                                       # ball/profile.py's table
 ])
+
+# point detectors (detectors.py), passed as their own argument like
+# tallies.MeshExtra so that runs without them pay nothing
+Detectors = namedtuple("Detectors", [
+    "on",                             # any detector at all
+    "pos", "r0",                      # (n, 3) points; averaging radii, cm
+    "sig_t",                          # per material, 1/cm
+    "base",                           # entry of acc where they start
+    "k",                              # profile points per ball
+])
+K_DET = 4                # profile points per ball for detectors
+
+
+def _no_detectors(n_entries, n_mats):
+    return Detectors(False, np.zeros((0, 3)), np.zeros(0),
+                     np.zeros(max(n_mats, 1)), n_entries, 1)
+
 
 # ------------------------------------------------------------- directions
 @njit(cache=True, inline="always")
@@ -236,17 +254,22 @@ def source_rng(seed, batch):
 
 # ------------------------------------------------------------ one history
 @njit(cache=True)
-def _track(i, g, ph, L, X, P, row, cnt, pth, last, to, univ, scr):
+def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
+           dpth):
     """Run particle i until it dies or asks for a ball step.
 
     pth, last, to, univ (MAX_LEVELS each) and scr (tallies.scratch) are
     the calling thread's work space: the cell at every level of the
     particle's path now, at the last successful descent (for a surface
-    tally's cell-from), and on the far side of a crossing."""
+    tally's cell-from), and on the far side of a crossing; dpth is the
+    point detectors' (their lines descend the geometry too)."""
     x, y, z = P.x[i], P.y[i], P.z[i]
     u, v, w = P.u[i], P.v[i], P.w[i]
     wgt = P.wgt[i]
     fresh = P.fresh[i]
+
+    if D.on and P.status[i] == MOVING and P.fresh[i]:
+        DT.score(row, D, g, D.sig_t, wgt, x, y, z, dpth)  # isotropic birth
 
     if P.status[i] == READY:
         # ---- finish a ball step: the backend has filled mu and s
@@ -273,6 +296,27 @@ def _track(i, g, ph, L, X, P, row, cnt, pth, last, to, univ, scr):
         elif L.has_mesh:
             T.score_ball_mesh(row, L, X, cell, path, mat, sa, ss, flux,
                               x, y, z, scr)
+        if D.on:
+            # the ball's unseen scatters (detectors.py): sigma_s x its
+            # flux at D.k profile points of the walk, plus the scatters a
+            # walk conditioned on scattering has beyond that, carried by
+            # the straight flight it excludes (weight `excess` each)
+            p_out = np.exp(-ss * d)
+            excess = ss * p_out / (1.0 - p_out) * \
+                T._decayed(wgt, sa, 0.0, d) / D.k
+            for _ in range(D.k):
+                r = draw_r(ph.prof_log_r, ph.prof_log1p_ell, ph.prof_f_unsc,
+                           ph.prof_cdf, P.ball_R[i], sa / ss,
+                           P.s[i], P.seed, i) * d / P.ball_R[i]
+                px, py, pz = rng.isotropic(P.seed, i)
+                DT.score(row, D, g, D.sig_t, ss * flux / D.k, x + r * px,
+                         y + r * py, z + r * pz, dpth)
+                xi = rng.rand(P.seed, i)
+                tl = xi * d if sa * d < 1e-9 else \
+                    -np.log1p(xi * np.expm1(-sa * d)) / sa
+                px, py, pz = rng.isotropic(P.seed, i)
+                DT.score(row, D, g, D.sig_t, excess, x + tl * px,
+                         y + tl * py, z + tl * pz, dpth)
         wgt *= np.exp(-sa * s_cm)
         nx, ny, nz = rng.isotropic(P.seed, i)    # exit point
         x, y, z = x + d * nx, y + d * ny, z + d * nz
@@ -403,6 +447,8 @@ def _track(i, g, ph, L, X, P, row, cnt, pth, last, to, univ, scr):
         cnt[C_FLIGHT] += 1
 
         if scatter:
+            if D.on:
+                DT.score(row, D, g, D.sig_t, wgt, x, y, z, dpth)
             u, v, w = rng.isotropic(P.seed, i)
             fresh = True
             cnt[C_SCATTER] += 1
@@ -470,7 +516,7 @@ def _track(i, g, ph, L, X, P, row, cnt, pth, last, to, univ, scr):
 
 
 @njit(cache=True, parallel=True)
-def _advance(g, ph, L, X, P, acc, cnt, nchunk):
+def _advance(g, ph, L, X, D, P, acc, cnt, nchunk):
     """Run every live particle until it dies or waits for a ball.
 
     Chunk c takes particles [c*per, min(n, (c+1)*per)).  Each chunk is a
@@ -486,21 +532,24 @@ def _advance(g, ph, L, X, P, acc, cnt, nchunk):
         to = np.full(G.MAX_LEVELS, -1, np.int64)
         univ = np.full(G.MAX_LEVELS, -1, np.int64)
         scr = T.scratch(G.MAX_LEVELS)
+        dpth = np.full(G.MAX_LEVELS, -1, np.int64)
         for i in range(c * per, min(n, (c + 1) * per)):
             st = P.status[i]
             if st == MOVING or st == READY:
-                _track(i, g, ph, L, X, P, acc[c], cnt[c], pth, last, to,
-                       univ, scr)
+                _track(i, g, ph, L, X, D, P, acc[c], cnt[c], pth, last, to,
+                       univ, scr, dpth)
 
 
 # ------------------------------------------------------------- the driver
 def physics(problem, backend=None, r_star=3.0, r_max=None,
-            mesh_rule="profile", w_cut=0.25, w_surv=1.0, k_max=None):
+            mesh_rule="profile", w_cut=0.25, w_surv=1.0, k_max=None,
+            need_profile=False):
     """The Physics and tally Layout a run uses (also used by
     checks/loop_breakdown.py, which times run() phase by phase).
     Returns (ph, L, r_max actually used, X): X is the tallies.MeshExtra,
     passed to the kernels as its own argument (Numba's parallel loop
-    cannot take it inside Physics)."""
+    cannot take it inside Physics).  need_profile loads ball/profile.py's
+    table even with no mesh (point detectors use it)."""
     if mesh_rule not in ("profile", "cap"):
         raise ValueError("mesh_rule must be 'profile' or 'cap'")
     k_max = K_MAX if k_max is None else k_max
@@ -519,7 +568,7 @@ def physics(problem, backend=None, r_star=3.0, r_max=None,
     mesh_h = float(X.mesh_h[L.mesh_on & ((L.kind == T.VOLUME) |
                                          (L.kind == T.CURVED))].min()) \
         if L.has_mesh else 1.0
-    if use_profile:
+    if use_profile or (need_profile and backend is not None):
         prof = ball_profile.get()
         r_max = min(r_max, prof.r_max)       # the profile's range
         if r_star < prof.r_min:
@@ -548,7 +597,7 @@ def _particles(n):
 
 def run(problem, particles=100_000, batches=20, seed=1, backend=None,
         r_star=3.0, r_max=None, mesh_rule="profile", w_cut=0.25, w_surv=1.0,
-        nchunk=32, verbose=False, k_max=None):
+        nchunk=32, verbose=False, k_max=None, k_det=K_DET):
     """Solve a Problem (from openmc_import.load).
 
     backend      None for plain Monte Carlo, or a ball backend from ball/
@@ -557,13 +606,21 @@ def run(problem, particles=100_000, batches=20, seed=1, backend=None,
     mesh_rule    'profile' or 'cap' (see tallies.py)
     k_max        most mesh points per ball under 'profile' (default K_MAX;
                  1 gives the one-point rule, for comparisons)
+    k_det        profile points per ball for point detectors
 
     Returns tallies.Results: per-source-particle means and standard errors.
     """
     g = problem.geom
+    dets = getattr(problem, "detectors", []) or []
     ph, L, r_max, X = physics(problem, backend, r_star, r_max, mesh_rule,
-                           w_cut, w_surv, k_max)
-    accum = T.Accumulator(L)
+                              w_cut, w_surv, k_max, need_profile=bool(dets))
+    m = problem.mats
+    D = Detectors(True, np.array([d[1] for d in dets], float).reshape(-1, 3),
+                  np.array([d[2] for d in dets], float),
+                  (m.sig_s + m.sig_a).astype(float), L.n_entries,
+                  int(k_det)) if dets else \
+        _no_detectors(L.n_entries, len(m.ids))
+    accum = T.Accumulator(L, len(dets))
     cnt = np.zeros((nchunk, len(COUNTERS)), np.int64)
     t_track = t_backend = 0.0
     calls = 0
@@ -572,13 +629,13 @@ def run(problem, particles=100_000, batches=20, seed=1, backend=None,
     for b in range(batches):
         P = _particles(particles)
         P.seed[:] = rng.streams(np.uint64(seed), b * particles, particles)
-        acc = np.zeros((nchunk, L.n_entries))
+        acc = np.zeros((nchunk, L.n_entries + len(dets)))
         t0 = time.perf_counter()
         sites = problem.source.sample(particles, source_rng(seed, b))
         redrawn += sites.redrawn
         _birth(sites.xyz, sites.uvw, sites.wgt, sites.iso, P, cnt, nchunk)
         while True:
-            _advance(g, ph, L, X, P, acc, cnt, nchunk)
+            _advance(g, ph, L, X, D, P, acc, cnt, nchunk)
             t1 = time.perf_counter()
             t_track += t1 - t0
             idx = np.flatnonzero(P.status == WAITING)
@@ -607,5 +664,6 @@ def run(problem, particles=100_000, batches=20, seed=1, backend=None,
                     backend=getattr(backend, "name", None), r_star=r_star,
                     r_max=r_max, mesh_rule=mesh_rule,
                     k_max=ph.k_max if ph.mesh_profile else None, w_cut=w_cut,
-                    w_surv=w_surv, nchunk=nchunk)
-    return accum.results(problem.tallies, counters, timing, settings)
+                    w_surv=w_surv, nchunk=nchunk,
+                    k_det=int(k_det) if dets else None)
+    return accum.results(problem.tallies, counters, timing, settings, dets)

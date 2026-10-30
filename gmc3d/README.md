@@ -48,6 +48,16 @@ Numba and PyTorch):
     python run.py race --device cuda            # ... with the network on a GPU
     python -m checks.gpu_bench --device cuda    # GPU cost per draw only
     python -m pytest -q tests                   # unit tests
+    python run.py check my_model.py             # what gmc3d will use, refuse
+                                                # and warn about (no run)
+    python run.py robust                        # 30 random models vs OpenMC
+    python run.py detcheck                      # point detectors checked
+    python run.py score                         # one number out of 10 from
+                                                # tests, validate, robust and
+                                                # detcheck results
+
+What gmc3d accepts, class by class: `ACCEPTED_INPUTS.md`.  What it leaves
+out: `GAPS.md`.
 
 ## File map
 
@@ -74,6 +84,9 @@ core/                THE SOLVER
   tallies.py           flux, absorption and surface-current scoring, mesh
                        tracking, the mesh rules for balls, error bars
   transport.py         plain Monte Carlo + ball steps; the batched loop
+  detectors.py         point detectors: the next-event estimator, and how
+                       a ball's unseen scatters are scored
+  model_check.py       `run.py check`: every refusal and warning at once
   output.py            results to JSON; mesh tallies to VTK (ParaView)
 
 ball/                THE BALL STEP
@@ -90,6 +103,9 @@ checks/              IS IT RIGHT, AND IS IT FAST
   compare.py           ours vs a reference, bin by bin (z-scores)
   analytic.py          problems with exact answers
   validate.py          the Stage 1 suite (all problems, OpenMC, exact balls)
+  robust.py            randomly built models vs OpenMC (pass or refuse)
+  detcheck.py          point detectors: exact, balls vs plain, vs OpenMC
+  score.py             the score out of 10 and what it leaves out
   ball_metrics.py      one radius at a time: backend vs exact walk
   mesh_profile.py      the mesh rule vs exact walks, one ball at a time
   flux_maps.py         mesh tallies vs OpenMC as pictures (PNG per problem)

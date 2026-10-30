@@ -143,6 +143,7 @@ class Problem:
     cell_ids: np.ndarray         # OpenMC id of each internal cell index
     cell_names: list
     warnings: list = field(default_factory=list)   # settings not used
+    detectors: list = field(default_factory=list)  # (name, xyz, r0), v1.6
 
 
 # ------------------------------------------------------------------ surfaces
@@ -687,6 +688,44 @@ def _instances(geo, cells, cell_index, lats, lat_ustart, lat_univs,
 
 
 # ------------------------------------------------------------------- load
+def _detectors(model, geom, src):
+    """gmc3d's point detectors (problems/common.point_detector), checked.
+
+    The next-event estimator scores, from every emission, the flux that
+    reaches the point uncollided along a straight line.  Two things would
+    make that line wrong, so they are refused rather than run wrongly:
+      * a reflective, white or periodic boundary: the uncollided flux
+        would also arrive by way of the wall, along paths not followed
+      * a source that is not isotropic: its emission towards the point
+        needs the angular density there, which is not handled (an
+        isotropic source's is 1 / 4 pi)"""
+    dets = list(getattr(model, "gmc3d_detectors", []) or [])
+    if not dets:
+        return []
+    bad = sorted({BC for BC, code in _BCS.items()
+                  if code in geom.surf_bc and code not in
+                  (G.BC_TRANSMISSION, G.BC_VACUUM)})
+    if bad:
+        raise Unsupported(f"point detectors with {bad} boundaries: the "
+                          f"next-event estimator here follows straight "
+                          f"lines only (vacuum and transmission)")
+    for k, part in enumerate(src.parts):
+        if not getattr(part, "always_isotropic", False):
+            raise Unsupported(f"point detectors need isotropic sources; "
+                              f"source {k} is not (or is a FileSource)")
+    names = set()
+    for name, xyz, r0 in dets:
+        if name in names:
+            raise Unsupported(f"two point detectors named '{name}'")
+        names.add(name)
+        if r0 < 0:
+            raise Unsupported(f"point detector '{name}': r0 {r0} < 0")
+        if G.locate(geom, *xyz)[1] == G.LOST:
+            raise Unsupported(f"point detector '{name}' at {xyz} is outside "
+                              f"the geometry")
+    return dets
+
+
 def load(model):
     """Compile an openmc.Model into a Problem.  Raises Unsupported."""
     warn = _settings(model)                 # refuse early
@@ -698,6 +737,11 @@ def load(model):
 
     mats = _materials(model)
     mat_index = {mid: i for i, mid in enumerate(mats.ids)}
+    if not np.any(mats.sig_a > 0.0) and \
+            all(s.boundary_type != "vacuum" for s in surfs):
+        raise Unsupported("no material absorbs and no surface is vacuum: "
+                          "a history would never end (OpenMC would run "
+                          "forever too)")
 
     univs = sorted(geo.get_all_universes().values(), key=lambda u: u.id)
     univ_index = {u.id: i for i, u in enumerate(univs)}
@@ -796,8 +840,9 @@ def load(model):
     src = sources.make(model, geom, cell_index, mat_index, univ_index,
                        Unsupported)
     warn += src.warnings
+    dets = _detectors(model, geom, src)
     for line in warn:
         warnings.warn(line, IgnoredSetting, stacklevel=2)
     return Problem(model, geom, mats, src, tallies,
                    np.array([c.id for c in cells]), [c.name for c in cells],
-                   warn)
+                   warn, dets)

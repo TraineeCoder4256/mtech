@@ -15,7 +15,7 @@ Columns:
   the model work they belong to.
 - **plan**: the push in `V1_PLAN.md` that closes it, or "hold" / "later".
 
-Last updated: v1.5.0 (30 Oct 2026).
+Last updated: v1.6.0 (30 Oct 2026).
 
 ## Geometry (left in v1.0 to v1.4.1)
 
@@ -50,7 +50,7 @@ Since v1.2 every OpenMC source kind is read except the rows below
 | `PointCloud` / `MeshSpatial` `bias` | built (v1.2), checked only by unit test: OpenMC 0.16 refuses the XML its own Python writes for it, so no OpenMC comparison | - | no | when OpenMC fixes it |
 | Source energy | ignored (one group) | - | YES at Stage 3 (energy becomes a network input) | Stage 3 |
 
-## Tallies (left in v1.0 to v1.5)
+## Tallies (left in v1.0 to v1.6)
 
 | gap | shows as | size | model change? | plan |
 |---|---|---|---|---|
@@ -75,7 +75,12 @@ Since v1.2 every OpenMC source kind is read except the rows below
 | Surface currents on surfaces inside a universe whose frame is moved (any lattice element but a centred one, a translated cell) | built (v1.5), checked only by conservation (net current into an absorber = - its absorption): OpenMC 0.16 gets these wrong (3 x 3 lattice +0.169 against an absorption of 0.493; `runs/2026-10-30/v1.5/openmc_bugs.log`) | - | no | when OpenMC fixes it |
 | Current on a rotational periodic wall: signed against the wall the particle comes in through | built (v1.5), checked by beam unit tests; OpenMC 0.16 signs it against the wall it left, after turning (no current of either wall; same log). Translational walls agree with OpenMC | - | no | when OpenMC fixes it |
 | Current on a reflective or white wall | exactly 0 (v1.5), as OpenMC (+w then -w at every reflection); partial currents there are 0 too | - | no | - |
-| Point detectors (flux at a point; Kobayashi reports these) | not available | M | no under the idea of using v1.1 profile points as stand-in collision sites; that idea is a method decision for Phani | Phani decides |
+| Point detectors with reflective, white or periodic boundaries | refused (v1.6): the next-event line would also have to follow the wall's images | M | no | later |
+| Point detectors with a source that is not isotropic (monodirectional, polar-azimuthal, biased isotropic, `FileSource`) | refused (v1.6): needs the source's angular density towards the point | S | no | later |
+| Point detector inside a scattering material without an averaging radius `r0` | by design (v1.6): mean right, variance infinite (the estimator's own property, as in MCNP); with `r0` > 0 the variance is finite and the bias of order r0 | - | no | - |
+| Point detectors in balls: scored at 4 profile points (plus the conditioned-walk term), not at the walk's own scatters | by design (v1.6): exact on average, loses the walk's correlation (noise only) | - | no | - |
+| Point detectors against OpenMC | only through a small void sphere's average (OpenMC 0.16 has no point detector) | - | no | - |
+| Point detectors with the trained network backend | not checked (v1.6 checks use the exact walk) | S | no expected, the scoring is the same | v1.6.x |
 | `UnstructuredMesh` (tetrahedral) | refused | L | no, but large engineering | later |
 | Flux-map pictures (`run.py maps`) draw a rectilinear mesh's bins as equal widths; `.vtk` output writes only flux and absorption and assumes even spacing | cosmetic (v1.1.3) | S | no | later |
 
@@ -115,3 +120,6 @@ Since v1.2 every OpenMC source kind is read except the rows below
 |---|---|---|
 | Plain MC 5-16% slower than v1.2 (sphere 4.10 vs 3.89 s, cask 13.50 vs 11.64 s, `runs/2026-10-29/v1.3/speed.log`) | v1.3 | cause of the last part not found; a fix would be v1.3.1 |
 | No race against OpenMC with weight windows | v1.0 | the fair comparison for shielding claims |
+| The validation pass rule treats a tally's bins as independent; neighbouring bins of a mesh tally are correlated (slab depth bins: +0.88 next door, +0.37 ten apart), so its chi2/dof spreads 3.5x wider than the rule allows and a correct code fails it by chance (7 of 40 seeds on the slab, `runs/2026-10-30/v1.6/slab_corr.log`) | v1.6 | a 10x OpenMC reference (validate's `REF_SCALE`) does not cure it: v1.6 validate still fails the slab's plain MC depth tallies (chi2/dof 2.16 and 2.24), from one 2.15-sigma shift of the whole profile. A rule that measures the correlation (effective degrees of freedom: about 6 for the slab's 60 bins) passes them (p 0.04; `neff_probe.log`): decision for Phani |
+| The pass rule also trusts a reference bin that scored almost nothing: OpenMC's analog run can give a deep bin 0 +- 0 (or a handful of counts with too small an error bar) where our implicit-capture run scores a small, well-measured value, and the z-score then reads 4-6 (robustness model 26: a face current deep behind a shield, 0 +- 0 in OpenMC; `runs/2026-10-30/v1.6/model26.log`) | v1.6 | the suite reruns a FAIL once at 5x before counting it; the same effective-dof decision as above could also drop bins with too few reference counts |
+| The robustness suite (v1.6) leaves out the three OpenMC 0.16 errors and draws 30 models | v1.6 | more models or more kinds of object: later |

@@ -10,6 +10,16 @@
     python run.py race                             OpenMC vs ours, head to head
     python run.py meshcheck                        mesh profile vs exact walks
     python run.py maps                             flux maps vs OpenMC, as PNG
+    python run.py robust                           random models vs OpenMC
+    python run.py detcheck                         point detectors: exact,
+                                                   balls vs plain, vs OpenMC
+    python run.py score                            one number out of 10 from
+                                                   the latest test, validate,
+                                                   robust and detector runs
+    python run.py check model.py                   what gmc3d will use, refuse
+                                                   and warn about, without
+                                                   running (also a problem
+                                                   name, model.xml or folder)
 
 Backends: mc (no balls), oracle (exact walk), table, network.
 --device cuda runs the network on a GPU (the transport stays on the CPU);
@@ -202,6 +212,41 @@ def cmd_sourcecheck(args, log):
     return "sourcecheck"
 
 
+def cmd_check(args, log):
+    from core import model_check
+    rep = model_check.check(model_check.load_model(args.model))
+    for line in rep.lines():
+        log(line)
+    return None
+
+
+def cmd_robust(args, log):
+    from checks import robust
+    res = robust.suite(DATA / "openmc", args.models, log=log)
+    (out_dir(args) / "robust.json").write_text(
+        json.dumps(output._plain(res), indent=1))
+    return "robust"
+
+
+def cmd_detcheck(args, log):
+    from checks import detcheck
+    res = detcheck.run(DATA / "openmc", args.particles, args.batches,
+                       seed=args.seed, log=log)
+    (out_dir(args) / "detcheck.json").write_text(
+        json.dumps(output._plain(res), indent=1))
+    return "detcheck"
+
+
+def cmd_score(args, log):
+    from checks import score
+    parts, total = score.score(out_dir(args))
+    text = score.report(parts, total)
+    log(text)
+    (out_dir(args) / "SCORE.md").write_text(
+        f"# gmc3d check score: {total:.1f} / 10\n\n{text}\n")
+    return "score"
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawTextHelpFormatter)
@@ -270,6 +315,21 @@ def main():
     s.add_argument("--r-star", type=float, default=3.0)
     common(s)
     s.set_defaults(seed=5)
+
+    s = sub.add_parser("robust")
+    s.add_argument("--models", type=int, default=30)
+    common(s)
+
+    s = sub.add_parser("detcheck")
+    common(s)
+    s.set_defaults(seed=7)
+
+    s = sub.add_parser("score")
+    common(s)
+
+    s = sub.add_parser("check")
+    s.add_argument("model", help="problem name, .py file, model.xml or "
+                   "folder of OpenMC xml files")
 
     args = p.parse_args()
     log = Log()

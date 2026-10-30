@@ -7,9 +7,8 @@ see the "model change?" column in `GAPS.md`), so none waits on model work.
 
 Status: proposed 27 Oct 2026; Phani gave the go on 29 Oct 2026. v1.1.3
 v1.2.0 (sources), v1.3.0 (multi-filter tallies), v1.4.0 and v1.4.1
-(geometry) and v1.5.0 (the medium tally items) are done. Phani, 30 Oct
-2026: the remaining decisions (point detectors, the slab reference rerun)
-go into v1.6.
+(geometry), v1.5.0 (the medium tally items) and v1.6.0 (hardening, point
+detectors, the score) are done.
 
 Numbering (Phani, 29 Oct 2026): v1.1.x is the mesh work and the easy
 tally items; each later area gets its own minor version (v1.2 sources,
@@ -113,16 +112,33 @@ scores +w then -w, which nets to 0), not a crossing and a return.
 | Surface current on reflective surfaces and on surfaces inside a filled universe | reflective: count both the crossing and the return, as OpenMC does; inner surfaces: use the direction in the universe's own frame |
 | `MeshSurfaceFilter` (currents through voxel faces) | flights: count face crossings in the grid walk. Balls: a ball's walk crosses voxel faces in ways (mu, s) cannot tell us, so when this filter is present the balls are shrunk to fit inside one voxel (`cap`). Exact, but fewer ball savings there |
 
+## v1.6 (done, v1.6.0, 30 Oct 2026): hardening, point detectors, the score
+
+Phani, 30 Oct 2026: point detectors by the profile-point idea (1-A), the
+slab reference rerun at 10x (2-A), the hardening rows, and one score out
+of 10 over every check.
+
+| item | how |
+|---|---|
+| Point detectors | next-event estimator from every isotropic emission (source sites, scatters); in a ball, sigma_s x its flux at 4 profile points, plus the term for the straight flights a ball's conditioned walk excludes (`core/detectors.py`). Checked exactly, balls against plain MC, and against OpenMC's small void spheres (`run.py detcheck`) |
+| Slab reference | OpenMC at 20M histories. It found the cause but did not cure the verdict: the depth bins are strongly correlated (about 6 independent among 60), so the chi2 rule fails a correct code by chance (7 of 40 seeds), and the seed-1 run fails against the 20M reference too. validate uses the 10x reference for the slab anyway |
+| V1-ROB-4 robustness suite | `run.py robust`: 30 random models against OpenMC, each must pass or be refused cleanly |
+| V1-ROB-5 edge cases | `tests/test_edge_cases_v160.py` (found and fixed: a source exactly on a surface hung) |
+| V1-ROB-6 `run.py check` | every refusal and warning of a model at once, without running it |
+| V1-ROB-7 accepted inputs | `ACCEPTED_INPUTS.md` |
+| The score | `run.py score`: unit tests 2, against OpenMC 4, exact answers 1, random models 2, point detectors 1 |
+
 ## Needs your decision (research, not engineering)
 
-- **Point detectors** (flux at a point, which Kobayashi reports). The
-  standard next-event estimator scores from every collision, and inside a
-  ball the collisions are invisible. One idea: the v1.1 profile points are
-  distributed like collisions (collision density is proportional to flux),
-  so they could serve as pseudo-collision sites and stay unbiased. That is
-  a method question, and the detector's infinite-variance problem near the
-  point comes with it. Yours to decide; until then, small voxels with
-  `cap`.
+- **The pass rule for correlated bins** (found in v1.6). The validation
+  rule treats a tally's bins as independent; neighbouring mesh bins are
+  not (the slab's: +0.88), so the rule fails a correct code by chance on
+  such tallies and reads too low a bar on others. A rule that measures
+  the correlation (effective degrees of freedom from our own run's
+  groups) would fix it everywhere (it passes the slab: p 0.04); a 10x
+  reference does not. The same rule could also leave out bins where the reference
+  scored almost nothing (OpenMC's analog run gives such a bin 0 +- 0;
+  robustness model 26).
 
 ## Order and why
 

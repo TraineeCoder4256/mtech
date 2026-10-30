@@ -7,6 +7,58 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v1.6.0 (30 Oct 2026): hardening, point detectors, one score out of 10
+
+- **Point detectors** (`problems/common.point_detector`, `core/detectors.py`):
+  the flux at a point by the next-event estimator, scored from every
+  isotropic emission (source sites and scatters). Inside a ball, the
+  unseen scatters are scored as sigma_s x the ball's flux at 4 profile
+  points, plus a term for the straight flights that a ball's conditioned
+  walk leaves out. Without that term the detector check measured balls
+  2-6% low; with it, all four detectors agree with plain MC (z -1.30 to
+  +0.11). An optional averaging radius r0 gives finite variance inside a
+  scattering material. Refused with reflective, white or periodic walls,
+  and with non-isotropic sources. `run.py detcheck` checks detectors
+  three ways: exactly (rel err 5e-10), balls against plain MC, and
+  against OpenMC's small void spheres.
+- **Slab reference at 20M histories**, as Phani asked. It does not
+  settle the slab depth item, but it found its cause.
+  - The 60 depth bins are strongly correlated: neighbours +0.88, about 6
+    independent bins in all.
+  - So their chi2/dof spreads 3.5x wider than the pass rule assumes: of
+    40 runs of a correct code, 7 fail it.
+  - The run that fails (plain MC, seed 1) has a total flux 2.15 sigma low,
+    and every bin moves with it. It fails against the 20M reference too
+    (chi2/dof 2.16).
+  - A rule that counts effective bins passes it (p 0.04). That rule is
+    left for Phani to decide.
+  - validate now uses the 10x reference for the slab (`REF_SCALE`).
+- **Robustness suite** (`run.py robust`, V1-ROB-4): 30 models built at
+  random within what gmc3d accepts, each against OpenMC (plain MC and
+  exact balls). Each must pass or be refused cleanly; about one in seven
+  is given an unsupported feature to test the refusal.
+- **Edge cases** (`tests/test_edge_cases_v160.py`, V1-ROB-5). Found and
+  fixed: a source site exactly on a surface lay in no cell and was redrawn
+  for ever (a hang). It is now moved 1e-8 cm along its direction, which is
+  how OpenMC decides the side. Also new: a source no site of which can be
+  accepted now stops after about 20 rounds instead of 1000, and a model in
+  which nothing absorbs and nothing leaks is refused.
+- **`run.py check model.py`** (V1-ROB-6): every refusal and warning of a
+  model at once, without running it. It takes a problem name, a Python
+  file, model.xml or a folder. It works around OpenMC 0.16 dropping
+  `<macroscopic>` when it reads materials from XML.
+- **`ACCEPTED_INPUTS.md`** (V1-ROB-7): every OpenMC class and setting,
+  marked used, refused or warned.
+- **`run.py score`**: one number out of 10, with these weights:
+  - unit tests 2;
+  - tallies against OpenMC 4;
+  - exact answers 1;
+  - random models 2;
+  - point detectors 1.
+
+  It is printed with the failing checks and with what it does not
+  measure: the trained network, speed, and physics beyond Stage 1.
+
 ## v1.5.0 (30 Oct 2026): curved meshes, currents on any surface, mesh surface currents
 
 - **`CylindricalMesh` and `SphericalMesh`** in a `MeshFilter`, with any

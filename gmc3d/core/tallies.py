@@ -960,9 +960,9 @@ class Accumulator:
     old estimate, for comparison only).  See this file's docstring.
     """
 
-    def __init__(self, layout):
+    def __init__(self, layout, n_detectors=0):
         self.layout = layout
-        n = layout.n_entries
+        n = layout.n_entries + n_detectors      # detectors after tallies
         self.s1 = np.zeros(n)             # batch-level, for the comparison
         self.s2 = np.zeros(n)
         self.batches = 0
@@ -1010,7 +1010,7 @@ class Accumulator:
         var = np.maximum(self.s2 / b - mean * mean, 0.0) / max(b - 1, 1)
         return mean, np.sqrt(var)
 
-    def results(self, tallies, counters, timing, settings):
+    def results(self, tallies, counters, timing, settings, detectors=()):
         mean, se = self.mean_se()
         out = {}
         for t, tl in enumerate(tallies):
@@ -1024,6 +1024,15 @@ class Accumulator:
                 "filters": [(f.kind, f.nbins) for f in tl.filters],
                 "mean": mean[a:a + NS * nb].reshape(nb, NS),
                 "se": se[a:a + NS * nb].reshape(nb, NS)}
+        base = self.layout.n_entries
+        for j, (name, xyz, r0) in enumerate(detectors):
+            mu, sd = np.zeros((1, NS)), np.zeros((1, NS))
+            mu[0, 0], sd[0, 0] = mean[base + j], se[base + j]
+            out[name] = {"id": None, "filter": "detector", "bin_ids": [],
+                         "mesh": None, "scores": ["flux"],
+                         "mesh_type": "rect", "edges": None, "filters": [],
+                         "point": list(xyz), "r0": r0, "mean": mu,
+                         "se": sd}
         _, se_b = self.mean_se_batches()
         return Results(float(mean[LEAKAGE]), float(se[LEAKAGE]), out,
                        counters, timing, settings,

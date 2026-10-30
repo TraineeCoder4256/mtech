@@ -1,0 +1,13 @@
+correlation of depth bins  1 apart: mean +0.878
+correlation of depth bins  2 apart: mean +0.782
+correlation of depth bins  5 apart: mean +0.567
+correlation of depth bins 10 apart: mean +0.367
+correlation of depth bins 20 apart: mean +0.158
+
+chi2/dof of 40 runs vs OpenMC 20M: mean 1.117, sd 0.637, min 0.290, max 2.820
+for 60 independent bins: mean 1.0, sd 0.183
+runs above the p = 0.001 line (1.660): 7 of 40 (independent bins: 0.04 expected)
+
+effective number of independent directions (participation ratio of the covariance): 3.7 of 60
+
+v1.5's failing run (plain MC, seed 1, 2M) vs OpenMC 20M: depth chi2/dof 1.266, depth1d 1.278: PASS

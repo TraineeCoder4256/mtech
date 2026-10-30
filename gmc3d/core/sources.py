@@ -69,6 +69,8 @@ import openmc.stats as st
 from . import geometry as G
 
 MAX_TRIES = 1000            # rounds of drawing before giving up
+NUDGE = 1.0e-8              # cm: a site on a surface moves this far along
+                            # its direction (transport.TINY)
 
 
 class _Unsupported(ValueError):
@@ -295,6 +297,7 @@ class _Independent:
         self.space = _space(s.space, where)
         self.angle, self.iso = _angle(s.angle, where)
         self.ew, self.tw = _extra_weight(s.energy), _extra_weight(s.time)
+        self.always_isotropic = bool(self.iso)    # point detectors need it
 
     def draw(self, n, rng):
         xyz, w1 = self.space(n, rng)
@@ -322,6 +325,7 @@ class _Mesh:
                                    f"own constraints")
             self.parts.append(_Independent(e, f"{where} element {k}"))
         self.strength = np.array([e.strength for e in s.sources], float)
+        self.always_isotropic = all(p.iso for p in self.parts)
 
     def draw(self, n, rng):
         idx, w = _choose(self.strength, None, n, rng)
@@ -427,9 +431,24 @@ class SourceSampler:
         return (np.array(cells, np.int64), np.array(mats, np.int64),
                 np.array(univs, np.int64))
 
-    def _ok(self, xyz, dom):
-        """Inside the geometry and (if any) inside the domains."""
+    def _ok(self, xyz, dom, uvw=None):
+        """Inside the geometry and (if any) inside the domains.
+
+        A site exactly ON a surface is in no cell by the region formulas.
+        OpenMC then decides the side by the site's direction (its
+        `Surface::sense`); moving the site NUDGE along its direction does
+        the same, so with uvw given such sites are moved (xyz is changed
+        in place) and kept (v1.6; before, they were redrawn forever)."""
         cells, univs, mats = G.paths_many(self.geom, xyz)
+        lost = mats == G.LOST
+        if uvw is not None and lost.any():
+            at = np.flatnonzero(lost)
+            q = xyz[at] + NUDGE * uvw[at]
+            c2, u2, m2 = G.paths_many(self.geom, q)
+            fix = m2 != G.LOST
+            at, q = at[fix], q[fix]
+            xyz[at], cells[at], univs[at], mats[at] = q, c2[fix], u2[fix], \
+                m2[fix]
         ok = mats != G.LOST
         if dom is not None:
             c, m, u = dom
@@ -457,15 +476,15 @@ class SourceSampler:
                 share = max(kept / drawn, 1e-3) if drawn else 1.0
                 m = int(min(max(1.2 * todo.size / share, 64), 50 * n))
                 p, d, w, i = self.parts[k].draw(m, rng)
-                ok = np.flatnonzero(self._ok(p, self.domains[k]))
+                ok = np.flatnonzero(self._ok(p, self.domains[k], d))
                 drawn, kept = drawn + m, kept + ok.size
                 ok = ok[:todo.size]
                 put, todo = todo[:ok.size], todo[ok.size:]
                 xyz[put], uvw[put], wgt[put], iso[put] = p[ok], d[ok], \
                     w[ok], i[ok]
-                if todo.size == 0:
-                    break
-            else:
+                if todo.size == 0 or (kept == 0 and drawn >= 1000 * n):
+                    break       # done, or no site can be accepted at all
+            if todo.size:
                 raise RuntimeError(
                     f"source {k}: {todo.size} of {n} sites still outside "
                     f"the geometry or its domains after {drawn:,} draws")
