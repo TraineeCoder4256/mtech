@@ -1,4 +1,4 @@
-# Accepted inputs (gmc3d v1.6, SRS V1-ROB-7)
+# Accepted inputs (gmc3d v1.6.1, SRS V1-ROB-7)
 
 These are the OpenMC 0.16 classes and settings that gmc3d reads. Anything
 else falls into one of two groups:
@@ -28,7 +28,8 @@ and whether closing each one needs the network to change, are in
 | `particles`, `batches`, `seed` | used |
 | `source` | used, see Sources |
 | `photon_transport` | refused (neutrons only) |
-| `survival_biasing`, `weight_windows`, `cutoff`, `temperature`, `max_lost_particles`, tally `triggers`, and every other setting | warned. They change only the noise or the run's length |
+| tally `triggers` (with `trigger_active`, `trigger_max_batches`, `trigger_batch_interval`) | used: batches run until every trigger is met (v1.6.1) |
+| `survival_biasing`, `weight_windows`, `cutoff`, `temperature`, `max_lost_particles`, and every other setting | warned. They change only the noise or the run's length |
 | `output`, `verbosity`, `statepoint`, `sourcepoint`, `track`, `max_tracks` | quiet: these only concern OpenMC's own files |
 
 ## Materials
@@ -40,6 +41,8 @@ and whether closing each one needs the network to change, are in
 | nuclides in a material | refused (macroscopic data only) |
 | anisotropic scattering (Legendre order > 0, non-zero) | refused (stage 2) |
 | fissile data | refused (stage 4) |
+| scattering multiplicity other than 1 ((n,xn)) | refused (v1.6.1) |
+| `inverse_velocity` | used for time filters and the inverse-velocity score (v1.6.1) |
 | total != absorption + scattering | refused |
 | nothing absorbs and no surface is vacuum | refused, because no history would end (v1.6) |
 
@@ -51,12 +54,12 @@ and whether closing each one needs the network to change, are in
 | `Sphere` | used |
 | `XCylinder`, `YCylinder`, `ZCylinder`, `Cylinder` (any axis) | used |
 | `XCone`, `YCone`, `ZCone`, `Cone` (any axis) | used |
-| `XTorus`, `YTorus`, `ZTorus` (circular or elliptical tube) | used. Refused if the tube meets the axis (c >= a) |
+| `XTorus`, `YTorus`, `ZTorus` (circular or elliptical tube, horn and spindle tori too) | used |
 | `Quadric` | used (the ball distance near it is a lower bound, so slower but exact) |
 | boundary `transmission`, `vacuum`, `reflective`, `white` | used |
-| boundary `periodic`, translational (parallel planes) | used |
-| boundary `periodic`, rotational (two planes through the z axis) | used. Refused for planes that do not contain the z axis |
-| `albedo` other than 1 | refused |
+| boundary `periodic`, translational (parallel planes; general `Plane`s pair by `periodic_surface` or by being the only parallel partner) | used |
+| boundary `periodic`, rotational (two planes through the z axis, the problem on either side of each) | used. Refused for planes that do not contain the z axis, as in OpenMC |
+| `albedo` | used (v1.6.1): the weight not sent back counts as leakage, as in OpenMC |
 | any other surface class | refused |
 
 ## Geometry
@@ -64,7 +67,7 @@ and whether closing each one needs the network to change, are in
 | input | gmc3d |
 |---|---|
 | `Cell` filled with a material, void, a `Universe` or a lattice | used |
-| a cell with a list of materials (distributed materials) | used. Refused inside a lattice's outer universe |
+| a cell with a list of materials (distributed materials) | used. Refused inside a lattice's outer universe (OpenMC does not number instances there) |
 | cell `translation`, `rotation` | used |
 | region operators `&`, `\|`, `~` | used |
 | `RectLattice` (2D, 3D), with an `outer` universe | used |
@@ -78,10 +81,11 @@ and whether closing each one needs the network to change, are in
 | `IndependentSource` (`particle` 'neutron') | used |
 | space `Point`, `Box`, `CartesianIndependent`, `CylindricalIndependent`, `SphericalIndependent`, `PointCloud`, `MeshSpatial` | used |
 | `Box(only_fissionable=True)` | refused |
-| angle `Isotropic`, `Monodirectional`, `PolarAzimuthal` | used |
-| energy and time distributions | read only for their biasing weights (one group, steady state) |
-| `FileSource` (.h5) | used |
-| `MeshSource` | used |
+| angle `Isotropic` (with or without a `bias`), `Monodirectional`, `PolarAzimuthal` | used |
+| energy distribution | read only for its biasing weights (one group) |
+| time distribution | used: particles carry time (v1.6.1) |
+| `FileSource` (.h5, MCPL `.mcpl` / `.mcpl.gz`) | used |
+| `MeshSource`, `MeshSpatial` on Regular (1D, 2D, 3D), Rectilinear, Cylindrical, Spherical meshes | used. Refused on an `UnstructuredMesh` |
 | `CompiledSource` | refused (user C++ code) |
 | constraints `domains` (cell, material, universe) | used, by redrawing as OpenMC does |
 | constraint `fissionable` | refused |
@@ -90,24 +94,31 @@ and whether closing each one needs the network to change, are in
 
 ## Tallies
 
+Since v1.6.1 every filter and score OpenMC 0.16 runs in a one-group,
+fixed-source problem is used. Tallies the fast kernels take (cell,
+material, energy, mesh and surface filters in the usual combinations) run
+there; every other one runs in the general scorer (`core/ext.py`), checked
+against OpenMC by `python run.py gapcheck`.
+
 | input | gmc3d |
 |---|---|
-| scores `flux`, `absorption`, `scatter`, `total` (track length) | used |
-| score `current` with a `SurfaceFilter` or a `MeshSurfaceFilter` | used |
-| any other score | refused |
-| `estimator` 'collision' or 'analog' | refused (collisions inside a ball are not seen) |
+| scores `flux`, `absorption`, `scatter`, `total`, `nu-scatter`, `inverse-velocity` | used |
+| scores `fission`, `nu-fission`, `kappa-fission`, `prompt-nu-fission`, `delayed-nu-fission`, `decay-rate` | used: 0, as OpenMC gives without fissile material |
+| score `current` | used with Surface, CellFrom, MaterialFrom or MeshSurface filters |
+| score `events` | refused (it counts how a code transports, not the problem) |
+| `heating`, `(n,gamma)` and `EnergyFunctionFilter` | refused, as OpenMC 0.16 refuses them in multigroup mode |
+| `estimator` 'collision' or 'analog' | warned: scored by track length (the same expected answer) |
 | nuclides other than 'total', derivatives | refused |
-| `CellFilter` (any level, filled cells too), `MaterialFilter`, `EnergyFilter` | used, in any combination |
-| `MeshFilter` on `RegularMesh` (1D, 2D, 3D), `RectilinearMesh`, `CylindricalMesh`, `SphericalMesh` | used, combined with the filters above |
-| `SurfaceFilter` (any surface, any level, any boundary) | used, alone or with cell, cell-from, material and energy filters |
-| `CellFromFilter` | used with a `SurfaceFilter` (partial currents). Refused otherwise |
-| `MeshSurfaceFilter` on a Regular or Rectilinear mesh | used, alone. Refused on curved meshes or combined with other filters |
-| `MeshBornFilter`, `DistribcellFilter`, angle, time, and any other filter | refused |
+| `CellFilter`, `CellFromFilter`, `MaterialFilter`, `MaterialFromFilter`, `UniverseFilter`, `CellInstanceFilter`, `DistribcellFilter`, `CellBornFilter`, `EnergyFilter`, `EnergyoutFilter`, `ParticleFilter`, `TimeFilter`, `WeightFilter`, `CollisionFilter` | used, in any combination, a kind twice too |
+| `MeshFilter`, `MeshBornFilter`, `MeshMaterialFilter` on `RegularMesh` (1D, 2D, 3D, with `translation`), `RectilinearMesh`, `CylindricalMesh`, `SphericalMesh` | used, combined with any of the above |
+| `SurfaceFilter` (any surface, any level, any boundary), `MuSurfaceFilter` | used; a Surface, CellFrom or MaterialFrom tally with flux or current is scored at crossings, lattice walls included, as in OpenMC |
+| `MeshSurfaceFilter` on any of those meshes | used, with energy, time and the other non-cell filters. Refused with cell, material or surface filters, as in OpenMC |
+| `PolarFilter`, `AzimuthalFilter`, `SphericalHarmonicsFilter`, `MuFilter`, `LegendreFilter`, `SpatialLegendreFilter`, `ZernikeFilter`, `ZernikeRadialFilter` | used. Mu and Collision filters, and Polar, Azimuthal and SphericalHarmonics on a track tally, make the run plain Monte Carlo (warned) |
+| `ReactionFilter`, `ParentNuclideFilter`, `ParticleProductionFilter`, `DelayedGroupFilter` | used: 0, as OpenMC gives here |
 | unstructured (tetrahedral) meshes | refused (large gap) |
-| a filter used twice in one tally | refused |
 
 ## gmc3d's own additions (no OpenMC equivalent)
 
 | input | gmc3d |
 |---|---|
-| point detectors, `common.point_detector(model, name, xyz, r0)` (v1.6) | next-event estimator, with balls as described in `GAPS.md`. Refused unless every source is isotropic, and refused with reflective, white or periodic boundaries |
+| point detectors, `common.point_detector(model, name, xyz, r0)` (v1.6) | next-event estimator, with balls as described in `GAPS.md`. Any source, any boundary (v1.6.1); refused only with reflective or periodic walls in a problem with no material at all |

@@ -24,9 +24,13 @@ What a model is made of, drawn within what gmc3d accepts:
     tallies     total; cell; material; a regular mesh; then at random a
                 cylindrical or spherical mesh, currents on the world's
                 faces, a mesh-surface tally, a cell x energy tally
-    refusals    about one model in seven also asks for something gmc3d
-                does not do (an albedo, a collision estimator, a fission
-                score, a horn torus): it must be refused, naming it
+    extras      about one model in seven also has something v1.6.1 added
+                (an albedo, a collision estimator, a fission score, a
+                horn torus), which must PASS like the rest; until v1.6.0
+                these were refusals
+    refusals    about one model in ten also asks for something gmc3d
+                still does not do (a tally derivative, the 'events'
+                score): it must be refused, naming it
 
 Left out on purpose: the three places OpenMC 0.16 is itself wrong
 (runs/2026-10-30/v1.5/openmc_bugs.log): spherical-mesh theta edges at
@@ -232,25 +236,40 @@ def build(k):
         tallies.append(common.flux_tally("cell_e", None))
         tallies[-1].filters = [openmc.CellFilter(cells[:2]),
                                openmc.EnergyFilter([0.0, 20.0e6])]
-    # about one model in seven also asks for something gmc3d does not do,
-    # to check that it is refused cleanly while the model is read
-    bad = None
+    # about one model in seven also has something v1.6.1 added (refused
+    # until v1.6.0; the same draws, so model k keeps its shape)
+    extra = None
     if rng.random() < 0.15:
-        bad = str(rng.choice(["albedo", "collision", "fission", "horn"]))
-        if bad == "albedo":
+        extra = str(rng.choice(["albedo", "collision", "fission", "horn"]))
+        if extra == "albedo":
             v = next(f for f in faces if f.boundary_type == "vacuum")
             v.albedo = 0.5
-        elif bad == "collision":
+        elif extra == "collision":
             tallies[0].estimator = "collision"
-        elif bad == "fission":
+        elif extra == "fission":
             tallies[1].scores = ["flux", "fission"]
         else:
             horn = openmc.ZTorus(x0=-Lx + 1.0 + half, a=0.2, b=0.4, c=0.4)
-            cells[0].region = cells[0].region & +horn
+            # the torus's inside goes to the background, so no point is in
+            # no cell (v1.6.1: before, that hole lost particles in OpenMC)
+            old = cells[0].region
+            cells[0].region = old & +horn
+            cells[-1].region = cells[-1].region | (old & -horn)
+    # and about one in ten asks for something gmc3d still does not do, to
+    # check that it is refused cleanly while the model is read
+    bad = None
+    if rng.random() < 0.10:
+        bad = str(rng.choice(["derivative", "events"]))
+        if bad == "derivative":
+            tallies[0].derivative = openmc.TallyDerivative(
+                variable="density", material=materials[0].id)
+        else:
+            tallies[0].scores = list(tallies[0].scores) + ["events"]
     desc = (f"{nobj} object(s) {kinds}, {nmat} materials, faces x/y/z "
             f"{bcs}, source {sk}/{ak}"
             + (" + constraint" if src.constraints else "")
             + f", tallies {[t.name for t in tallies]}"
+            + (f", with {extra}" if extra else "")
             + (f", UNSUPPORTED {bad}" if bad else ""))
     return openmc.Model(geometry, materials, settings,
                         openmc.Tallies(tallies)), desc

@@ -1,0 +1,91 @@
+{
+ "checks": [
+  {
+   "name": "exact beyond_both",
+   "pass": true,
+   "detail": "ours 0.001512378412, exact 0.001512378411, rel err 5.0e-10"
+  },
+  {
+   "name": "exact inner",
+   "pass": true,
+   "detail": "ours 0.0133355936, exact 0.0133355936, rel err 1.8e-15"
+  },
+  {
+   "name": "exact far",
+   "pass": true,
+   "detail": "ours 0.0005520571275, exact 0.0005520571272, rel err 5.0e-10"
+  },
+  {
+   "name": "balls vs plain MC, cavity",
+   "pass": true,
+   "detail": "balls 0.000882388 +- 7e-06, plain 0.000890178 +- 6.6e-06, z -0.81"
+  },
+  {
+   "name": "balls vs plain MC, outside",
+   "pass": true,
+   "detail": "balls 1.04172e-05 +- 1.3e-07, plain 1.04306e-05 +- 1.3e-07, z -0.07"
+  },
+  {
+   "name": "balls vs plain MC, medium",
+   "pass": true,
+   "detail": "balls 0.00200278 +- 2.2e-05, plain 0.00204192 +- 2.3e-05, z -1.24 (r0 0.3 cm)"
+  },
+  {
+   "name": "balls vs plain MC, medium_deep",
+   "pass": true,
+   "detail": "balls 0.0088255 +- 6.2e-05, plain 0.00880665 +- 5e-05, z +0.24 (r0 0.3 cm)"
+  },
+  {
+   "name": "plain MC detector vs OpenMC, cavity",
+   "pass": true,
+   "detail": "detector 0.000890178 +- 6.6e-06, OpenMC 0.000869722 +- 8.8e-06, z +1.86"
+  },
+  {
+   "name": "exact balls detector vs OpenMC, cavity",
+   "pass": true,
+   "detail": "detector 0.000882388 +- 7e-06, OpenMC 0.000869722 +- 8.8e-06, z +1.13"
+  },
+  {
+   "name": "plain MC detector vs OpenMC, outside",
+   "pass": true,
+   "detail": "detector 1.04306e-05 +- 1.3e-07, OpenMC 1.03772e-05 +- 2.9e-07, z +0.17"
+  },
+  {
+   "name": "exact balls detector vs OpenMC, outside",
+   "pass": true,
+   "detail": "detector 1.04172e-05 +- 1.3e-07, OpenMC 1.03772e-05 +- 2.9e-07, z +0.13"
+  }
+ ],
+ "timing": {
+  "plain_mc_s": 113.15464288199996,
+  "balls_s": 113.5440933110001
+ },
+ "counters_mc": {
+  "histories": 2000000,
+  "flights": 42918101,
+  "scatters": 40600259,
+  "crossings": 2317842,
+  "balls": 0,
+  "ball_skipped": 0,
+  "roulette_killed": 872089,
+  "lost": 0,
+  "rescued": 0,
+  "mesh_points": 0,
+  "backend_calls": 0,
+  "source_redrawn": 0
+ },
+ "counters_balls": {
+  "histories": 2000000,
+  "flights": 7291597,
+  "scatters": 5029677,
+  "crossings": 2261920,
+  "balls": 4390075,
+  "ball_skipped": 385546,
+  "roulette_killed": 888047,
+  "lost": 0,
+  "rescued": 0,
+  "mesh_points": 0,
+  "backend_calls": 346,
+  "source_redrawn": 0
+ }
+}

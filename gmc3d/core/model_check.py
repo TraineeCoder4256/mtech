@@ -169,15 +169,19 @@ def check(model):
         mats_ = I.Materials([], [], np.zeros(0), np.zeros(0), np.zeros(0))
     mat_index = {m.id: i for i, m in enumerate(
         list(model.materials) or geo.get_all_materials().values())}
+    ctx = {"univ_index": {u.id: i for i, u in enumerate(
+        sorted(univs.values(), key=lambda u: u.id))}, "inst": False}
     for t in model.tallies:
         with rep.part(f"tally {t.id}"):
             tw = []
             I._check_tally(t, tw)
-            tl = I._tally(t, model, mats_, cell_index, mat_index, surf_index)
+            tl = I._tally(t, model, mats_, cell_index, mat_index, surf_index,
+                          ctx, tw)
             rep.warned += tw
+            nb = "per instance" if tl.nbins < 0 else f"{tl.nbins} bins"
             rep.used.append(f"tally {t.id} '{t.name}': filters "
-                            f"[{tl.filter}], scores {list(t.scores)}, "
-                            f"{tl.nbins} bins")
+                            f"[{tl.filter}], scores {list(t.scores)}, {nb}"
+                            + (" (general scorer)" if tl.ext else ""))
 
     # Sources need the compiled geometry: load the model without its
     # tallies (refused tallies are already listed above), then whole.

@@ -89,6 +89,7 @@ import numpy as np
 from numba import njit, prange
 
 from . import detectors as DT
+from . import ext as EX
 from . import geometry as G
 from . import rng
 from . import surfaces as S
@@ -141,13 +142,77 @@ Detectors = namedtuple("Detectors", [
     "sig_t",                          # per material, 1/cm
     "base",                           # entry of acc where they start
     "k",                              # profile points per ball
+    "img", "img_det",                 # (m, 3) each detector and its wall
+                                      # images; the detector of each
+    "img_cut", "walls",               # images used within this distance
+                                      # (cm); any wall (v1.6.1)
+])
+# what the general tally scorer (ext.py) follows of each particle, passed
+# as its own argument too; arrays of length 1 when no ext tally exists
+ExtState = namedtuple("ExtState", [
+    "time",                           # s
+    "ncoll",                          # scatters so far
+    "mu_last",                        # cosine of the last scatter
+    "prev_mat",                       # material before the last crossing
+                                      # (-1 after a scatter: OpenMC's
+                                      # material_last)
+    "w_analog",                       # the weight an analog game carries
+                                      # (the birth weight; WeightFilter)
+    "born",                           # (n, k) birth bins (CellBorn, MeshBorn)
+    "prev",                           # (n, MAX_LEVELS) cells before the
+                                      # last crossing (OpenMC's cell_last)
+    "v_mu",                           # Mu-filter runs only (else empty):
+                                      # the last scatter cosine of the
+                                      # analog history this walk stands
+                                      # for, once it has been absorbed
+                                      # (NaN while it lives; _advance)
 ])
 K_DET = 4                # profile points per ball for detectors
+BIRTH_SLICE = 4096       # source sites scored at detectors per call
+
+
+def _ext_state(n, n_born, on, mu_on=False):
+    nv = n if on and mu_on else 0
+    n = n if on else 1
+    return ExtState(np.zeros(n), np.zeros(n, np.int64), np.zeros(n),
+                    np.full(n, -1, np.int64), np.ones(n),
+                    np.full((n, max(n_born, 1)), -1, np.int64),
+                    np.full((n, G.MAX_LEVELS), -1, np.int64),
+                    np.full(nv, np.nan))
+
+
+@njit(cache=True, inline="always")
+def _iv(E, mat):
+    """Inverse velocity in material mat (the last entry: void)."""
+    return E.iv[mat] if mat >= 0 else E.iv[E.iv.size - 1]
+
+
+@njit(cache=True)
+def _ext_cross(row, E, L, X, g, P, XS, i, k, sw, frm, to, m_to, m_from, x,
+               y, z, u, v, w, ws):
+    """A crossing of surface k for the ext surface tallies (ext.cross),
+    with MuSurface's cosine |u . n| (OpenMC flips the normal to the side
+    crossed to, so it is never negative)."""
+    nx, ny, nz = S.normal(g.surf_kind[k], g.surf_coef[k], x, y, z)
+    nn = np.sqrt(nx * nx + ny * ny + nz * nz)
+    mus = min(abs(u * nx + v * ny + w * nz) / nn, 1.0) if nn > 0.0 else 1.0
+    EX.cross(row, E, L, X, g, P, XS, i, k, sw, frm, to, m_to, m_from, x, y,
+             z, u, v, w, mus, ws)
+
+
+@njit(cache=True)
+def _ext_crossed(XS, i, cells, mat):
+    """After any crossing: the cells and material left (CellFrom and
+    MaterialFrom on later flights)."""
+    for lv in range(cells.size):
+        XS.prev[i, lv] = cells[lv]
+    XS.prev_mat[i] = mat
 
 
 def _no_detectors(n_entries, n_mats):
     return Detectors(False, np.zeros((0, 3)), np.zeros(0),
-                     np.zeros(max(n_mats, 1)), n_entries, 1)
+                     np.zeros(max(n_mats, 1)), n_entries, 1,
+                     np.zeros((0, 3)), np.zeros(0, np.int64), INF, False)
 
 
 # ------------------------------------------------------------- directions
@@ -255,21 +320,19 @@ def source_rng(seed, batch):
 # ------------------------------------------------------------ one history
 @njit(cache=True)
 def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
-           dpth):
+           dpth, E, XS, ws):
     """Run particle i until it dies or asks for a ball step.
 
     pth, last, to, univ (MAX_LEVELS each) and scr (tallies.scratch) are
     the calling thread's work space: the cell at every level of the
     particle's path now, at the last successful descent (for a surface
     tally's cell-from), and on the far side of a crossing; dpth is the
-    point detectors' (their lines descend the geometry too)."""
+    point detectors' (their lines descend the geometry too), ws the
+    general scorer's (E, XS: ext.py; E.n = 0 when there is none)."""
     x, y, z = P.x[i], P.y[i], P.z[i]
     u, v, w = P.u[i], P.v[i], P.w[i]
     wgt = P.wgt[i]
     fresh = P.fresh[i]
-
-    if D.on and P.status[i] == MOVING and P.fresh[i]:
-        DT.score(row, D, g, D.sig_t, wgt, x, y, z, dpth)  # isotropic birth
 
     if P.status[i] == READY:
         # ---- finish a ball step: the backend has filled mu and s
@@ -317,6 +380,12 @@ def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
                 px, py, pz = rng.isotropic(P.seed, i)
                 DT.score(row, D, g, D.sig_t, excess, x + tl * px,
                          y + tl * py, z + tl * pz, dpth)
+        if E.n:
+            ivm = _iv(E, mat)
+            EX.ball(row, E, L, X, g, P, XS, i, path, XS.prev[i], mat, sa,
+                    ss, flux, x, y, z, d, s_cm, ivm, ph, ws)
+            XS.time[i] += s_cm * ivm
+            XS.prev_mat[i] = -1
         wgt *= np.exp(-sa * s_cm)
         nx, ny, nz = rng.isotropic(P.seed, i)    # exit point
         x, y, z = x + d * nx, y + d * ny, z + d * nz
@@ -338,7 +407,8 @@ def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
     for _ in range(MAX_EVENTS):
         want_near = fresh and ph.ball_on
         cell, mat, near, t_ray, surf, lvl, sg = G._descend(
-            g, x, y, z, u, v, w, want_near, True, pth, L.has_surface)
+            g, x, y, z, u, v, w, want_near, True, pth,
+            L.has_surface or E.n > 0)
         at_root = lvl == 0
 
         if mat == G.LOST:
@@ -362,22 +432,50 @@ def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
                     T.score_surface(row, L, k,
                                     _crossing_sign(g, k, x, y, z, u, v, w)
                                     * wgt, last, last, last_mat, scr)
+                if E.n:
+                    _ext_cross(row, E, L, X, g, P, XS, i, k, _crossing_sign(
+                        g, k, x, y, z, u, v, w) * wgt, last, last, last_mat,
+                        XS.prev_mat[i], x, y, z, u, v, w, ws)
                 row[T.LEAKAGE] += wgt
                 P.status[i] = DEAD
                 return
+            turn = g.surf_bc[k] == G.BC_REFLECTIVE or \
+                g.surf_bc[k] == G.BC_WHITE
+            if E.n and turn:
+                _ext_cross(row, E, L, X, g, P, XS, i, k, _crossing_sign(
+                    g, k, x, y, z, u, v, w) * wgt, last, last, last_mat,
+                    XS.prev_mat[i], x, y, z, u, v, w, ws)
             x, y, z, u, v, w = _boundary(g, k, P, i, x, y, z, u, v, w)
-            if g.surf_bc[k] == G.BC_PERIODIC and L.has_surface:
+            if E.n and turn:
+                _ext_cross(row, E, L, X, g, P, XS, i, k, _crossing_sign(
+                    g, k, x, y, z, u, v, w) * wgt, last, last, last_mat,
+                    last_mat, x, y, z, u, v, w, ws)
+            w_in = wgt                  # currents use it (OpenMC: wgt_last)
+            if g.surf_shift[k, 4] != 1.0:             # albedo
+                row[T.LEAKAGE] += wgt * (1.0 - g.surf_shift[k, 4])
+                wgt *= g.surf_shift[k, 4]
+            if D.on and g.surf_bc[k] == G.BC_WHITE:
+                _white_detectors(g, k, D, row, wgt, x, y, z, dpth)
+            if g.surf_bc[k] == G.BC_PERIODIC and (L.has_surface or E.n):
                 k2 = int(g.surf_shift[k, 3])         # as at a crossing
                 to[:] = -1
                 m_to = G._path(g, x + TINY * u, y + TINY * v, z + TINY * w,
                                to, univ)
-                T.score_surface(row, L, k2, _crossing_sign(
-                    g, k2, x, y, z, u, v, w) * wgt, last, to, m_to, scr)
+                if L.has_surface:
+                    T.score_surface(row, L, k2, _crossing_sign(
+                        g, k2, x, y, z, u, v, w) * w_in, last, to, m_to,
+                        scr)
+                if E.n:
+                    _ext_cross(row, E, L, X, g, P, XS, i, k2, _crossing_sign(
+                        g, k2, x, y, z, u, v, w) * w_in, last, to, m_to,
+                        last_mat, x, y, z, u, v, w, ws)
+            if E.n:
+                _ext_crossed(XS, i, last, last_mat)
             x, y, z = x + 2.0 * TINY * u, y + 2.0 * TINY * v, \
                 z + 2.0 * TINY * w
             continue
         rescues = 0
-        if L.has_surface:
+        if L.has_surface or E.n:
             for lv in range(pth.size):
                 last[lv] = pth[lv]
                 if pth[lv] < 0:
@@ -396,6 +494,9 @@ def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
             elif L.has_meshsurf:      # a ball must not cross a mesh face
                 room = min(room,
                            T.mesh_room(L, X, x, y, z, True) - GUARD)
+            if E.n and (ph.mesh_cap or E.any_faces):   # ext.py's meshes
+                room = min(room, EX.room(E, L, X, x, y, z, ph.mesh_cap)
+                           - GUARD)
             R = room * ss
             if R >= ph.r_star:
                 if R > ph.r_max:
@@ -427,7 +528,7 @@ def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
         if L.has_curved:
             T.score_segment_curved(row, L, X, cell, pth, mat, sa, ss,
                                    wgt, x, y, z, u, v, w, step, scr)
-        if L.has_meshsurf:
+        if L.has_meshsurf or E.n:
             # Mesh faces crossed, as OpenMC sees them: a flight that ends
             # by passing through a surface (or out through vacuum) is seen
             # up to TINY beyond it, where the next flight starts, so a
@@ -440,8 +541,17 @@ def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
                 bc = g.surf_bc[surf] if at_root else G.BC_TRANSMISSION
                 reach = step + TINY if bc == G.BC_VACUUM or \
                     bc == G.BC_TRANSMISSION else step - TINY
-            T.score_mesh_faces(row, L, X, sa, wgt, x, y, z, u, v, w,
-                               reach)
+            if L.has_meshsurf:
+                T.score_mesh_faces(row, L, X, sa, wgt, x, y, z, u, v, w,
+                                   reach)
+            if E.n:
+                ivm = _iv(E, mat)
+                EX.track(row, E, L, X, g, P, XS, i, pth, XS.prev[i], mat,
+                         sa, ss, wgt, x, y, z, u, v, w, step, reach, ivm, ws)
+                XS.time[i] += step * ivm
+            if XS.v_mu.size and np.isnan(XS.v_mu[i]) and sa > 0.0 and \
+                    rng.rand(P.seed, i) < -np.expm1(-sa * step):
+                XS.v_mu[i] = XS.mu_last[i]       # the analog one is absorbed
         wgt *= np.exp(-sa * step)
         x, y, z = x + step * u, y + step * v, z + step * w
         cnt[C_FLIGHT] += 1
@@ -449,13 +559,18 @@ def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
         if scatter:
             if D.on:
                 DT.score(row, D, g, D.sig_t, wgt, x, y, z, dpth)
-            u, v, w = rng.isotropic(P.seed, i)
+            nu, nv, nw = rng.isotropic(P.seed, i)
+            if E.n:
+                XS.mu_last[i] = u * nu + v * nv + w * nw
+                XS.ncoll[i] += 1
+                XS.prev_mat[i] = -1
+            u, v, w = nu, nv, nw
             fresh = True
             cnt[C_SCATTER] += 1
         else:
             cnt[C_CROSS] += 1
             bc = g.surf_bc[surf] if at_root else G.BC_TRANSMISSION
-            if surf >= 0 and L.has_surface:
+            if surf >= 0 and (L.has_surface or E.n):
                 # Current, as OpenMC 0.16 scores it (measured, v1.3 and
                 # v1.5): signed by the side the flight crosses to, in the
                 # surface's own frame (sg), at any universe level.
@@ -472,8 +587,16 @@ def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
                 #               outside the face): OpenMC does not count
                 #               it, so neither does this.
                 if bc == G.BC_VACUUM:
-                    T.score_surface(row, L, surf, sg * wgt, pth, pth, mat,
-                                    scr)
+                    if L.has_surface:
+                        T.score_surface(row, L, surf, sg * wgt, pth, pth,
+                                        mat, scr)
+                    if E.n:
+                        # MaterialFrom: OpenMC's material_last, which no
+                        # cell search has updated (the one before this
+                        # cell, or none after a collision)
+                        _ext_cross(row, E, L, X, g, P, XS, i, surf, sg * wgt,
+                                   pth, pth, mat, XS.prev_mat[i], x, y, z, u,
+                                   v, w, ws)
                 elif bc == G.BC_TRANSMISSION:
                     to[:] = -1
                     m_to = G._path(g, x + TINY * u, y + TINY * v,
@@ -483,15 +606,53 @@ def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
                         if to[lv] != pth[lv]:
                             moved = True
                     if moved:
-                        T.score_surface(row, L, surf, sg * wgt, pth, to,
-                                        m_to, scr)
+                        if L.has_surface:
+                            T.score_surface(row, L, surf, sg * wgt, pth, to,
+                                            m_to, scr)
+                        if E.n:
+                            _ext_cross(row, E, L, X, g, P, XS, i, surf,
+                                       sg * wgt, pth, to, m_to, mat, x, y,
+                                       z, u, v, w, ws)
+                elif E.n:
+                    # reflective / white: OpenMC scores the crossing
+                    # twice, before the turn and after it (+w then -w,
+                    # which cancel unless a filter tells the two
+                    # directions apart); here the first, below the second
+                    _ext_cross(row, E, L, X, g, P, XS, i, surf, sg * wgt,
+                               pth, pth, mat, XS.prev_mat[i], x, y, z, u, v,
+                               w, ws)
+            elif surf < 0 and E.n:
+                # a lattice wall: OpenMC scores every one for the crossing
+                # tallies without a SurfaceFilter (CellFrom, MaterialFrom),
+                # with its normal along the step taken, so current is +w;
+                # sg is the wall's |cosine| here (geometry._descend)
+                to[:] = -1
+                m_to = G._path(g, x + TINY * u, y + TINY * v, z + TINY * w,
+                               to, univ)
+                EX.cross(row, E, L, X, g, P, XS, i, -1, wgt, pth, to, m_to,
+                         mat, x, y, z, u, v, w, sg, ws)
             if bc == G.BC_VACUUM:
                 row[T.LEAKAGE] += wgt
                 P.status[i] = DEAD
                 return
             if bc != G.BC_TRANSMISSION:
                 x, y, z, u, v, w = _boundary(g, surf, P, i, x, y, z, u, v, w)
-                if bc == G.BC_PERIODIC and L.has_surface:
+                if E.n and surf >= 0 and (bc == G.BC_REFLECTIVE or
+                                          bc == G.BC_WHITE):
+                    _ext_cross(row, E, L, X, g, P, XS, i, surf,
+                               _crossing_sign(g, surf, x, y, z, u, v, w) *
+                               wgt, pth, pth, mat, mat, x, y, z, u, v, w, ws)
+                w_in = wgt
+                if g.surf_shift[surf, 4] != 1.0:
+                    # albedo: the weight not sent back counts as leakage,
+                    # as in OpenMC (openmc_import._periodic_shifts); the
+                    # periodic current below is scored with the weight
+                    # that arrived (OpenMC's wgt_last, measured v1.6.1)
+                    row[T.LEAKAGE] += wgt * (1.0 - g.surf_shift[surf, 4])
+                    wgt *= g.surf_shift[surf, 4]
+                if D.on and bc == G.BC_WHITE:
+                    _white_detectors(g, surf, D, row, wgt, x, y, z, dpth)
+                if bc == G.BC_PERIODIC and (L.has_surface or E.n):
                     # OpenMC scores a periodic crossing once, at the
                     # PARTNER plane, signed by the direction after the
                     # jump; cell-from is the cell left, cell the one
@@ -500,11 +661,23 @@ def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
                     to[:] = -1
                     m_to = G._path(g, x + TINY * u, y + TINY * v,
                                    z + TINY * w, to, univ)
-                    T.score_surface(row, L, k2, _crossing_sign(
-                        g, k2, x, y, z, u, v, w) * wgt, pth, to, m_to, scr)
+                    if L.has_surface:
+                        T.score_surface(row, L, k2, _crossing_sign(
+                            g, k2, x, y, z, u, v, w) * w_in, pth, to, m_to,
+                            scr)
+                    if E.n:
+                        _ext_cross(row, E, L, X, g, P, XS, i, k2,
+                                   _crossing_sign(g, k2, x, y, z, u, v, w) *
+                                   w_in, pth, to, m_to, mat, x, y, z, u, v,
+                                   w, ws)
+            if E.n:
+                _ext_crossed(XS, i, pth, mat)
             x, y, z = x + TINY * u, y + TINY * v, z + TINY * w
 
-        if wgt < ph.w_cut * P.w0[i]:
+        if wgt < ph.w_cut * P.w0[i] and not (XS.v_mu.size and
+                                             np.isnan(XS.v_mu[i])):
+            # (roulette waits while the analog history a Mu filter needs
+            # is still alive: without roulette the weights stay unbiased)
             if rng.rand(P.seed, i) < wgt / (ph.w_surv * P.w0[i]):
                 wgt = ph.w_surv * P.w0[i]
             else:
@@ -515,8 +688,44 @@ def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
     P.status[i] = DEAD
 
 
+@njit(cache=True)
+def _white_detectors(g, k, D, row, wgt, x, y, z, dpth):
+    """A white wall's re-emission seen by the point detectors
+    (detectors.score_white), from just inside the wall."""
+    nx, ny, nz = S.normal(g.surf_kind[k], g.surf_coef[k], x, y, z)
+    nn = np.sqrt(nx * nx + ny * ny + nz * nz)
+    nx, ny, nz = nx / nn, ny / nn, nz / nn
+    px, py, pz = x + TINY * nx, y + TINY * ny, z + TINY * nz
+    if G.locate(g, px, py, pz)[1] == G.LOST:
+        nx, ny, nz = -nx, -ny, -nz                  # inward is the - side
+        px, py, pz = x + TINY * nx, y + TINY * ny, z + TINY * nz
+    DT.score_white(row, D, g, D.sig_t, wgt, px, py, pz, nx, ny, nz, dpth)
+
+
 @njit(cache=True, parallel=True)
-def _advance(g, ph, L, X, D, P, acc, cnt, nchunk):
+def _birth_detectors(g, D, xyz, wimg, lo, acc, n, nchunk):
+    """Every source site lo .. lo + len(xyz) - 1 scored at the point
+    detectors (detectors.score_birth), into its own chunk's row."""
+    per = (n + nchunk - 1) // nchunk
+    m = xyz.shape[0]
+    for c in prange(nchunk):
+        dpth = np.full(G.MAX_LEVELS, -1, np.int64)
+        a = max(c * per, lo) - lo
+        b = min(min(n, (c + 1) * per), lo + m) - lo
+        for q in range(a, b):
+            DT.score_birth(acc[c], D, g, D.sig_t, wimg[q], xyz[q, 0],
+                           xyz[q, 1], xyz[q, 2], dpth)
+
+
+@njit(cache=True)
+def _set_mu(mu_last, i, carry):
+    # (a store made in _advance's own prange body did not reach _track:
+    # measured v1.6.1, numba's parfor lowering; a call keeps it)
+    mu_last[i] = carry
+
+
+@njit(cache=True, parallel=True)
+def _advance(g, ph, L, X, D, P, acc, cnt, nchunk, E, XS):
     """Run every live particle until it dies or waits for a ball.
 
     Chunk c takes particles [c*per, min(n, (c+1)*per)).  Each chunk is a
@@ -533,11 +742,27 @@ def _advance(g, ph, L, X, D, P, acc, cnt, nchunk):
         univ = np.full(G.MAX_LEVELS, -1, np.int64)
         scr = T.scratch(G.MAX_LEVELS)
         dpth = np.full(G.MAX_LEVELS, -1, np.int64)
+        ws = EX.workspace()
+        carry, have = 0.0, False
         for i in range(c * per, min(n, (c + 1) * per)):
             st = P.status[i]
             if st == MOVING or st == READY:
+                if E.n and st == MOVING and have:
+                    # OpenMC keeps a thread's last scatter cosine from one
+                    # history to the next (it is never reset): a Mu filter
+                    # sees the previous history's on unscattered flights.
+                    # The same here, chunk by chunk (a run with a Mu filter
+                    # has no balls, so each history runs to its end in one
+                    # go; ext.py)
+                    _set_mu(XS.mu_last, i, carry)
                 _track(i, g, ph, L, X, D, P, acc[c], cnt[c], pth, last, to,
-                       univ, scr, dpth)
+                       univ, scr, dpth, E, XS, ws)
+                if E.n and P.status[i] == DEAD:
+                    # the cosine OpenMC's (analog) history ends with: the
+                    # one it was absorbed with, or the last if it leaked
+                    carry, have = XS.mu_last[i], True
+                    if XS.v_mu.size and not np.isnan(XS.v_mu[i]):
+                        carry = XS.v_mu[i]
 
 
 # ------------------------------------------------------------- the driver
@@ -586,6 +811,35 @@ def physics(problem, backend=None, r_star=3.0, r_max=None,
     return ph, L, r_max, X
 
 
+def _triggers_met(problem, accum):
+    """Is every tally trigger met (openmc_import._triggers)?"""
+    mean, se = accum.mean_se()
+    for k, kind, thr, cols, ignore0 in problem.triggers:
+        tl = problem.tallies[k]
+        a = accum.layout.offset[k]
+        nb = tl.nbins
+        m = mean[a:a + T.NS * nb].reshape(nb, T.NS)
+        e = se[a:a + T.NS * nb].reshape(nb, T.NS)
+        for c in cols:
+            if c >= T.NS:          # a derived column (tallies.ALL_SCORES)
+                c = 2 if c == T.NS else None
+                if c is None:
+                    continue
+            mu, sd = m[:, c], e[:, c]
+            if kind == "variance":
+                val = sd * sd
+            elif kind == "std_dev":
+                val = sd
+            else:
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    val = np.where(mu != 0.0, sd / np.abs(mu), np.inf)
+            if ignore0:
+                val = val[mu != 0.0]
+            if val.size and np.max(val) > thr:
+                return False
+    return True
+
+
 def _particles(n):
     f = lambda: np.zeros(n)
     return Particles(f(), f(), f(), f(), f(), f(), f(),
@@ -597,7 +851,7 @@ def _particles(n):
 
 def run(problem, particles=100_000, batches=20, seed=1, backend=None,
         r_star=3.0, r_max=None, mesh_rule="profile", w_cut=0.25, w_surv=1.0,
-        nchunk=32, verbose=False, k_max=None, k_det=K_DET):
+        nchunk=32, verbose=False, k_max=None, k_det=K_DET, triggers=True):
     """Solve a Problem (from openmc_import.load).
 
     backend      None for plain Monte Carlo, or a ball backend from ball/
@@ -607,26 +861,53 @@ def run(problem, particles=100_000, batches=20, seed=1, backend=None,
     k_max        most mesh points per ball under 'profile' (default K_MAX;
                  1 gives the one-point rule, for comparisons)
     k_det        profile points per ball for point detectors
+    triggers     honour the model's tally triggers (when it turns them
+                 on): run more batches, up to trigger_max_batches, until
+                 every trigger is met, as OpenMC does; `batches` is then
+                 the least.  settings['batches'] says how many ran.
 
     Returns tallies.Results: per-source-particle means and standard errors.
     """
     g = problem.geom
     dets = getattr(problem, "detectors", []) or []
+    ext_t = [tl for tl in problem.tallies if getattr(tl, "ext", False)]
+    if ext_t and EX.no_balls(ext_t):
+        backend = None          # plain Monte Carlo (openmc_import warned)
     ph, L, r_max, X = physics(problem, backend, r_star, r_max, mesh_rule,
-                              w_cut, w_surv, k_max, need_profile=bool(dets))
+                              w_cut, w_surv, k_max,
+                              need_profile=bool(dets) or bool(ext_t))
     m = problem.mats
-    D = Detectors(True, np.array([d[1] for d in dets], float).reshape(-1, 3),
-                  np.array([d[2] for d in dets], float),
-                  (m.sig_s + m.sig_a).astype(float), L.n_entries,
-                  int(k_det)) if dets else \
-        _no_detectors(L.n_entries, len(m.ids))
+    if ext_t:
+        info = problem.ext_info
+        at = [t for t, tl in enumerate(problem.tallies)
+              if getattr(tl, "ext", False)]
+        E, (cols_mesh, cols_cell, n_born) = EX.build(
+            ext_t, L.offset[at], info["cell_univ"], len(problem.cell_ids),
+            len(m.ids), info["iv"], info["occ"])
+    else:
+        E, (cols_mesh, cols_cell, n_born) = EX.empty()
+    mu_carry = bool(E.n) and bool(np.any(E.f_type == EX.X_MU))
+    if dets:
+        img, img_det, cut = problem.det_images
+        D = Detectors(True,
+                      np.array([d[1] for d in dets], float).reshape(-1, 3),
+                      np.array([d[2] for d in dets], float),
+                      (m.sig_s + m.sig_a).astype(float), L.n_entries,
+                      int(k_det), np.asarray(img, float),
+                      np.asarray(img_det, np.int64), float(cut),
+                      len(img) > len(dets) or
+                      bool(np.any(g.surf_bc == G.BC_WHITE)))
+    else:
+        D = _no_detectors(L.n_entries, len(m.ids))
     accum = T.Accumulator(L, len(dets))
     cnt = np.zeros((nchunk, len(COUNTERS)), np.int64)
     t_track = t_backend = 0.0
     calls = 0
     redrawn = 0
 
-    for b in range(batches):
+    trig = getattr(problem, "trigger_settings", None) if triggers else None
+    b, n_batches, trig_met = 0, batches, None
+    while b < n_batches:
         P = _particles(particles)
         P.seed[:] = rng.streams(np.uint64(seed), b * particles, particles)
         acc = np.zeros((nchunk, L.n_entries + len(dets)))
@@ -634,8 +915,29 @@ def run(problem, particles=100_000, batches=20, seed=1, backend=None,
         sites = problem.source.sample(particles, source_rng(seed, b))
         redrawn += sites.redrawn
         _birth(sites.xyz, sites.uvw, sites.wgt, sites.iso, P, cnt, nchunk)
+        XS = _ext_state(particles, n_born, E.n > 0, mu_carry)
+        if E.n:
+            # the first history of each chunk: a scatter cosine drawn
+            # uniformly (the rest carry the previous history's, _advance)
+            XS.time[:] = sites.t
+            XS.w_analog[:] = sites.wgt
+            XS.mu_last[:] = np.random.default_rng(
+                [int(seed), int(b), 0xE77]).uniform(-1.0, 1.0, particles)
+            cells, _, _ = G.paths_many(g, sites.xyz)
+            XS.prev[:] = cells
+            if n_born:
+                deep = cells[np.arange(particles),
+                             np.maximum((cells >= 0).sum(axis=1) - 1, 0)]
+                EX.born_bins(E, L, X, sites.xyz, deep, cols_mesh, cols_cell,
+                             XS.born)
+        if dets:
+            for lo in range(0, particles, BIRTH_SLICE):
+                hi = min(particles, lo + BIRTH_SLICE)
+                wimg = problem.source.detector_weights(sites, D.img, lo, hi)
+                _birth_detectors(g, D, sites.xyz[lo:hi], wimg, lo, acc,
+                                 particles, nchunk)
         while True:
-            _advance(g, ph, L, X, D, P, acc, cnt, nchunk)
+            _advance(g, ph, L, X, D, P, acc, cnt, nchunk, E, XS)
             t1 = time.perf_counter()
             t_track += t1 - t0
             idx = np.flatnonzero(P.status == WAITING)
@@ -653,17 +955,24 @@ def run(problem, particles=100_000, batches=20, seed=1, backend=None,
         accum.add_batch(acc, particles)
         if verbose:
             mean, se = accum.mean_se()
-            print(f"batch {b + 1}/{batches}  leakage {mean[0]:.5f} "
+            print(f"batch {b + 1}/{n_batches}  leakage {mean[0]:.5f} "
                   f"+- {se[0]:.5f}", flush=True)
+        b += 1
+        if trig is not None and b >= batches and \
+                (b - batches) % trig["interval"] == 0:
+            trig_met = _triggers_met(problem, accum)
+            n_batches = b if trig_met else min(
+                trig["max_batches"], b + trig["interval"])
 
     counters = dict(zip(COUNTERS, cnt.sum(axis=0).tolist()))
     counters["backend_calls"] = calls
     counters["source_redrawn"] = redrawn
     timing = {"transport_s": t_track, "backend_s": t_backend}
-    settings = dict(particles=particles, batches=batches, seed=seed,
+    settings = dict(particles=particles, batches=b, seed=seed,
                     backend=getattr(backend, "name", None), r_star=r_star,
                     r_max=r_max, mesh_rule=mesh_rule,
                     k_max=ph.k_max if ph.mesh_profile else None, w_cut=w_cut,
                     w_surv=w_surv, nchunk=nchunk,
-                    k_det=int(k_det) if dets else None)
+                    k_det=int(k_det) if dets else None,
+                    triggers_met=trig_met)
     return accum.results(problem.tallies, counters, timing, settings, dets)

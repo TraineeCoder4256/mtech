@@ -142,13 +142,21 @@ def test_vacuum_face_cell_and_cell_from_are_the_cell_left():
     (lambda c: [openmc.CellFromFilter([c["core"]])], "CellFromFilter"),
     (lambda c: [openmc.CellFilter([c["core"]]),
                 openmc.CellFilter([c["reflector"]])], "two CellFilters"),
-    (lambda c: [openmc.SurfaceFilter([1]), common.mesh_filter(
+    (lambda c: [openmc.SurfaceFilter(list(
+        c["core"].region.get_surfaces().values())[:1]), common.mesh_filter(
         (-10, -10, -10), (10, 10, 10), (2, 2, 2))], "MeshFilter"),
 ])
-def test_unsupported_filter_sets_are_refused(filters, words):
+def test_other_filter_sets_go_to_the_general_scorer(filters, words):
+    """Refused before v1.6.1; now scored by core/ext.py (checked against
+    OpenMC by checks/gapcheck.py)."""
     model, c, _ = _nested()
     scores = ("current",) if "Surface" in words or words == "MeshFilter" \
         else ("flux",)
     model.tallies = openmc.Tallies([_tally("x", filters(c), scores)])
-    with pytest.raises(Unsupported, match=words):
-        openmc_import.load(model)
+    if words == "UniverseFilter":
+        model.tallies[0].filters = [openmc.UniverseFilter(
+            [model.geometry.root_universe])]
+    pr = openmc_import.load(model)
+    assert pr.tallies[0].ext
+    r = transport.run(pr, 2000, 2, seed=1)
+    assert np.all(np.isfinite(r.tallies["x"]["mean"]))

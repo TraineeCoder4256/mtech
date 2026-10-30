@@ -7,8 +7,9 @@ see the "model change?" column in `GAPS.md`), so none waits on model work.
 
 Status: proposed 27 Oct 2026; Phani gave the go on 29 Oct 2026. v1.1.3
 v1.2.0 (sources), v1.3.0 (multi-filter tallies), v1.4.0 and v1.4.1
-(geometry), v1.5.0 (the medium tally items) and v1.6.0 (hardening, point
-detectors, the score) are done.
+(geometry), v1.5.0 (the medium tally items), v1.6.0 (hardening, point
+detectors, the score) and v1.6.1 (every remaining non-physics input) are
+done.
 
 Numbering (Phani, 29 Oct 2026): v1.1.x is the mesh work and the easy
 tally items; each later area gets its own minor version (v1.2 sources,
@@ -127,6 +128,14 @@ of 10 over every check.
 | V1-ROB-6 `run.py check` | every refusal and warning of a model at once, without running it |
 | V1-ROB-7 accepted inputs | `ACCEPTED_INPUTS.md` |
 | The score | `run.py score`: unit tests 2, against OpenMC 4, exact answers 1, random models 2, point detectors 1 |
+
+## v1.6.1 (done, 30 Oct 2026): every OpenMC input that is not a physics stage
+
+Phani, 30 Oct 2026: implement the 18 plain items of the gaps list, then
+recount the gaps. Done; each checked against OpenMC by `run.py gapcheck`
+(20 cases). What is left of version 1 is in `GAPS.md` part 1b: DAGMC, the
+tetrahedral mesh, tally derivatives (all large or research), and the
+method limits of part 1c, which wait for model work.
 
 ## Needs your decision (research, not engineering)
 

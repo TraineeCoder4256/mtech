@@ -202,9 +202,7 @@ def test_bounds_and_kill_are_warned_as_unused():
      "fissionable"),
     (lambda: openmc.IndependentSource(space=st.Box(
         (0, 0, 0), (1, 1, 1), only_fissionable=True)), "fissionable"),
-    (lambda: openmc.IndependentSource(angle=st.Isotropic(
-        bias=st.PolarAzimuthal())), "Isotropic"),
-    (lambda: openmc.FileSource("sites.mcpl"), "mcpl"),
+    (lambda: openmc.FileSource("sites.txt"), "sites.txt"),
 ])
 def test_unsupported_sources_are_refused(src, words):
     with pytest.raises(Unsupported, match=words):

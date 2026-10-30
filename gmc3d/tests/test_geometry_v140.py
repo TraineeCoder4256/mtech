@@ -192,12 +192,15 @@ def test_rotational_periodic_is_refused():
     _refuse(model, "not parallel")
 
 
-def test_albedo_is_refused():
+def test_albedo_is_kept():
+    """Refused before v1.6.1; now the weight sent back is multiplied by
+    it, the rest counted as leakage (as OpenMC)."""
     model = PROBLEMS["slab"]()
     for s in model.geometry.get_all_surfaces().values():
         if s.boundary_type == "reflective":
             s.albedo = 0.5
-    _refuse(model, "albedo")
+    pr = openmc_import.load(model)
+    assert np.any(pr.geom.surf_shift[:, 4] == 0.5)
 
 
 def test_current_on_a_white_surface_is_zero():

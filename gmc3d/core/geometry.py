@@ -72,7 +72,8 @@ VOID = -1
 Geometry = namedtuple("Geometry", [
     "surf_kind", "surf_coef", "surf_bc",                    # per surface
     "surf_shift",       # periodic surface: (the jump to its partner plane,
-                        # the partner's index as a float, -1 if none);
+                        # the partner's index as a float, -1 if none,
+                        # the albedo: 1 unless set, v1.6.1);
                         # one array, not two: every array here is paid for
                         # on every _descend call (see tallies.MeshExtra)
     "surf_angle",       # ... or, if not 0, the turn about z onto it
@@ -159,11 +160,13 @@ def _descend(g, x, y, z, u, v, w, want_near, want_ray, path,
       ray_sign        +1 if the flight crosses to that surface's positive
                       side, -1 if to its negative side, in the surface's
                       own (local) frame: a surface current's sign (v1.5;
-                      only if want_sign, else 0)
+                      only if want_sign, else 0).  For a lattice wall it is
+                      instead |cosine| with the wall's normal (v1.6.1)
     """
     univ = g.root
     near, t_ray, ray_surf, ray_lvl = INF, INF, -1, -1
     hx, hy, hz, hu, hv, hw = 0.0, 0.0, 0.0, 0.0, 0.0, 1.0   # winner's frame
+    wcos = 1.0                          # the winning lattice wall's cosine
     inst = 0
     for level in range(MAX_LEVELS):
         # ---- which cell of this universe holds the point
@@ -205,6 +208,8 @@ def _descend(g, x, y, z, u, v, w, want_near, want_ray, path,
                                       g.surf_coef[ray_surf], hx + t_ray * hu,
                                       hy + t_ray * hv, hz + t_ray * hw)
                 sg = 1.0 if hu * nx + hv * ny + hw * nz > 0.0 else -1.0
+            elif want_sign and t_ray < INF:
+                sg = wcos
             return cell, m, near, t_ray, ray_surf, ray_lvl, sg
 
         # ---- move into the fill's coordinates: p' = R (p - t), d' = R d
@@ -236,6 +241,8 @@ def _descend(g, x, y, z, u, v, w, want_near, want_ray, path,
             d = _wall_exit(g, lat, x, y, z, u, v, w)
             if d < t_ray:
                 t_ray, ray_surf, ray_lvl = d, -1, -1
+                if want_sign:
+                    wcos = _wall_cos(g, lat, x, y, z, u, v, w)
         if valid:
             univ = g.lat_univs[g.lat_univ_start[lat] + k]
             inst += g.lat_off[g.lat_univ_start[lat] + k]
@@ -322,6 +329,36 @@ def _slab_exit(q, s, h):
     if s < 0.0:
         return (-h - q) / s
     return INF
+
+
+@njit(cache=True, inline="always")
+def _wall_cos(g, lat, lx, ly, lz, u, v, w):
+    """|cosine| between (u, v, w) and the normal of the wall _wall_exit
+    stops at (OpenMC's surface-crossing flux at a lattice wall)."""
+    p = g.lat_pitch[lat]
+    t = g.lat_type[lat]
+    if t == LAT_RECT:
+        ds = (_slab_exit(lx, u, 0.5 * p[0]), _slab_exit(ly, v, 0.5 * p[1]),
+              INF)
+        cs = (abs(u), abs(v), 0.0)
+    else:
+        h = 0.5 * p[0]
+        if t == LAT_HEX_Y:
+            s1, s2, s3 = v, SQ75 * u + 0.5 * v, SQ75 * u - 0.5 * v
+            q1, q2, q3 = ly, SQ75 * lx + 0.5 * ly, SQ75 * lx - 0.5 * ly
+        else:
+            s1, s2, s3 = u, 0.5 * u + SQ75 * v, 0.5 * u - SQ75 * v
+            q1, q2, q3 = lx, 0.5 * lx + SQ75 * ly, 0.5 * lx - SQ75 * ly
+        ds = (_slab_exit(q1, s1, h), _slab_exit(q2, s2, h),
+              _slab_exit(q3, s3, h))
+        cs = (abs(s1), abs(s2), abs(s3))
+    best, c = INF, 1.0
+    for j in range(3):
+        if ds[j] < best:
+            best, c = ds[j], cs[j]
+    if g.lat_ndim[lat] == 3 and _slab_exit(lz, w, 0.5 * p[2]) < best:
+        c = abs(w)
+    return c
 
 
 @njit(cache=True, inline="always")

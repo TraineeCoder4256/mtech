@@ -120,9 +120,12 @@ from dataclasses import dataclass
 import numpy as np
 from numba import njit
 
-VOLUME, SURFACE, MESHSURF, CURVED = 0, 1, 2, 3
+VOLUME, SURFACE, MESHSURF, CURVED, EXT = 0, 1, 2, 3, 4
 # tally kinds: track scores, surface crossings, mesh face crossings, track
-# scores on a curved mesh (scored by its own kernel; see MeshExtra)
+# scores on a curved mesh (scored by its own kernel; see MeshExtra), and a
+# tally for the general scorer (ext.py), which every kernel here skips.
+# An ext tally's meshes get slots of their own after the tallies (kind -1,
+# no entries), so ext.py reads them through the same mesh arrays.
 F_CELL, F_CELLFROM, F_MAT, F_MESH, F_SURF, F_ENERGY = range(1, 7)
 _FKIND = {"cell": F_CELL, "cellfrom": F_CELLFROM, "material": F_MAT,
           "mesh": F_MESH, "meshsurface": F_MESH, "surface": F_SURF,
@@ -137,6 +140,15 @@ MAX_COMBOS = 256                  # combined bins one event can score in:
                                   # matching at most every level (16 x 16)
 SCORES = ("flux", "absorption", "scatter", "total")   # columns, in order
 NS = len(SCORES)                  # entries per bin
+# Scores reported beside SCORES (v1.6.1), as more columns of a result:
+# nu-scatter is scatter (one group, no multiplication: openmc_import
+# checks), inverse-velocity is scored by ext.py (its own copy of the
+# tally's bins, flux x 1/v), and the fission family and decay-rate are 0
+# (no material is fissile; OpenMC gives 0 too, measured 30 Oct 2026).
+EXTRA_SCORES = ("nu-scatter", "inverse-velocity", "fission", "nu-fission",
+                "kappa-fission", "prompt-nu-fission", "delayed-nu-fission",
+                "decay-rate")
+ALL_SCORES = SCORES + EXTRA_SCORES
 LEAKAGE = 0                       # index of the leakage entry
 INF = 1.0e300
 BIG = 1.0e100                     # edge of a mesh's missing axis
@@ -200,7 +212,11 @@ def compile_layouts(tallies, n_cells, n_mats, n_surfs=1, leaf=None):
     offset[t] + NS b, b = sum over filters of (filter bin) x stride, the
     last filter's stride 1 (OpenMC's order).  (A surface tally keeps the
     same layout: current, then unused zeros.)"""
-    nt = max(len(tallies), 1)
+    ext_mesh = [f for tl in tallies if getattr(tl, "ext", False)
+                for f in tl.filters if f.edges is not None]
+    for k, f in enumerate(ext_mesh):
+        f.slot = len(tallies) + k
+    nt = max(len(tallies) + len(ext_mesh), 1)
     kind = np.full(nt, -1, np.int64)
     offset = np.zeros(nt, np.int64)
     nf = np.zeros(nt, np.int64)
@@ -222,9 +238,31 @@ def compile_layouts(tallies, n_cells, n_mats, n_surfs=1, leaf=None):
     mesh_box = np.zeros((nt, 2, 3))
     mesh_h = np.ones(nt)
     mesh_ndim = np.full(nt, 3, np.int64)
+    def put_mesh(t, f):
+        for a, e in enumerate(f.edges):
+            e = np.asarray(e, float)
+            w = np.diff(e)
+            edges[t][a] = e
+            mesh_ll[t, a], mesh_dim[t, a] = e[0], e.size - 1
+            mesh_dw[t, a] = w.min()
+            mesh_uniform[t, a] = np.allclose(w, w[0], rtol=1e-12)
+        mesh_type[t] = _MESH_TYPE[getattr(f, "mesh_type", "rect")]
+        mesh_org[t] = getattr(f, "origin", None) if \
+            getattr(f, "origin", None) is not None else 0.0
+        mesh_box[t], mesh_h[t] = _box_and_size(mesh_type[t], mesh_org[t],
+                                               edges[t])
+        mesh_ndim[t] = getattr(f, "ndim", 3)
+
+    for f in ext_mesh:
+        put_mesh(f.slot, f)
     pos = 1                                       # entry 0 is leakage
     for t, tl in enumerate(tallies):
         fs = tl.filters
+        if getattr(tl, "ext", False):
+            kind[t], offset[t] = EXT, pos
+            pos += NS * tl.nbins * (2 if "inverse-velocity" in tl.scores
+                                    else 1)
+            continue
         kind[t] = SURFACE if any(f.kind == "surface" for f in fs) \
             else MESHSURF if any(f.kind == "meshsurface" for f in fs) \
             else CURVED if any(f.kind == "mesh" and
@@ -239,19 +277,7 @@ def compile_layouts(tallies, n_cells, n_mats, n_surfs=1, leaf=None):
             f_kind[t, j], f_stride[t, j] = _FKIND[f.kind], stride
             if f.kind in ("mesh", "meshsurface"):
                 mesh_on[t], mesh_stride[t] = True, stride
-                mesh_ndim[t] = getattr(f, "ndim", 3)
-                for a, e in enumerate(f.edges):
-                    e = np.asarray(e, float)
-                    w = np.diff(e)
-                    edges[t][a] = e
-                    mesh_ll[t, a], mesh_dim[t, a] = e[0], e.size - 1
-                    mesh_dw[t, a] = w.min()
-                    mesh_uniform[t, a] = np.allclose(w, w[0], rtol=1e-12)
-                mesh_type[t] = _MESH_TYPE[getattr(f, "mesh_type", "rect")]
-                mesh_org[t] = getattr(f, "origin", None) if \
-                    getattr(f, "origin", None) is not None else 0.0
-                mesh_box[t], mesh_h[t] = _box_and_size(
-                    mesh_type[t], mesh_org[t], edges[t])
+                put_mesh(t, f)
             elif f.kind == "energy":
                 f_lut[t, j, 0] = f.bins[0]
             else:
@@ -1013,20 +1039,30 @@ class Accumulator:
     def results(self, tallies, counters, timing, settings, detectors=()):
         mean, se = self.mean_se()
         out = {}
+        nc = len(ALL_SCORES)
         for t, tl in enumerate(tallies):
             a = self.layout.offset[t]
             nb = tl.nbins
+            m, e = np.zeros((nb, nc)), np.zeros((nb, nc))
+            m[:, :NS] = mean[a:a + NS * nb].reshape(nb, NS)
+            e[:, :NS] = se[a:a + NS * nb].reshape(nb, NS)
+            m[:, NS], e[:, NS] = m[:, 2], e[:, 2]          # nu-scatter
+            if "inverse-velocity" in tl.scores:
+                c = a + NS * nb                            # ext.py's copy
+                m[:, NS + 1] = mean[c:c + NS * nb].reshape(nb, NS)[:, 0]
+                e[:, NS + 1] = se[c:c + NS * nb].reshape(nb, NS)[:, 0]
             out[tl.name or f"tally{tl.id}"] = {
                 "id": tl.id, "filter": tl.filter, "bin_ids": tl.bin_ids,
                 "mesh": tl.mesh, "scores": tl.scores,
                 "mesh_type": getattr(tl, "mesh_type", "rect"),
                 "edges": tl.edges,
                 "filters": [(f.kind, f.nbins) for f in tl.filters],
-                "mean": mean[a:a + NS * nb].reshape(nb, NS),
-                "se": se[a:a + NS * nb].reshape(nb, NS)}
+                "surface_type": bool(getattr(tl, "surface_type", False)),
+                "mean": m, "se": e}
         base = self.layout.n_entries
         for j, (name, xyz, r0) in enumerate(detectors):
-            mu, sd = np.zeros((1, NS)), np.zeros((1, NS))
+            mu, sd = np.zeros((1, len(ALL_SCORES))), \
+                np.zeros((1, len(ALL_SCORES)))
             mu[0, 0], sd[0, 0] = mean[base + j], se[base + j]
             out[name] = {"id": None, "filter": "detector", "bin_ids": [],
                          "mesh": None, "scores": ["flux"],

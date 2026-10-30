@@ -1,0 +1,17 @@
+== 1. exact: point source in two absorbing shells, no scatter
+  PASS  exact beyond_both: ours 0.001512378412, exact 0.001512378411, rel err 5.0e-10
+  PASS  exact inner: ours 0.0133355936, exact 0.0133355936, rel err 1.8e-15
+  PASS  exact far: ours 0.0005520571275, exact 0.0005520571272, rel err 5.0e-10
+
+== 2./3. scattering sphere, 2,000,000 histories
+   plain MC 113 s; exact balls 114 s (4,390,075 balls); lost 0 / 0
+  PASS  balls vs plain MC, cavity: balls 0.000882388 +- 7e-06, plain 0.000890178 +- 6.6e-06, z -0.81
+  PASS  balls vs plain MC, outside: balls 1.04172e-05 +- 1.3e-07, plain 1.04306e-05 +- 1.3e-07, z -0.07
+  PASS  balls vs plain MC, medium: balls 0.00200278 +- 2.2e-05, plain 0.00204192 +- 2.3e-05, z -1.24 (r0 0.3 cm)
+  PASS  balls vs plain MC, medium_deep: balls 0.0088255 +- 6.2e-05, plain 0.00880665 +- 5e-05, z +0.24 (r0 0.3 cm)
+   cavity: OpenMC sphere average 0.000869722 +- 8.8e-06; ours (track length, same sphere) 0.000892507 +- 2e-05
+  PASS  plain MC detector vs OpenMC, cavity: detector 0.000890178 +- 6.6e-06, OpenMC 0.000869722 +- 8.8e-06, z +1.86
+  PASS  exact balls detector vs OpenMC, cavity: detector 0.000882388 +- 7e-06, OpenMC 0.000869722 +- 8.8e-06, z +1.13
+   outside: OpenMC sphere average 1.03772e-05 +- 2.9e-07; ours (track length, same sphere) 8.83166e-06 +- 6.3e-07
+  PASS  plain MC detector vs OpenMC, outside: detector 1.04306e-05 +- 1.3e-07, OpenMC 1.03772e-05 +- 2.9e-07, z +0.17
+  PASS  exact balls detector vs OpenMC, outside: detector 1.04172e-05 +- 1.3e-07, OpenMC 1.03772e-05 +- 2.9e-07, z +0.13

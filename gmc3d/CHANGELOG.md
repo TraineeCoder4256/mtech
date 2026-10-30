@@ -7,6 +7,70 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v1.6.1 (30 Oct 2026): every OpenMC input that is not a physics stage
+
+Phani's ask: implement the 18 plain items of the v1.6.0 gaps list, then
+recount the gaps. Every item is checked against OpenMC by the new
+`python run.py gapcheck` (20 cases, plain MC and exact balls; all pass,
+`runs/2026-10-30/v1.6.1/gapcheck.log`).
+
+- **General scorer** (`core/ext.py`): any tally the fast kernels do not
+  take goes here, with every OpenMC filter: Universe, CellInstance,
+  Distribcell, MaterialFrom, CellBorn, MeshBorn, MeshMaterial, Particle,
+  Polar, Azimuthal, SphericalHarmonics, Mu, MuSurface, Collision, Time,
+  SpatialLegendre, Zernike, ZernikeRadial, Legendre, Energyout, Weight;
+  two filters of one kind; CellFrom on a track tally; Surface with Mesh;
+  MeshSurface on curved meshes and with other filters. Scores nu-scatter,
+  inverse-velocity, and the fission and decay scores (0 here, as in
+  OpenMC). Collision and analog estimators are accepted (scored by track
+  length, warned).
+- **Crossing tallies as OpenMC scores them**: a Surface, CellFrom or
+  MaterialFrom filter with flux or current is scored at crossings, flux
+  by the surface-crossing estimator w/|mu| with OpenMC's grazing rule.
+  Lattice walls count as crossings (OpenMC scores every one). Reflective
+  walls are scored twice, periodic ones once at the partner plane with
+  the weight that arrived.
+- **Geometry**: boundary albedo; general `Plane` periodic pairs; horn and
+  spindle tori. Rotational periodic walls with the problem on the - side
+  of a plane were silently wrong in both codes: now turned the right way.
+- **Sources**: MCPL files; 1D and 2D `MeshSource`; `Isotropic` with a
+  bias; source times (for Time filters and inverse-velocity).
+- **Tally triggers** are honoured: batches run until every trigger is met
+  or `max_batches`.
+- **Point detectors** with reflective, white and periodic walls (wall
+  images) and with any source (its angular density towards the point).
+  Checked with the trained network backend too (`detnet.log`).
+- **Found and fixed while checking against OpenMC**:
+  - MaterialFrom at a vacuum leak or before a reflection is OpenMC's
+    material_last (the material before the last cell search, none after a
+    collision), not the cell's own.
+  - Curved-mesh phi faces: with two phi bins every crossing was filed
+    as going up; the way is now read from phi itself.
+  - Mu filter: OpenMC never resets the scatter cosine between histories,
+    so it bins an unscattered flight by the previous history's last one.
+    gmc3d now carries it the same way, from the analog history its
+    weighted walk stands for (roulette waits until that history is
+    absorbed). Before: up to 9.5 sigma per bin.
+  - A store into an array inside `_advance`'s prange body did not reach
+    `_track` (numba parfor lowering); moved into a helper call.
+  - OpenMC 0.16's `Tabular.evaluate` takes one value at a time.
+- **OpenMC errors found** (GAPS.md part 2b): inward crossings of a curved
+  mesh face are filed by the next face along the ray; a CylindricalMesh
+  with phi range pi/3 in a wedge sums 6% below OpenMC's own cell tally.
+- **GAPS.md rewritten**: real gaps only, then what OpenMC refuses too or
+  gets wrong, then open checks.
+- `checks/robust.py`: the four former refusals (albedo, collision
+  estimator, fission score, horn torus) now run and must PASS; the
+  refusal test uses a tally derivative and the events score.
+- New tests: `tests/test_general_v161.py`; tests that expected refusals
+  of now-accepted inputs updated (183 pass).
+- The robustness builder cut a horn torus out of its object without
+  giving the hole to the background (a region in no cell; OpenMC lost
+  particles there, model 13). Fixed in `checks/robust.py`.
+- Speed: plain MC 6-7% slower than v1.6.0 with answers bit-identical;
+  cause not found (not the general scorer's branches). Cold-cache compile
+  54 s -> 115 s. `runs/2026-10-30/v1.6.1/speed.log`, GAPS.md open checks.
+
 ## v1.6.0 (30 Oct 2026): hardening, point detectors, one score out of 10
 
 - **Point detectors** (`problems/common.point_detector`, `core/detectors.py`):

@@ -287,6 +287,7 @@ def test_rotational_wall_off_the_z_axis_is_refused():
         openmc_import.load(model)
 
 
-def test_torus_whose_tube_meets_the_axis_is_refused():
-    with pytest.raises(Unsupported, match="horn or spindle"):
-        openmc_import._surface(openmc.ZTorus(a=1.0, b=1.0, c=1.5))
+def test_horn_torus_is_accepted():
+    """Refused before v1.6.1 (surfaces.py: the self-intersecting tube's
+    inner roots are skipped; checks/gapcheck.py runs one vs OpenMC)."""
+    openmc_import._surface(openmc.ZTorus(a=1.0, b=1.0, c=1.5))

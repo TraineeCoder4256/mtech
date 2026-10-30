@@ -178,6 +178,13 @@ def draw_r(log_r, log1p_ell, f_unsc, cdf, R, kappa, s, state, i):
     """A radius (in mfp, from the ball's centre) at which to score the
     whole flux of a ball of radius R whose walk had path s (mfp), in a
     material with sigma_a / sigma_s = kappa.  See the docstring."""
+    return draw_rT(log_r, log1p_ell, f_unsc, cdf, R, kappa, s, state, i)[0]
+
+
+@njit(cache=True)
+def draw_rT(log_r, log1p_ell, f_unsc, cdf, R, kappa, s, state, i):
+    """draw_r, also returning the path length T (mfp) at which the point
+    lies (core/ext.py: the time of a point in a ball)."""
     # 1. the path length T in [0, s], density proportional to exp(-kappa T)
     xi = rng.rand(state, i)
     if kappa * s < 1.0e-9:
@@ -196,7 +203,7 @@ def draw_r(log_r, log1p_ell, f_unsc, cdf, R, kappa, s, state, i):
 
     # 4. not scattered yet: exactly at radius T; otherwise from the shells
     if rng.rand(state, i) < f_unsc[kr, jl]:
-        return min(T, R)
+        return min(T, R), T
     c = cdf[kr, jl]
     nb = c.size - 1
     xi = rng.rand(state, i)
@@ -209,7 +216,7 @@ def draw_r(log_r, log1p_ell, f_unsc, cdf, R, kappa, s, state, i):
             hi = mid
     width = c[lo + 1] - c[lo]
     frac = (xi - c[lo]) / width if width > 0.0 else 0.5
-    return (lo + min(max(frac, 0.0), 1.0)) / nb * min(T, R)
+    return (lo + min(max(frac, 0.0), 1.0)) / nb * min(T, R), T
 
 
 class Profile:

@@ -1,0 +1,33 @@
+same machine, same session
+v1.6.1 cask     24.44 s
+v1.6.1 hexcore  34.60 s
+v1.6.1 curved   76.72 s
+v1.6.0 cask     22.67 s
+v1.6.0 hexcore  32.23 s
+v1.6.0 curved   72.14 s
+second pass, order reversed (v1.6.0 first)
+v1.6.0 cask     21.58 s
+v1.6.0 hexcore  30.87 s
+v1.6.0 curved   69.99 s
+v1.6.1 cask     23.29 s
+v1.6.1 hexcore  33.21 s
+v1.6.1 curved   74.54 s
+
+third pass (cask only, scratch builds), best of 3:
+v1.6.0 22.83, 21.73 s; v1.6.1 23.68 s; v1.6.1 with every ext branch in
+_track compiled out (E.n -> False) 23.69, 23.17 s
+=> the general scorer's code in the flight loop is not the cost.
+
+fourth pass, interleaved, best of 3 (cask / hexcore):
+v1.6.0 23.27 / 33.24, 23.54 / 31.01 s
+v1.6.1 25.37 / 34.29, 24.24 / 32.64 s
+(a build with _track inlined into _advance ran 2x faster on hexcore but
+gave a different answer -- leakage 0.373 against 0.0805 -- so numba's
+inline='always' broke the early returns: discarded, not a fix)
+
+all passes: cask v1.6.0 mean 22.6 s, v1.6.1 24.2 s (+7%); hexcore 31.8 s
+against 33.7 s (+6%); curved 71.1 s against 75.6 s (+6%). Answers are
+bit-identical to v1.6.0 (validate.json: only timings differ). Cause not
+found: not the ext branches (above); left as an open check in GAPS.md.
+
+cold-cache compile (first run of the cask, numba caches deleted): v1.6.0 54 s, v1.6.1 115 s

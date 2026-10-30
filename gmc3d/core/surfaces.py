@@ -210,8 +210,11 @@ def _bracket_root(which, b3, b2, b1, b0, lo, hi, flo):
 def _torus_ray(kind, c, x, y, z, u, v, w):
     """First crossing of a ray with a torus: the smallest positive root of
     a quartic (the torus equation squared out).  With the tube inside its
-    ring (c < a, checked on import) the quartic's roots are exactly the
-    torus's crossings.
+    ring (c < a) the quartic's roots are exactly the torus's crossings.
+    A horn or spindle torus (c >= a, v1.6.1) squares in false roots too:
+    S = rho^2 + k h^2 + a^2 - c^2 = 2 a rho on the surface, and squaring
+    adds S = -2 a rho (the tube's mirror image through the axis), so a
+    root counts only where S >= 0.
 
     Found without a general polynomial solver: the quartic's turning
     points split [0, T] (T bounds every root) into pieces where it is
@@ -263,7 +266,8 @@ def _torus_ray(kind, c, x, y, z, u, v, w):
                 tp2 = r
             ntp += 1
         lo = hi
-    # the first monotone piece of [0, T] whose ends differ in sign
+    # the first monotone piece of [0, T] whose ends differ in sign (and,
+    # for a horn or spindle torus, whose root is not a false one)
     lo = 0.0
     flo, _ = _quartic(b3, b2, b1, b0, 0.0)
     for j in range(ntp + 1):
@@ -272,7 +276,9 @@ def _torus_ray(kind, c, x, y, z, u, v, w):
             hi = T
         fhi, _ = _quartic(b3, b2, b1, b0, hi)
         if flo != 0.0 and (flo > 0.0) != (fhi > 0.0):
-            return _bracket_root(0, b3, b2, b1, b0, lo, hi, flo)
+            r = _bracket_root(0, b3, b2, b1, b0, lo, hi, flo)
+            if c[5] < A or (S2 * r + S1) * r + S0 >= 0.0:
+                return r
         lo, flo = hi, fhi
     return INF
 
@@ -434,10 +440,21 @@ def nearest(kind, c, x, y, z):
         # the nearest point lies in the half-plane through the axis and p,
         # where the torus is an ellipse (semi-axes c across, b along the
         # axis) centred at rho = a
+        # (v1.6.1) For a horn or spindle torus (c >= a) the tube's section
+        # in the opposite half-plane, the ellipse centred at rho = -a,
+        # reaches into this one; the distance is the smaller of the two
+        # (a lower bound: each ellipse counts in full, although only its
+        # part on its own side of the axis is surface).
         _, _, _, rho, h = _torus_frame(kind, c, x, y, z)
         if c[4] == c[5]:
-            return abs(np.sqrt((rho - c[3]) ** 2 + h * h) - c[5])
-        return _ellipse_distance(c[5], c[4], rho - c[3], h)
+            d = abs(np.sqrt((rho - c[3]) ** 2 + h * h) - c[5])
+            if c[5] >= c[3]:
+                d = min(d, abs(np.sqrt((rho + c[3]) ** 2 + h * h) - c[5]))
+            return d
+        d = _ellipse_distance(c[5], c[4], rho - c[3], h)
+        if c[5] >= c[3]:
+            d = min(d, _ellipse_distance(c[5], c[4], rho + c[3], h))
+        return d
     if kind == CYLINDER:
         _, _, _, _, rho2 = _any_axis(c, x, y, z)
         return abs(np.sqrt(rho2) - c[3])

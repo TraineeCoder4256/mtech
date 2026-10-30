@@ -326,7 +326,7 @@ def test_mesh_faces_balance_and_balls_agree():
     assert np.abs(z).max() < 4.0
 
 
-def test_mesh_surface_filter_takes_no_other_filter():
+def test_mesh_surface_filter_with_a_cell_filter_is_refused_like_openmc():
     model = PROBLEMS["slab"]()
     m = openmc.RegularMesh()
     m.lower_left, m.upper_right, m.dimension = (0,), (60,), (6,)
@@ -335,5 +335,17 @@ def test_mesh_surface_filter_takes_no_other_filter():
         list(model.geometry.get_all_cells().values()))]
     t.scores = ["current"]
     model.tallies.append(t)
-    with pytest.raises(Unsupported, match="MeshSurfaceFilter"):
+    with pytest.raises(openmc_import.Unsupported):
         openmc_import.load(model)
+
+
+def test_mesh_surface_filter_with_an_energy_filter_is_accepted():
+    model = PROBLEMS["slab"]()
+    m = openmc.RegularMesh()
+    m.lower_left, m.upper_right, m.dimension = (0,), (60,), (6,)
+    t = openmc.Tally(name="x")
+    t.filters = [openmc.MeshSurfaceFilter(m),
+                 openmc.EnergyFilter([0.0, 2e7])]
+    t.scores = ["current"]
+    model.tallies.append(t)
+    assert openmc_import.load(model).tallies[-1].ext

@@ -88,7 +88,7 @@ from pathlib import Path
 import numpy as np
 import openmc
 
-from core.tallies import SCORES, Results
+from core.tallies import ALL_SCORES, Results
 
 OPENMC = os.path.join(sys.prefix, "bin", "openmc")
 
@@ -120,6 +120,14 @@ def run(model, workdir, particles=None, batches=None, seed=1, threads=None,
     return read(sp_path, wall)
 
 
+def _crossing(t):
+    """Is an OpenMC tally scored at surface crossings (its tally.cpp)?"""
+    kinds = {type(f) for f in t.filters}
+    return "current" in t.scores or openmc.SurfaceFilter in kinds or (
+        bool(kinds & {openmc.CellFromFilter, openmc.MaterialFromFilter})
+        and "flux" in t.scores)
+
+
 def read(sp_path, wall=None):
     with openmc.StatePoint(str(sp_path)) as sp:
         g = {row[0].decode(): row for row in sp.global_tallies}
@@ -128,19 +136,21 @@ def read(sp_path, wall=None):
         for tid, t in sp.tallies.items():
             m = t.mean.reshape(t.mean.shape[0], -1)
             d = t.std_dev.reshape(t.std_dev.shape[0], -1)
-            # our layout: columns SCORES (flux, absorption, scatter,
-            # total); a surface tally's current in column 0.  Scores the
+            # our layout: columns ALL_SCORES (flux, absorption, scatter,
+            # total, then tallies.EXTRA_SCORES); a surface tally's current in column 0.  Scores the
             # tally did not ask for stay 0.
-            mean = np.zeros((m.shape[0], len(SCORES)))
+            mean = np.zeros((m.shape[0], len(ALL_SCORES)))
             se = np.zeros_like(mean)
-            names = ("current",) if "current" in t.scores else SCORES
+            # a tally scored at crossings: current, then surface flux
+            names = ("current", "flux") if _crossing(t) else ALL_SCORES
             for c, k in enumerate(names):
                 if k in t.scores:
                     j = t.scores.index(k)
                     mean[:, c], se[:, c] = m[:, j], d[:, j]
             out[t.name or f"tally{tid}"] = {"id": tid, "mean": mean,
                                             "se": se,
-                                            "scores": list(t.scores)}
+                                            "scores": list(t.scores),
+                                            "surface_type": _crossing(t)}
         timing = {"openmc_transport_s": float(sp.runtime["transport"]),
                   "openmc_total_s": float(sp.runtime["total"])}
         if wall is not None:

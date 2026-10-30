@@ -13,6 +13,9 @@
     python run.py robust                           random models vs OpenMC
     python run.py detcheck                         point detectors: exact,
                                                    balls vs plain, vs OpenMC
+    python run.py gapcheck                         the v1.6.1 features (albedo,
+                                                   new filters, sources,
+                                                   triggers, ...) vs OpenMC
     python run.py score                            one number out of 10 from
                                                    the latest test, validate,
                                                    robust and detector runs
@@ -237,6 +240,15 @@ def cmd_detcheck(args, log):
     return "detcheck"
 
 
+def cmd_gapcheck(args, log):
+    from checks import gapcheck
+    res = gapcheck.suite(DATA / "openmc", args.particles, args.batches,
+                         names=args.cases or None, log=log)
+    (out_dir(args) / "gapcheck.json").write_text(
+        json.dumps(output._plain(res), indent=1))
+    return "gapcheck"
+
+
 def cmd_score(args, log):
     from checks import score
     parts, total = score.score(out_dir(args))
@@ -323,6 +335,10 @@ def main():
     s = sub.add_parser("detcheck")
     common(s)
     s.set_defaults(seed=7)
+
+    s = sub.add_parser("gapcheck")
+    s.add_argument("cases", nargs="*")
+    common(s, particles=20_000)
 
     s = sub.add_parser("score")
     common(s)

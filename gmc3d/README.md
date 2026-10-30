@@ -52,6 +52,9 @@ Numba and PyTorch):
                                                 # and warn about (no run)
     python run.py robust                        # 30 random models vs OpenMC
     python run.py detcheck                      # point detectors checked
+    python run.py gapcheck                      # the v1.6.1 inputs (filters,
+                                                # crossings, albedo, MCPL,
+                                                # triggers, ...) vs OpenMC
     python run.py score                         # one number out of 10 from
                                                 # tests, validate, robust and
                                                 # detcheck results
@@ -84,6 +87,9 @@ core/                THE SOLVER
   tallies.py           flux, absorption and surface-current scoring, mesh
                        tracking, the mesh rules for balls, error bars
   transport.py         plain Monte Carlo + ball steps; the batched loop
+  ext.py               the general scorer: every tally the fast kernels in
+                       tallies.py do not take (any OpenMC filter, crossing
+                       tallies as OpenMC scores them)
   detectors.py         point detectors: the next-event estimator, and how
                        a ball's unseen scatters are scored
   model_check.py       `run.py check`: every refusal and warning at once
@@ -105,6 +111,7 @@ checks/              IS IT RIGHT, AND IS IT FAST
   validate.py          the Stage 1 suite (all problems, OpenMC, exact balls)
   robust.py            randomly built models vs OpenMC (pass or refuse)
   detcheck.py          point detectors: exact, balls vs plain, vs OpenMC
+  gapcheck.py          every v1.6.1 input against OpenMC (20 cases)
   score.py             the score out of 10 and what it leaves out
   ball_metrics.py      one radius at a time: backend vs exact walk
   mesh_profile.py      the mesh rule vs exact walks, one ball at a time

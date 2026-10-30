@@ -1,0 +1,56 @@
+  filters              mc    PASS  balls 0  
+  filters              balls PASS  balls 104,212  
+/opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=22.
+  warn(msg, IDWarning)
+/opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=27.
+  warn(msg, IDWarning)
+/opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=25.
+  warn(msg, IDWarning)
+/opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=31.
+  warn(msg, IDWarning)
+  surfaces             mc    PASS  balls 0  
+  surfaces             balls PASS  balls 359,194  
+  lattice_crossings    mc    PASS  balls 0  
+  lattice_crossings    balls PASS  balls 129,009  
+  meshsurf             mc    PASS  balls 0  
+  meshsurf             balls PASS  balls 1,188,091  
+/home/claude/mtech/gmc3d/checks/gapcheck.py:464: IgnoredSetting: tallies 35, 36, 37, 38, 39, 40: a filter on the direction or the collision count along tracks (Polar, Azimuthal, SphericalHarmonics, Mu or Collision) cannot be scored inside a ball, whose walk is not seen: this model runs without balls (plain Monte Carlo, exact)
+  pr = openmc_import.load(model)
+  directions           mc    PASS  balls 0  
+  albedo_reflective    mc    PASS  balls 0  
+  albedo_reflective    balls PASS  balls 273,997  
+  albedo_white         mc    PASS  balls 0  
+  albedo_white         balls PASS  balls 274,597  
+  albedo_periodic      mc    PASS  balls 0  
+  albedo_periodic      balls PASS  balls 274,821  
+  plane_pair           mc    PASS  balls 0  
+  plane_pair           balls PASS  balls 363,101  
+  horn_torus           mc    PASS  balls 0  
+  horn_torus           balls PASS  balls 1,055,141  
+  mesh_source_1d       mc    PASS  balls 0  
+  mesh_source_1d       balls PASS  balls 300,882  
+  mesh_source_2d       mc    PASS  balls 0  
+  mesh_source_2d       balls PASS  balls 275,081  
+  biased_isotropic     ERROR UFuncTypeError: Cannot cast ufunc 'subtract' output from dtype('float64') to dtype('int64') with casting rule 'same_kind'
+  mcpl                 mc    PASS  balls 0  
+  mcpl                 balls PASS  balls 89,750  
+/home/claude/mtech/gmc3d/checks/gapcheck.py:464: IgnoredSetting: rotational periodic surfaces 86 and 87: the problem lies on the - side of at least one; gmc3d turns particles the right way, OpenMC 0.16 assumes the + side and turns them the wrong way, so its answer for this model is wrong
+  pr = openmc_import.load(model)
+/home/claude/mtech/gmc3d/checks/gapcheck.py:464: IgnoredSetting: rotational periodic surfaces 87 and 86: the problem lies on the - side of at least one; gmc3d turns particles the right way, OpenMC 0.16 assumes the + side and turns them the wrong way, so its answer for this model is wrong
+  pr = openmc_import.load(model)
+  rotation_minus       mc    PASS  balls 0  
+  rotation_minus       balls PASS  balls 1,133,032  
+  triggers             mc    PASS  ran 80 batches (asked 10, max 200), worst rel. error 0.0040 (trigger 0.004)
+/home/claude/mtech/gmc3d/checks/gapcheck.py:489: IgnoredSetting: point detectors with reflective or periodic walls and a void region: wall images further than 55.6 cm (25 mean free paths of the thinnest material) are dropped, which can cut long void streaming paths
+  pr = openmc_import.load(model)
+  det_reflective      mc    PASS  0.017633 +- 4.7e-05 vs OpenMC sphere 0.017551 +- 7.1e-05 (z +0.96)
+  det_reflective      balls PASS  0.01769 +- 4.3e-05 vs OpenMC sphere 0.017551 +- 7.1e-05 (z +1.67)
+  det_white           mc    PASS  0.018339 +- 4.7e-05 vs OpenMC sphere 0.018205 +- 7.3e-05 (z +1.55)
+  det_white           balls PASS  0.018311 +- 4.6e-05 vs OpenMC sphere 0.018205 +- 7.3e-05 (z +1.24)
+/home/claude/mtech/gmc3d/checks/gapcheck.py:489: IgnoredSetting: point detectors with reflective or periodic walls and a void region: wall images further than 55.6 cm (25 mean free paths of the thinnest material) are dropped, which can cut long void streaming paths
+  pr = openmc_import.load(model)
+  det_periodic        mc    PASS  0.014746 +- 4e-05 vs OpenMC sphere 0.014685 +- 6.5e-05 (z +0.79)
+  det_periodic        balls PASS  0.014725 +- 3.7e-05 vs OpenMC sphere 0.014685 +- 6.5e-05 (z +0.53)
+  det_beam            mc    PASS  0.012011 +- 3.7e-05 vs OpenMC sphere 0.011998 +- 6.2e-05 (z +0.18)
+  det_beam            balls PASS  0.011971 +- 3.6e-05 vs OpenMC sphere 0.011998 +- 6.2e-05 (z -0.39)
+gapcheck: 19 of 20 cases pass

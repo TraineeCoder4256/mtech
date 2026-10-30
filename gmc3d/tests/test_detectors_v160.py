@@ -77,7 +77,19 @@ def test_runs_without_detectors_are_unchanged():
     assert "detector" not in {t["filter"] for t in a.tallies.values()}
 
 
-@pytest.mark.parametrize("what", ["reflective", "mono", "outside", "twice"])
+@pytest.mark.parametrize("what", ["reflective", "mono"])
+def test_detectors_behind_walls_and_with_beams_load(what):
+    """Refused in v1.6, handled since v1.6.1 (wall images, the source's
+    true angular density; checks/gapcheck.py runs them against OpenMC)."""
+    model = PROBLEMS["sphere"](box=(what == "reflective"), mesh=4)
+    if what == "mono":
+        model.settings.source = common.point_source((0, 0, 0), (1, 0, 0))
+    common.point_detector(model, "d", (1.0, 0.0, 0.0))
+    pr = openmc_import.load(model)
+    assert len(pr.detectors) == 1
+
+
+@pytest.mark.parametrize("what", ["outside", "twice"])
 def test_detector_refusals(what):
     model = PROBLEMS["sphere"](box=(what == "reflective"), mesh=4)
     if what == "mono":
@@ -94,26 +106,27 @@ def test_detector_refusals(what):
 def _bad_model():
     mats, m = common.one_group_materials("chk_bad", {"a": (0.5, 0.1)})
     s1 = openmc.Sphere(r=10, boundary_type="vacuum")
-    s1.albedo = 0.5
     t = openmc.ZTorus(a=1.0, b=2.0, c=2.0)
     st_ = common.settings(common.point_source((0, 0, 0)))
     st_.survival_biasing = True
-    t1 = openmc.Tally(name="coll")
-    t1.estimator, t1.scores = "collision", ["flux"]
-    t2 = openmc.Tally(name="fiss")
-    t2.scores = ["fission"]
+    t1 = openmc.Tally(name="ev")
+    t1.scores = ["events"]
+    t2 = openmc.Tally(name="efun")
+    t2.filters = [openmc.EnergyFunctionFilter([0, 2e7], [1, 2])]
+    t2.scores = ["flux"]
+    t3 = openmc.Tally(name="heat")
+    t3.scores = ["heating"]
     return openmc.Model(openmc.Geometry([
         openmc.Cell(fill=m["a"], region=-s1 & +t),
         openmc.Cell(fill=m["a"], region=-t)]), mats, st_,
-        openmc.Tallies([t1, t2]))
+        openmc.Tallies([t1, t2, t3]))
 
 
 def test_check_lists_every_refusal_at_once():
     rep = model_check.check(_bad_model())
     text = "\n".join(rep.lines())
     assert not rep.loads
-    for bit in ("albedo 0.5", "torus with c", "'collision' estimator",
-                "['fission']"):
+    for bit in ("'events'", "EnergyFunctionFilter", "'heating'"):
         assert bit in text, bit
     assert any("survival_biasing" in w for w in rep.warned)
 

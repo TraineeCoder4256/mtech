@@ -1,0 +1,36 @@
+  model  0  PASS         4 s  1 object(s) ['sphere'], 3 materials, faces x/y/z ['reflective', 'vacuum', 'vacuum'], source point/iso, tallies ['total', 'cells', 'mats', 'mesh'], with albedo
+  model  1  PASS         6 s  2 object(s) ['tiltcyl', 'cone'], 4 materials, faces x/y/z ['vacuum', 'vacuum', 'vacuum'], source point/mono, tallies ['total', 'cells', 'mats', 'mesh', 'sph', 'faces']
+  model  2  PASS         6 s  1 object(s) ['tiltcyl'], 2 materials, faces x/y/z ['vacuum', 'reflective', 'white'], source box/cone, tallies ['total', 'cells', 'mats', 'mesh', 'cyl']
+  model  3  PASS         6 s  2 object(s) ['shell', 'zcyl'], 4 materials, faces x/y/z ['vacuum', 'vacuum', 'reflective'], source shell/cone, tallies ['total', 'cells', 'mats', 'mesh', 'faces']
+  model  4  REFUSED      0 s  3 object(s) ['sphere', 'torus', 'cone'], 2 materials, faces x/y/z ['white', 'vacuum', 'vacuum'], source box/iso, tallies ['total', 'cells', 'mats', 'mesh', 'faces'], with collision, UNSUPPORTED events
+             tally 21 scores 'events': the number of events a code takes depends on how it transports, not on the problem (OpenMC's is 4.4 per particle here; gmc3d's is another number)
+  model  5  PASS         5 s  2 object(s) ['zcyl', 'box'], 2 materials, faces x/y/z ['vacuum', 'reflective', 'periodic'], source box/cone, tallies ['total', 'cells', 'mats', 'mesh', 'faces']
+  model  6  PASS         5 s  1 object(s) ['cone'], 2 materials, faces x/y/z ['periodic', 'vacuum', 'white'], source point/iso, tallies ['total', 'cells', 'mats', 'mesh', 'sph']
+  model  7  PASS        16 s  2 object(s) ['cone', 'lattice'], 2 materials, faces x/y/z ['white', 'vacuum', 'vacuum'], source box/iso, tallies ['total', 'cells', 'mats', 'mesh', 'cyl', 'sph', 'meshsurf']
+  model  8  PASS        12 s  2 object(s) ['lattice', 'lattice'], 4 materials, faces x/y/z ['periodic', 'vacuum', 'vacuum'], source shell/iso, tallies ['total', 'cells', 'mats', 'mesh', 'cyl', 'sph']
+  model  9  PASS        12 s  1 object(s) ['box'], 3 materials, faces x/y/z ['vacuum', 'periodic', 'reflective'], source point/iso + constraint, tallies ['total', 'cells', 'mats', 'mesh', 'cyl', 'meshsurf']
+  model 10  PASS         8 s  4 object(s) ['shell', 'lattice', 'sphere', 'tiltcyl'], 2 materials, faces x/y/z ['white', 'periodic', 'vacuum'], source shell/iso + constraint, tallies ['total', 'cells', 'mats', 'mesh', 'sph', 'meshsurf']
+  model 11  PASS         4 s  1 object(s) ['zcyl'], 3 materials, faces x/y/z ['white', 'vacuum', 'vacuum'], source shell/cone, tallies ['total', 'cells', 'mats', 'mesh']
+  model 12  REFUSED      0 s  2 object(s) ['torus', 'shell'], 4 materials, faces x/y/z ['vacuum', 'vacuum', 'vacuum'], source point/mono, tallies ['total', 'cells', 'mats', 'mesh'], UNSUPPORTED events
+             tally 65 scores 'events': the number of events a code takes depends on how it transports, not on the problem (OpenMC's is 4.4 per particle here; gmc3d's is another number)
+  model 13  PASS        12 s  1 object(s) ['zcyl'], 4 materials, faces x/y/z ['vacuum', 'white', 'vacuum'], source box/mono, tallies ['total', 'cells', 'mats', 'mesh', 'meshsurf', 'cell_e'], with horn
+  model 14  PASS         4 s  1 object(s) ['lattice'], 4 materials, faces x/y/z ['vacuum', 'vacuum', 'vacuum'], source point/cone, tallies ['total', 'cells', 'mats', 'mesh', 'cyl', 'sph', 'cell_e']
+  model 15  PASS        91 s  3 object(s) ['shell', 'torus', 'box'], 4 materials, faces x/y/z ['reflective', 'periodic', 'vacuum'], source point/iso + constraint, tallies ['total', 'cells', 'mats', 'mesh', 'sph', 'faces', 'meshsurf']
+  model 16  PASS        18 s  4 object(s) ['sphere', 'zcyl', 'sphere', 'shell'], 2 materials, faces x/y/z ['reflective', 'vacuum', 'reflective'], source point/iso, tallies ['total', 'cells', 'mats', 'mesh', 'cyl', 'sph', 'faces', 'cell_e']
+  model 17  PASS        13 s  1 object(s) ['sphere'], 4 materials, faces x/y/z ['periodic', 'reflective', 'vacuum'], source shell/cone, tallies ['total', 'cells', 'mats', 'mesh', 'faces', 'cell_e']
+  model 18  PASS         7 s  4 object(s) ['lattice', 'cone', 'tiltcyl', 'shell'], 3 materials, faces x/y/z ['vacuum', 'vacuum', 'periodic'], source shell/mono + constraint, tallies ['total', 'cells', 'mats', 'mesh', 'faces', 'cell_e']
+  model 19  PASS         5 s  2 object(s) ['sphere', 'shell'], 4 materials, faces x/y/z ['reflective', 'reflective', 'vacuum'], source shell/iso, tallies ['total', 'cells', 'mats', 'mesh']
+  model 20  PASS         6 s  2 object(s) ['tiltcyl', 'lattice'], 4 materials, faces x/y/z ['vacuum', 'periodic', 'white'], source point/iso, tallies ['total', 'cells', 'mats', 'mesh', 'faces']
+  model 21  PASS        11 s  3 object(s) ['cone', 'box', 'sphere'], 3 materials, faces x/y/z ['vacuum', 'vacuum', 'vacuum'], source shell/mono, tallies ['total', 'cells', 'mats', 'mesh', 'sph', 'faces']
+  model 22  PASS        16 s  2 object(s) ['torus', 'cone'], 2 materials, faces x/y/z ['periodic', 'vacuum', 'white'], source box/iso, tallies ['total', 'cells', 'mats', 'mesh', 'cyl', 'cell_e'], with collision
+  model 23  PASS         6 s  3 object(s) ['sphere', 'box', 'zcyl'], 3 materials, faces x/y/z ['vacuum', 'vacuum', 'white'], source point/iso, tallies ['total', 'cells', 'mats', 'mesh']
+  model 24  PASS         5 s  1 object(s) ['lattice'], 2 materials, faces x/y/z ['vacuum', 'vacuum', 'white'], source shell/iso, tallies ['total', 'cells', 'mats', 'mesh']
+  model 25  REFUSED      0 s  3 object(s) ['box', 'tiltcyl', 'cone'], 2 materials, faces x/y/z ['periodic', 'vacuum', 'white'], source shell/iso, tallies ['total', 'cells', 'mats', 'mesh', 'faces', 'meshsurf'], UNSUPPORTED derivative
+             tally 138 has a derivative; gmc3d has no differential tallies (they need the collisions a ball hides)
+  model 26: FAIL at 1x (mesh/flux chi2/dof 3.093 over 93 bins (p 9.5e-22); mesh/absorption chi2/dof 3.094 over 93 bins (p 9.2e-22); faces/current chi2/dof 4.760 over 6 bins (p 7.4e-05); mesh/flux chi2/dof 3.488 over 93 bins (p 2.3e-27); mesh/absorption chi2/dof 3.492 over 93 bins (p 2.0e-27); faces/current chi2/dof 4.752 over 6 bins (p 7.5e-05)), rerunning at 5x histories
+  model 26  PASS        10 s  1 object(s) ['sphere'], 3 materials, faces x/y/z ['vacuum', 'vacuum', 'periodic'], source point/iso, tallies ['total', 'cells', 'mats', 'mesh', 'faces', 'cell_e']
+  model 27  PASS         6 s  2 object(s) ['tiltcyl', 'cone'], 3 materials, faces x/y/z ['white', 'vacuum', 'white'], source box/iso, tallies ['total', 'cells', 'mats', 'mesh', 'cyl', 'sph', 'faces']
+  model 28  PASS         6 s  2 object(s) ['sphere', 'box'], 4 materials, faces x/y/z ['vacuum', 'vacuum', 'vacuum'], source box/iso, tallies ['total', 'cells', 'mats', 'mesh', 'faces', 'cell_e'], with fission
+  model 29  PASS         4 s  1 object(s) ['box'], 3 materials, faces x/y/z ['vacuum', 'vacuum', 'white'], source shell/iso + constraint, tallies ['total', 'cells', 'mats', 'mesh', 'cyl', 'faces', 'meshsurf']
+
+== robustness: 27 PASS, 3 refused cleanly, 0 FAIL, 0 ERROR of 30 models

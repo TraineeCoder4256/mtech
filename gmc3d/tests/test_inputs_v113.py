@@ -61,16 +61,31 @@ def _slab_tally(**attrs):
 
 
 @pytest.mark.parametrize("attrs, words", [
-    ({"estimator": "collision"}, "estimator"),
-    ({"estimator": "analog"}, "estimator"),
     ({"nuclides": ["U235"]}, "nuclides"),
     ({"derivative": openmc.TallyDerivative(variable="density",
                                            material=1)}, "derivative"),
-    ({"scores": ["fission"]}, "fission"),
+    ({"scores": ["events"]}, "events"),
+    ({"scores": ["heating"]}, "heating"),
 ])
 def test_tally_settings_that_change_the_answer_are_refused(attrs, words):
     with pytest.raises(Unsupported, match=words):
         openmc_import.load(_slab_tally(**attrs))
+
+
+@pytest.mark.parametrize("attrs", [{"estimator": "collision"},
+                                   {"estimator": "analog"}])
+def test_other_estimators_are_named_in_a_warning(attrs):
+    """Same expected value, other noise: since v1.6.1 a warning, not a
+    refusal."""
+    with pytest.warns(IgnoredSetting, match="estimator"):
+        openmc_import.load(_slab_tally(**attrs))
+
+
+def test_fission_scores_are_zero():
+    pr = openmc_import.load(_slab_tally(scores=["flux", "fission"]))
+    r = transport.run(pr, 2000, 2, seed=1)
+    from core.tallies import ALL_SCORES
+    assert r.tallies["extra"]["mean"][0, ALL_SCORES.index("fission")] == 0
 
 
 def test_tally_triggers_are_named_in_a_warning():
@@ -85,24 +100,24 @@ def test_track_length_estimator_and_total_nuclide_are_accepted():
                                    nuclides=["total"]))
 
 
-def test_mesh_born_filter_is_refused():
+def test_mesh_born_filter_is_not_a_mesh_filter():
     """Before v1.1.3 it passed the isinstance(MeshFilter) check and was
-    scored as an ordinary mesh: silently wrong.  (MeshSurfaceFilter, the
-    other relative, is handled since v1.5.)"""
+    scored as an ordinary mesh: silently wrong.  Refused from v1.1.3,
+    scored by birth element since v1.6.1."""
     m = openmc.RegularMesh()
     m.lower_left, m.upper_right, m.dimension = (0, -1, -1), (60, 1, 1), \
         (6, 1, 1)
-    with pytest.raises(Unsupported, match="MeshBornFilter"):
-        openmc_import.load(_slab_tally(filters=[openmc.MeshBornFilter(m)]))
+    pr = openmc_import.load(_slab_tally(filters=[openmc.MeshBornFilter(m)]))
+    assert [f.kind for f in pr.tallies[-1].filters] == ["meshborn"]
+    assert pr.tallies[-1].ext
 
 
-def test_mesh_surface_filter_on_a_cylindrical_mesh_is_refused():
+def test_mesh_surface_filter_on_a_cylindrical_mesh_is_accepted():
     m = openmc.CylindricalMesh(r_grid=[0, 1, 2], z_grid=[0, 1],
                                phi_grid=[0, 2 * np.pi])
     model = _slab_tally(filters=[openmc.MeshSurfaceFilter(m)],
                         scores=["current"])
-    with pytest.raises(Unsupported, match="CylindricalMesh"):
-        openmc_import.load(model)
+    assert openmc_import.load(model).tallies[-1].ext
 
 
 # ------------------------------------------------- scores and mesh shapes
