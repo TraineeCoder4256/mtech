@@ -61,7 +61,13 @@ def test_surface_currents_add_up_to_leakage():
         assert abs((right - left) - r.leakage) < 1e-12 * r.leakage
 
 
-def test_surface_filter_on_reflective_surface_is_refused():
-    model, _ = _slab_with_currents(reflective_too=True)
-    with pytest.raises(Unsupported, match="reflective"):
-        openmc_import.load(model)
+def test_current_on_a_reflective_surface_is_exactly_zero():
+    """OpenMC scores a reflection +w and then -w (measured, v1.5), so the
+    current through a reflective wall is exactly 0; before v1.5 such a
+    tally was refused."""
+    model, planes = _slab_with_currents(reflective_too=True)
+    r = transport.run(openmc_import.load(model), 5000, 4, seed=4)
+    cur = dict(zip(r.tallies["sides"]["bin_ids"],
+                   r.tallies["sides"]["mean"][:, 0]))
+    assert cur[planes[2].id] == 0.0
+    assert cur[planes[0].id] < 0 < cur[planes[1].id]

@@ -71,7 +71,10 @@ VOID = -1
 
 Geometry = namedtuple("Geometry", [
     "surf_kind", "surf_coef", "surf_bc",                    # per surface
-    "surf_shift",       # periodic surface: the jump to its partner plane
+    "surf_shift",       # periodic surface: (the jump to its partner plane,
+                        # the partner's index as a float, -1 if none);
+                        # one array, not two: every array here is paid for
+                        # on every _descend call (see tallies.MeshExtra)
     "surf_angle",       # ... or, if not 0, the turn about z onto it
     "cell_tok_start", "cell_tok_len", "tokens",             # region formulas
     "cell_surf_start", "cell_surf_len", "cell_surfs",       # surfaces a cell uses
@@ -135,24 +138,32 @@ def in_cell(g, cell, x, y, z):
 
 # ------------------------------------------------------------- the descent
 @njit(cache=True)
-def _descend(g, x, y, z, u, v, w, want_near, want_ray, path):
+def _descend(g, x, y, z, u, v, w, want_near, want_ray, path,
+             want_sign=False):
     """Walk from the root to the material cell holding (x, y, z).
 
     path (MAX_LEVELS long) receives the cell at each level, root first,
     then -1 after the deepest (what a tally's cell filter looks at: OpenMC
     matches a cell at any level).
 
-    Returns (cell, material, near, t_ray, ray_surface, ray_at_root):
+    Returns (cell, material, near, t_ray, ray_surface, ray_level,
+    ray_sign):
       cell, material  the deepest cell and its material (VOID / LOST codes)
       near            nearest-boundary distance (if want_near), else INF
       t_ray           distance along (u, v, w) to the next surface or
                       lattice wall at any level (if want_ray), else INF
       ray_surface     the surface t_ray stops at (-1 for a lattice wall)
-      ray_at_root     True if that surface belongs to the root universe,
-                      the only place boundary conditions act
+      ray_level       the level that surface belongs to (0: the root
+                      universe, the only place boundary conditions act;
+                      -1 for a lattice wall or none)
+      ray_sign        +1 if the flight crosses to that surface's positive
+                      side, -1 if to its negative side, in the surface's
+                      own (local) frame: a surface current's sign (v1.5;
+                      only if want_sign, else 0)
     """
     univ = g.root
-    near, t_ray, ray_surf, ray_root = INF, INF, -1, False
+    near, t_ray, ray_surf, ray_lvl = INF, INF, -1, -1
+    hx, hy, hz, hu, hv, hw = 0.0, 0.0, 0.0, 0.0, 0.0, 1.0   # winner's frame
     inst = 0
     for level in range(MAX_LEVELS):
         # ---- which cell of this universe holds the point
@@ -164,7 +175,7 @@ def _descend(g, x, y, z, u, v, w, want_near, want_ray, path):
                 break
         if cell < 0:
             path[level] = -1
-            return -1, LOST, 0.0, INF, -1, False
+            return -1, LOST, 0.0, INF, -1, -1, 0.0
         path[level] = cell
         if level + 1 < MAX_LEVELS:
             path[level + 1] = -1
@@ -181,14 +192,20 @@ def _descend(g, x, y, z, u, v, w, want_near, want_ray, path):
             if want_ray:
                 d = S.ray(g.surf_kind[i], g.surf_coef[i], x, y, z, u, v, w)
                 if d < t_ray:
-                    t_ray, ray_surf, ray_root = d, i, level == 0
+                    t_ray, ray_surf, ray_lvl = d, i, level
+                    hx, hy, hz, hu, hv, hw = x, y, z, u, v, w
 
         ft = g.cell_fill_type[cell]
-        if ft == FILL_MATERIAL:
-            m = g.leaf_mat[inst] if g.cell_dist[cell] else g.cell_fill[cell]
-            return cell, m, near, t_ray, ray_surf, ray_root
-        if ft == FILL_VOID:
-            return cell, VOID, near, t_ray, ray_surf, ray_root
+        if ft == FILL_MATERIAL or ft == FILL_VOID:
+            m = VOID if ft == FILL_VOID else (
+                g.leaf_mat[inst] if g.cell_dist[cell] else g.cell_fill[cell])
+            sg = 0.0
+            if want_sign and ray_surf >= 0:
+                nx, ny, nz = S.normal(g.surf_kind[ray_surf],
+                                      g.surf_coef[ray_surf], hx + t_ray * hu,
+                                      hy + t_ray * hv, hz + t_ray * hw)
+                sg = 1.0 if hu * nx + hv * ny + hw * nz > 0.0 else -1.0
+            return cell, m, near, t_ray, ray_surf, ray_lvl, sg
 
         # ---- move into the fill's coordinates: p' = R (p - t), d' = R d
         x, y, z = (x - g.cell_trans[cell, 0], y - g.cell_trans[cell, 1],
@@ -218,7 +235,7 @@ def _descend(g, x, y, z, u, v, w, want_near, want_ray, path):
         if want_ray:
             d = _wall_exit(g, lat, x, y, z, u, v, w)
             if d < t_ray:
-                t_ray, ray_surf, ray_root = d, -1, False
+                t_ray, ray_surf, ray_lvl = d, -1, -1
         if valid:
             univ = g.lat_univs[g.lat_univ_start[lat] + k]
             inst += g.lat_off[g.lat_univ_start[lat] + k]
@@ -226,8 +243,8 @@ def _descend(g, x, y, z, u, v, w, want_near, want_ray, path):
             univ = g.lat_outer[lat]
         else:
             path[level + 1 if level + 1 < MAX_LEVELS else level] = -1
-            return -1, LOST, 0.0, INF, -1, False
-    return -1, LOST, 0.0, INF, -1, False
+            return -1, LOST, 0.0, INF, -1, -1, 0.0
+    return -1, LOST, 0.0, INF, -1, -1, 0.0
 
 
 # ------------------------------------------------------------- lattices
@@ -333,15 +350,15 @@ def _wall_exit(g, lat, lx, ly, lz, u, v, w):
 @njit(cache=True)
 def locate(g, x, y, z):
     """(cell, material) holding the point; material is VOID or LOST if so."""
-    cell, mat, _, _, _, _ = _descend(g, x, y, z, 1.0, 0.0, 0.0, False, False,
-                                     np.empty(MAX_LEVELS, np.int64))
+    cell, mat, _, _, _, _, _ = _descend(g, x, y, z, 1.0, 0.0, 0.0, False,
+                                        False, np.empty(MAX_LEVELS, np.int64))
     return cell, mat
 
 
 @njit(cache=True)
 def nearest_boundary(g, x, y, z):
     """(distance, cell, material): the distance field at the point."""
-    cell, mat, near, _, _, _ = _descend(g, x, y, z, 1.0, 0.0, 0.0,
+    cell, mat, near, _, _, _, _ = _descend(g, x, y, z, 1.0, 0.0, 0.0,
                                         True, False,
                                         np.empty(MAX_LEVELS, np.int64))
     return near, cell, mat
@@ -350,9 +367,9 @@ def nearest_boundary(g, x, y, z):
 @njit(cache=True)
 def ray_boundary(g, x, y, z, u, v, w):
     """(distance, surface, at_root, cell, material) for a flight."""
-    cell, mat, _, t, s, root = _descend(g, x, y, z, u, v, w, False, True,
-                                        np.empty(MAX_LEVELS, np.int64))
-    return t, s, root, cell, mat
+    cell, mat, _, t, s, lvl, _ = _descend(g, x, y, z, u, v, w, False, True,
+                                          np.empty(MAX_LEVELS, np.int64))
+    return t, s, lvl == 0, cell, mat
 
 
 # ---------------------------------------------------- Python-side helpers

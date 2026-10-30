@@ -99,6 +99,19 @@ rectilinear meshes share one grid walk.  A 1D or 2D regular mesh has one
 bin from -BIG to +BIG on each missing axis, as OpenMC's are unbounded
 there.  Regular axes find a point's bin by division, rectilinear ones by
 binary search.
+
+CURVED MESHES (v1.5).  A CylindricalMesh has axes (r, phi, z) and a
+SphericalMesh (r, theta, phi), first axis fastest, all relative to the
+mesh's origin; phi runs from +x towards +y in [0, 2 pi), theta from +z
+(OpenMC's conventions).  Their edges are not planes, so the flight walk is
+different: from where the flight is, find the nearest point ahead where it
+meets ANY edge surface (a cylinder or sphere for an r edge, a half-plane
+through the z axis for a phi edge, a cone -- or the plane z = 0 at
+theta = pi/2 -- for a theta edge, a plane for a z edge), deposit the piece
+up to there in the bin of the piece's midpoint, and repeat.  A cut that is
+not a real bin boundary only splits a piece in two inside one bin, so it
+costs time, never accuracy.  The 'cap' rule's room is the distance to the
+nearest edge surface (exact for each kind).
 """
 
 from collections import namedtuple
@@ -107,10 +120,13 @@ from dataclasses import dataclass
 import numpy as np
 from numba import njit
 
-VOLUME, SURFACE = 0, 1            # tally kinds: track or crossing scores
+VOLUME, SURFACE, MESHSURF, CURVED = 0, 1, 2, 3
+# tally kinds: track scores, surface crossings, mesh face crossings, track
+# scores on a curved mesh (scored by its own kernel; see MeshExtra)
 F_CELL, F_CELLFROM, F_MAT, F_MESH, F_SURF, F_ENERGY = range(1, 7)
 _FKIND = {"cell": F_CELL, "cellfrom": F_CELLFROM, "material": F_MAT,
-          "mesh": F_MESH, "surface": F_SURF, "energy": F_ENERGY}
+          "mesh": F_MESH, "meshsurface": F_MESH, "surface": F_SURF,
+          "energy": F_ENERGY}
 MAX_FILTERS = 6                   # one of each kind at most
 # Shortcuts for the common tallies (all of v1.2's), which skip `_combos`:
 # no filter but a mesh; one cell filter on material / void cells only (it
@@ -124,6 +140,9 @@ NS = len(SCORES)                  # entries per bin
 LEAKAGE = 0                       # index of the leakage entry
 INF = 1.0e300
 BIG = 1.0e100                     # edge of a mesh's missing axis
+MESH_RECT, MESH_CYL, MESH_SPH = 0, 1, 2
+_MESH_TYPE = {"rect": MESH_RECT, "cyl": MESH_CYL, "sph": MESH_SPH}
+TWO_PI = 2.0 * np.pi
 
 # The compiled form the Numba kernels read.
 Layout = namedtuple("Layout", [
@@ -139,8 +158,28 @@ Layout = namedtuple("Layout", [
     "mesh_ll", "mesh_dw", "mesh_dim",   # per tally x axis: first edge,
                                         # SMALLEST bin width, bin count
     "mesh_edges", "mesh_uniform",       # per tally x axis: edges, regular?
-    "has_mesh", "has_surface",   # any tally of that kind (skip work if not)
+    "has_mesh", "has_surface",   # any tally of that kind (skip work if not:
+    "has_meshsurf", "has_curved",   # a volume mesh, a surface, a mesh
+                                    # surface, a curved volume mesh)
     "n_entries",                 # length of a row of acc
+])
+
+# What only the v1.5 kernels need (curved meshes, mesh surfaces, the ball
+# rules), kept OUT of Layout on purpose: every array in Layout is paid for
+# on every call that receives it, and score_segment makes several such
+# calls per flight.  Seven more arrays in Layout made the scoring of an
+# ordinary flight 40-65% slower even with no curved mesh (measured on cask
+# and hexcore, v1.5; one array alone cost 14% on cask).
+MeshExtra = namedtuple("MeshExtra", [
+    "mesh_type", "mesh_org",     # per tally: MESH_*, origin (curved only)
+    "mesh_box",                  # per tally: (lower, upper) corner of a
+                                 # box holding the mesh (flights are
+                                 # clipped to it)
+    "mesh_cos", "mesh_sin",      # per tally x axis x edge: cos / sin of an
+                                 # angular edge (curved meshes only)
+    "mesh_h",                    # per tally: a voxel's smallest size in cm
+                                 # (the 'profile' rule's point count)
+    "mesh_ndim",                 # per tally: a MESHSURF mesh's axes
 ])
 
 
@@ -152,7 +191,12 @@ def scratch(levels):
 
 
 def compile_layout(tallies, n_cells, n_mats, n_surfs=1, leaf=None):
-    """Tally list -> Layout.  Combined bin b of tally t is at
+    """Tally list -> Layout (see `compile_layouts` for MeshExtra too)."""
+    return compile_layouts(tallies, n_cells, n_mats, n_surfs, leaf)[0]
+
+
+def compile_layouts(tallies, n_cells, n_mats, n_surfs=1, leaf=None):
+    """Tally list -> (Layout, MeshExtra).  Combined bin b of tally t is at
     offset[t] + NS b, b = sum over filters of (filter bin) x stride, the
     last filter's stride 1 (OpenMC's order).  (A surface tally keeps the
     same layout: current, then unused zeros.)"""
@@ -173,10 +217,19 @@ def compile_layout(tallies, n_cells, n_mats, n_surfs=1, leaf=None):
     mesh_dim = np.ones((nt, 3), np.int64)
     edges = [[np.array([-BIG, BIG])] * 3 for _ in range(nt)]
     mesh_uniform = np.ones((nt, 3), np.bool_)
+    mesh_type = np.zeros(nt, np.int64)
+    mesh_org = np.zeros((nt, 3))
+    mesh_box = np.zeros((nt, 2, 3))
+    mesh_h = np.ones(nt)
+    mesh_ndim = np.full(nt, 3, np.int64)
     pos = 1                                       # entry 0 is leakage
     for t, tl in enumerate(tallies):
         fs = tl.filters
         kind[t] = SURFACE if any(f.kind == "surface" for f in fs) \
+            else MESHSURF if any(f.kind == "meshsurface" for f in fs) \
+            else CURVED if any(f.kind == "mesh" and
+                               getattr(f, "mesh_type", "rect") != "rect"
+                               for f in fs) \
             else VOLUME
         offset[t] = pos
         nf[t] = len(fs)
@@ -184,8 +237,9 @@ def compile_layout(tallies, n_cells, n_mats, n_surfs=1, leaf=None):
         for j in range(len(fs) - 1, -1, -1):     # last filter fastest
             f = fs[j]
             f_kind[t, j], f_stride[t, j] = _FKIND[f.kind], stride
-            if f.kind == "mesh":
+            if f.kind in ("mesh", "meshsurface"):
                 mesh_on[t], mesh_stride[t] = True, stride
+                mesh_ndim[t] = getattr(f, "ndim", 3)
                 for a, e in enumerate(f.edges):
                     e = np.asarray(e, float)
                     w = np.diff(e)
@@ -193,15 +247,22 @@ def compile_layout(tallies, n_cells, n_mats, n_surfs=1, leaf=None):
                     mesh_ll[t, a], mesh_dim[t, a] = e[0], e.size - 1
                     mesh_dw[t, a] = w.min()
                     mesh_uniform[t, a] = np.allclose(w, w[0], rtol=1e-12)
+                mesh_type[t] = _MESH_TYPE[getattr(f, "mesh_type", "rect")]
+                mesh_org[t] = getattr(f, "origin", None) if \
+                    getattr(f, "origin", None) is not None else 0.0
+                mesh_box[t], mesh_h[t] = _box_and_size(
+                    mesh_type[t], mesh_org[t], edges[t])
             elif f.kind == "energy":
                 f_lut[t, j, 0] = f.bins[0]
             else:
                 f_lut[t, j, f.bins] = np.arange(f.nbins)
             stride *= f.nbins
-        other = [j for j, f in enumerate(fs) if f.kind != "mesh"]
-        if kind[t] == VOLUME and not other:
+        other = [j for j, f in enumerate(fs)
+                 if f.kind not in ("mesh", "meshsurface")]
+        track = kind[t] in (VOLUME, CURVED)
+        if track and not other:
             fast[t] = FAST_NONE
-        elif kind[t] == VOLUME and len(other) == 1:
+        elif track and len(other) == 1:
             f = fs[other[0]]
             j = other[0]
             if f.kind == "material":
@@ -217,11 +278,36 @@ def compile_layout(tallies, n_cells, n_mats, n_surfs=1, leaf=None):
     for t in range(nt):
         for a in range(3):
             mesh_edges[t, a, :edges[t][a].size] = edges[t][a]
-    return Layout(kind, offset, nf, f_kind, f_stride, f_lut, fast, fast_lut,
-                  mesh_on,
-                  mesh_stride, mesh_ll, mesh_dw, mesh_dim, mesh_edges,
-                  mesh_uniform, bool(mesh_on.any()),
-                  bool((kind == SURFACE).any()), pos)
+    L = Layout(kind, offset, nf, f_kind, f_stride, f_lut, fast, fast_lut,
+               mesh_on,
+               mesh_stride, mesh_ll, mesh_dw, mesh_dim, mesh_edges,
+               mesh_uniform,
+               bool((mesh_on & ((kind == VOLUME) | (kind == CURVED))).any()),
+               bool((kind == SURFACE).any()),
+               bool((kind == MESHSURF).any()),
+               bool((kind == CURVED).any()), pos)
+    X = MeshExtra(mesh_type, mesh_org, mesh_box, np.cos(mesh_edges),
+                  np.sin(mesh_edges), mesh_h, mesh_ndim)
+    return L, X
+
+
+def _box_and_size(mtype, org, e):
+    """A mesh's bounding box ((2, 3): lower and upper corner) and its
+    smallest voxel size in cm.  For a curved mesh the size uses the arc
+    of the innermost ring at its mid radius: only a point count depends
+    on it ('profile' rule), never an answer."""
+    dmin = [np.diff(x).min() for x in e]
+    if mtype == MESH_RECT:
+        return np.array([[x[0] for x in e], [x[-1] for x in e]]), \
+            min(dmin)
+    r = e[0]
+    rmax, rmid = r[-1], 0.5 * (r[0] + r[1])
+    if mtype == MESH_CYL:
+        lo = org + np.array([-rmax, -rmax, e[2][0]])
+        hi = org + np.array([rmax, rmax, e[2][-1]])
+        return np.array([lo, hi]), min(dmin[0], dmin[2], rmid * dmin[1])
+    return np.array([org - rmax, org + rmax]), \
+        min(dmin[0], rmid * dmin[1], rmid * dmin[2])
 
 
 # ------------------------------------------------------------ the kernels
@@ -414,6 +500,193 @@ def _mesh_segment(row, L, t, base, sa, ss, w, x, y, z, u, v, ww, length):
             nz_ = t0 + _next_wall(L, t, 2, iz, sz, z0, ww)
 
 
+# ------------------------------------------------------- curved meshes
+@njit(cache=True, inline="always")
+def _coords(X, t, x, y, z):
+    """A point in mesh t's own coordinates: (x, y, z) for a rectangular
+    mesh, (r, phi, z) cylindrical, (r, theta, phi) spherical."""
+    k = X.mesh_type[t]
+    if k == MESH_RECT:
+        return x, y, z
+    dx = x - X.mesh_org[t, 0]
+    dy = y - X.mesh_org[t, 1]
+    dz = z - X.mesh_org[t, 2]
+    phi = np.arctan2(dy, dx)
+    if phi < 0.0:
+        phi += TWO_PI
+    rho2 = dx * dx + dy * dy
+    if k == MESH_CYL:
+        return np.sqrt(rho2), phi, dz
+    r = np.sqrt(rho2 + dz * dz)
+    c = dz / r if r > 0.0 else 1.0
+    return r, np.arccos(min(max(c, -1.0), 1.0)), phi
+
+
+@njit(cache=True)
+def _point_bin(L, X, t, x, y, z):
+    """Mesh bin (first axis fastest) of mesh t holding a point, or -1."""
+    dim = L.mesh_dim[t]
+    q0, q1, q2 = _coords(X, t, x, y, z)
+    i0 = _bin(L, t, 0, q0)
+    i1 = _bin(L, t, 1, q1)
+    i2 = _bin(L, t, 2, q2)
+    if 0 <= i0 < dim[0] and 0 <= i1 < dim[1] and 0 <= i2 < dim[2]:
+        return (i2 * dim[1] + i1) * dim[0] + i0
+    return -1
+
+
+@njit(cache=True, inline="always")
+def _first_root(a, b, c, lo):
+    """Smallest t > lo with a t^2 + 2 b t + c = 0 (INF if none)."""
+    if abs(a) < 1.0e-14:
+        if abs(b) < 1.0e-300:
+            return INF
+        r = -c / (2.0 * b)
+        return r if r > lo else INF
+    disc = b * b - a * c
+    if disc < 0.0:
+        return INF
+    sq = np.sqrt(disc)
+    r1, r2 = (-b - sq) / a, (-b + sq) / a
+    if r1 > r2:
+        r1, r2 = r2, r1
+    if r1 > lo:
+        return r1
+    return r2 if r2 > lo else INF
+
+
+@njit(cache=True)
+def _next_cut(L, X, t, px, py, pz, u, v, w, lo):
+    """Distance (> lo) along the ray from p (relative to the origin) to
+    the first point where it meets any edge surface of curved mesh t."""
+    k = X.mesh_type[t]
+    dim = L.mesh_dim[t]
+    best = INF
+    pp, pd = px * px + py * py, px * u + py * v
+    dd = u * u + v * v
+    if k == MESH_SPH:
+        pp += pz * pz
+        pd += pz * w
+        dd += w * w
+    # r edges: cylinders (about z) or spheres
+    e = L.mesh_edges[t, 0]
+    for i in range(dim[0] + 1):
+        if e[i] > 0.0:
+            best = min(best, _first_root(dd, pd, pp - e[i] * e[i], lo))
+    # phi edges: half-planes through the z axis
+    ap = 1 if k == MESH_CYL else 2
+    for i in range(dim[ap] + 1):
+        c, sn = X.mesh_cos[t, ap, i], X.mesh_sin[t, ap, i]
+        den = c * v - sn * u                 # normal (-sin, cos, 0) . d
+        if abs(den) < 1.0e-300:
+            continue
+        r = -(c * py - sn * px) / den
+        if lo < r < best and c * (px + r * u) + sn * (py + r * v) >= 0.0:
+            best = r
+    if k == MESH_CYL:
+        # z edges: planes
+        if w != 0.0:
+            e = L.mesh_edges[t, 2]
+            for i in range(dim[2] + 1):
+                r = (e[i] - pz) / w
+                if lo < r < best:
+                    best = r
+        return best
+    # theta edges: cones about z (the plane z = 0 at theta = pi/2)
+    for i in range(dim[1] + 1):
+        c = X.mesh_cos[t, 1, i]
+        if abs(c) > 1.0 - 1.0e-12:           # theta 0 or pi: the z axis
+            continue
+        if abs(c) < 1.0e-12:
+            if w != 0.0:
+                r = -pz / w
+                if lo < r < best:
+                    best = r
+            continue
+        c2 = c * c
+        a = w * w - c2 * dd
+        b = pz * w - c2 * pd
+        cc = pz * pz - c2 * pp
+        # both nappes solve the quadratic; keep the root on this theta's
+        r = _first_root(a, b, cc, lo)
+        while r < best and (pz + r * w) * c < 0.0:   # other nappe
+            r = _first_root(a, b, cc, r)
+        best = min(best, r)
+    return best
+
+
+@njit(cache=True)
+def _curved_segment(row, L, X, t, base, sa, ss, wgt, x, y, z, u, v, w,
+                    length):
+    """`_mesh_segment` for a cylindrical or spherical mesh: cut the flight
+    at every edge surface it meets, each piece into the bin of its
+    midpoint (see the docstring)."""
+    ms = NS * L.mesh_stride[t]
+    t0, t1 = 0.0, length
+    for a in range(3):
+        q = x if a == 0 else (y if a == 1 else z)
+        d = u if a == 0 else (v if a == 1 else w)
+        lo, hi = X.mesh_box[t, 0, a], X.mesh_box[t, 1, a]
+        if d == 0.0:
+            if q < lo or q > hi:
+                return
+        else:
+            ta, tb = (lo - q) / d, (hi - q) / d
+            if ta > tb:
+                ta, tb = tb, ta
+            t0, t1 = max(t0, ta), min(t1, tb)
+    if t0 >= t1:
+        return
+    px = x - X.mesh_org[t, 0]
+    py = y - X.mesh_org[t, 1]
+    pz = z - X.mesh_org[t, 2]
+    eps = 1.0e-10 * (1.0 + length)
+    tc = t0
+    while tc < t1:
+        te = min(t1, _next_cut(L, X, t, px, py, pz, u, v, w, tc + eps))
+        tm = 0.5 * (tc + te)
+        b = _point_bin(L, X, t, x + tm * u, y + tm * v, z + tm * w)
+        if b >= 0:
+            _add(row, base + ms * b, _decayed(wgt, sa, tc, te), sa, ss)
+        tc = te
+
+
+@njit(cache=True)
+def _curved_room(L, X, t, x, y, z):
+    """Distance from a point to the nearest edge surface of curved mesh t
+    (each kind's exact distance; see `mesh_room`)."""
+    k = X.mesh_type[t]
+    dim = L.mesh_dim[t]
+    px = x - X.mesh_org[t, 0]
+    py = y - X.mesh_org[t, 1]
+    pz = z - X.mesh_org[t, 2]
+    rho = np.sqrt(px * px + py * py)
+    rad = rho if k == MESH_CYL else np.sqrt(rho * rho + pz * pz)
+    room = INF
+    e = L.mesh_edges[t, 0]
+    for i in range(dim[0] + 1):
+        if e[i] > 0.0:
+            room = min(room, abs(rad - e[i]))
+    ap = 1 if k == MESH_CYL else 2
+    for i in range(dim[ap] + 1):
+        c, sn = X.mesh_cos[t, ap, i], X.mesh_sin[t, ap, i]
+        along = c * px + sn * py             # towards the half-plane
+        room = min(room, abs(c * py - sn * px) if along >= 0.0 else rho)
+    if k == MESH_CYL:
+        e = L.mesh_edges[t, 2]
+        for i in range(dim[2] + 1):
+            room = min(room, abs(pz - e[i]))
+        return room
+    for i in range(dim[1] + 1):
+        c, sn = X.mesh_cos[t, 1, i], X.mesh_sin[t, 1, i]
+        if abs(c) > 1.0 - 1.0e-12:
+            continue
+        # the cone's generator in the point's meridian half-plane
+        along = rho * sn + pz * c
+        room = min(room, abs(rho * c - pz * sn) if along >= 0.0 else rad)
+    return room
+
+
 @njit(cache=True)
 def score_segment(row, L, cell, path, mat, sa, ss, w, x, y, z, u, v, ww,
                   length, scr):
@@ -442,6 +715,26 @@ def score_segment(row, L, cell, path, mat, sa, ss, w, x, y, z, u, v, ww,
 
 
 @njit(cache=True)
+def score_segment_curved(row, L, X, cell, path, mat, sa, ss, w, x, y, z, u,
+                         v, ww, length, scr):
+    """`score_segment` for the curved-mesh tallies (kind CURVED, which it
+    skips), called only when there is one."""
+    for t in range(L.kind.size):
+        if L.kind[t] != CURVED:
+            continue
+        f = L.fast[t]
+        if f != GENERAL:
+            c = _fast(L, t, f, cell, mat)
+            n = 1 if c >= 0 else 0
+        else:
+            n = _combos(L, t, path, path, mat, -1, scr)
+        for q in range(n):
+            if L.fast[t] == GENERAL:
+                c = scr[q]
+            _curved_segment(row, L, X, t, L.offset[t] + NS * c, sa, ss, w,
+                            x, y, z, u, v, ww, length)
+
+@njit(cache=True)
 def score_surface(row, L, surf, signed_w, frm, to, mat_to, scr):
     """A flight crossing surface `surf` with weight +-w (sign: towards
     the positive side), leaving the cells `frm` for the cells `to` (in
@@ -453,6 +746,90 @@ def score_surface(row, L, surf, signed_w, frm, to, mat_to, scr):
         n = _combos(L, t, to, frm, mat_to, surf, scr)
         for q in range(n):
             row[L.offset[t] + NS * scr[q]] += signed_w
+
+
+@njit(cache=True)
+def score_mesh_faces(row, L, X, sa, wgt, x, y, z, u, v, w, length):
+    """Every mesh face a flight from (x, y, z) along (u, v, w) crosses in
+    (0, length), in every mesh-surface tally: the weight there, w
+    exp(-sa t), into the bin 'out of the element left' and 'in to the
+    element entered' (just one where the flight leaves or enters the
+    mesh).  OpenMC's MeshSurfaceFilter bins (see openmc_import.py)."""
+    for t in range(L.kind.size):
+        if L.kind[t] != MESHSURF:
+            continue
+        dim = L.mesh_dim[t]
+        nb = 4 * X.mesh_ndim[t]
+        at = L.offset[t]
+        # clip to the mesh box, remembering which axis bounds each end
+        t0, t1, a0, a1 = 0.0, length, -1, -1
+        out = False
+        for a in range(3):
+            q = x if a == 0 else (y if a == 1 else z)
+            d = u if a == 0 else (v if a == 1 else w)
+            lo, hi = L.mesh_edges[t, a, 0], L.mesh_edges[t, a, dim[a]]
+            if d == 0.0:
+                if q < lo or q > hi:
+                    out = True
+            else:
+                ta, tb = (lo - q) / d, (hi - q) / d
+                if ta > tb:
+                    ta, tb = tb, ta
+                if ta > t0:
+                    t0, a0 = ta, a
+                if tb < t1:
+                    t1, a1 = tb, a
+        if out or t0 >= t1:
+            continue
+        x0, y0, z0 = x + t0 * u, y + t0 * v, z + t0 * w
+        ix, sx, nx_ = _axis(L, t, 0, x0, u)
+        iy, sy, ny_ = _axis(L, t, 1, y0, v)
+        iz, sz, nz_ = _axis(L, t, 2, z0, w)
+        if a0 >= 0:                              # enters the mesh at t0
+            d = u if a0 == 0 else (v if a0 == 1 else w)
+            e = (iz * dim[1] + iy) * dim[0] + ix
+            f = 4 * a0 + (1 if d > 0.0 else 3)
+            row[at + NS * (e * nb + f)] += wgt * np.exp(-sa * t0)
+        nx_ += t0
+        ny_ += t0
+        nz_ += t0
+        while True:
+            te = min(nx_, ny_, nz_)
+            if te >= t1:
+                break
+            e = (iz * dim[1] + iy) * dim[0] + ix
+            if nx_ <= ny_ and nx_ <= nz_:
+                a, s = 0, sx
+            elif ny_ <= nz_:
+                a, s = 1, sy
+            else:
+                a, s = 2, sz
+            wt = wgt * np.exp(-sa * te)
+            row[at + NS * (e * nb + 4 * a + (2 if s > 0 else 0))] += wt
+            if a == 0:
+                ix += sx
+                if ix < 0 or ix >= dim[0]:
+                    break                        # the far face, by rounding
+                nx_ = t0 + _next_wall(L, t, 0, ix, sx, x0, u)
+            elif a == 1:
+                iy += sy
+                if iy < 0 or iy >= dim[1]:
+                    break
+                ny_ = t0 + _next_wall(L, t, 1, iy, sy, y0, v)
+            else:
+                iz += sz
+                if iz < 0 or iz >= dim[2]:
+                    break
+                nz_ = t0 + _next_wall(L, t, 2, iz, sz, z0, w)
+            e = (iz * dim[1] + iy) * dim[0] + ix
+            row[at + NS * (e * nb + 4 * a + (1 if s > 0 else 3))] += wt
+        if not (0 <= ix < dim[0] and 0 <= iy < dim[1] and 0 <= iz < dim[2]):
+            continue                             # already scored as out
+        if a1 >= 0 and t1 < length:              # leaves the mesh at t1
+            d = u if a1 == 0 else (v if a1 == 1 else w)
+            e = (iz * dim[1] + iy) * dim[0] + ix
+            f = 4 * a1 + (2 if d > 0.0 else 0)
+            row[at + NS * (e * nb + f)] += wgt * np.exp(-sa * t1)
 
 
 @njit(cache=True)
@@ -475,20 +852,18 @@ def score_ball(row, L, cell, path, mat, sa, ss, flux, scr):
 
 
 @njit(cache=True)
-def score_ball_mesh(row, L, cell, path, mat, sa, ss, flux, x, y, z, scr):
+def score_ball_mesh(row, L, X, cell, path, mat, sa, ss, flux, x, y, z, scr):
     """`flux` of a ball into the voxel holding (x, y, z), in every mesh
     tally (and its other filters' bins for the ball's cell and material):
     the ball's centre under 'cap', a drawn point of its walk under
     'profile' (see transport.py)."""
     for t in range(L.kind.size):
-        if not L.mesh_on[t]:
+        if not L.mesh_on[t] or (L.kind[t] != VOLUME and
+                                L.kind[t] != CURVED):
             continue
-        dim = L.mesh_dim[t]
-        ix = _bin(L, t, 0, x)
-        iy = _bin(L, t, 1, y)
-        iz = _bin(L, t, 2, z)
-        if 0 <= ix < dim[0] and 0 <= iy < dim[1] and 0 <= iz < dim[2]:
-            b = L.mesh_stride[t] * ((iz * dim[1] + iy) * dim[0] + ix)
+        b = _point_bin(L, X, t, x, y, z)
+        if b >= 0:
+            b *= L.mesh_stride[t]
             if L.fast[t] != GENERAL:
                 c = _fast(L, t, L.fast[t], cell, mat)
                 if c >= 0:
@@ -500,13 +875,19 @@ def score_ball_mesh(row, L, cell, path, mat, sa, ss, flux, x, y, z, scr):
 
 
 @njit(cache=True)
-def mesh_room(L, x, y, z):
+def mesh_room(L, X, x, y, z, faces_only=False):
     """Radius of the biggest ball around (x,y,z) that stays inside one voxel
     of every mesh tally ('cap' rule).  Outside a mesh, the ball must not
-    reach the mesh at all."""
+    reach the mesh at all.  (A curved mesh: the distance to its nearest
+    edge surface, which covers both cases.)  faces_only: only the meshes of
+    mesh-surface tallies, which cap balls under either rule (a ball must
+    not carry a particle across a mesh face unseen)."""
     room = INF
     for t in range(L.kind.size):
-        if not L.mesh_on[t]:
+        if not L.mesh_on[t] or (faces_only and L.kind[t] != MESHSURF):
+            continue
+        if L.kind[t] == CURVED:
+            room = min(room, _curved_room(L, X, t, x, y, z))
             continue
         dim = L.mesh_dim[t]
         p = (x, y, z)
@@ -638,6 +1019,7 @@ class Accumulator:
             out[tl.name or f"tally{tl.id}"] = {
                 "id": tl.id, "filter": tl.filter, "bin_ids": tl.bin_ids,
                 "mesh": tl.mesh, "scores": tl.scores,
+                "mesh_type": getattr(tl, "mesh_type", "rect"),
                 "edges": tl.edges,
                 "filters": [(f.kind, f.nbins) for f in tl.filters],
                 "mean": mean[a:a + NS * nb].reshape(nb, NS),

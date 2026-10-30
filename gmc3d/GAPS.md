@@ -15,7 +15,7 @@ Columns:
   the model work they belong to.
 - **plan**: the push in `V1_PLAN.md` that closes it, or "hold" / "later".
 
-Last updated: v1.4.1 (29 Oct 2026).
+Last updated: v1.5.0 (30 Oct 2026).
 
 ## Geometry (left in v1.0 to v1.4.1)
 
@@ -50,7 +50,7 @@ Since v1.2 every OpenMC source kind is read except the rows below
 | `PointCloud` / `MeshSpatial` `bias` | built (v1.2), checked only by unit test: OpenMC 0.16 refuses the XML its own Python writes for it, so no OpenMC comparison | - | no | when OpenMC fixes it |
 | Source energy | ignored (one group) | - | YES at Stage 3 (energy becomes a network input) | Stage 3 |
 
-## Tallies (left in v1.0 to v1.3)
+## Tallies (left in v1.0 to v1.5)
 
 | gap | shows as | size | model change? | plan |
 |---|---|---|---|---|
@@ -59,14 +59,22 @@ Since v1.2 every OpenMC source kind is read except the rows below
 | `MeshBornFilter` (bins by birth place) | refused (v1.1.3) | S | no | later |
 | Tally derivatives (differential tallies) | refused (v1.1.3) | M | no at one group; the sensitivity of a ball's (mu, s) to a cross section is a research question | later |
 | Other scores (`events`, `heating`, reaction rates by nuclide) | refused | S-M each | no, but most need data a one-group library lacks | later |
-| Filters other than Cell, CellFrom, Material, Mesh, Surface, Energy (`UniverseFilter`, `CellInstanceFilter`, `DistribcellFilter`, `MaterialFromFilter`, `CellBornFilter`, angle and time filters, ...) | refused (v1.3) | S each (Universe: the path is already there) | no | later |
+| Filters other than Cell, CellFrom, Material, Mesh, MeshSurface, Surface, Energy (`UniverseFilter`, `CellInstanceFilter`, `DistribcellFilter`, `MaterialFromFilter`, `CellBornFilter`, angle and time filters, ...) | refused (v1.3) | S each (Universe: the path is already there) | no | later |
 | Two filters of the same kind in one tally (OpenMC allows two MeshFilters, for instance) | refused (v1.3) | S | no | later |
 | `CellFromFilter` on a track tally (bins a flight by the cell the particle last left) | refused (v1.3) | S | no | later |
-| `SurfaceFilter` with a `MeshFilter` | refused (v1.3) | - | as `MeshSurfaceFilter` below | v1.5 |
+| `SurfaceFilter` with a `MeshFilter` | refused (v1.3); `MeshSurfaceFilter` (v1.5) does the usual job | S | no | later |
 | `EnergyFilter` bins real energies | one group: every particle sits at the group's midpoint, as in OpenMC (v1.3) | - | **YES** at Stage 3 (energy becomes a network input) | Stage 3 |
-| `CylindricalMesh`, `SphericalMesh` | refused | M | no | v1.5 |
-| Surface current on reflective, white or periodic surfaces / inside a filled universe | refused (white, periodic since v1.4.0) | S/M | no | v1.5 |
-| `MeshSurfaceFilter` (currents through voxel faces) | refused | M | no IF balls are shrunk to one voxel when it is present (exact, less speed-up); YES if balls stay full-size, since (mu, s) cannot say which faces the walk crossed | v1.5 (shrink) |
+| `SphericalMesh` with a theta edge at pi/2 (the plane z = 0) | built (v1.5), checked only against the exact uncollided answer: OpenMC 0.16 scores that edge wrongly (up to 360 sigma off, measured 30 Oct 2026; other cones it gets right) | - | no | when OpenMC fixes it |
+| Curved-mesh flights cut at every edge surface, then search again (cost grows with the number of edges) | by design (v1.5): a flight of N pieces tests every edge N times | S | no: walk neighbouring bins only | later, if a fine curved mesh is slow |
+| `cap` rule near a curved mesh, outside it: the room is the distance to the nearest edge surface, which may be a plane's or cone's extension that bounds no bin there | by design (v1.5): balls smaller than they need be, never wrong | S | no | later |
+| Curved meshes in `.vtk` files and flux-map pictures | skipped (v1.5): both draw rectangular meshes only | S | no | later |
+| `MeshSurfaceFilter` on a `CylindricalMesh` or `SphericalMesh` | refused (v1.5) | M | no | later |
+| `MeshSurfaceFilter` with any other filter | refused (v1.5) | S | no | later |
+| `MeshSurfaceFilter` present: balls are shrunk to stay inside one voxel of its mesh, whatever the mesh rule | by design (v1.5): exact, less speed-up | - | YES to keep full-size balls: (mu, s) cannot say which faces a walk crossed | hold |
+| A mesh face lying on a reflective, white or periodic wall | not counted (v1.5), as OpenMC (both stop TINY short of the wall) | - | no | - |
+| Surface currents on surfaces inside a universe whose frame is moved (any lattice element but a centred one, a translated cell) | built (v1.5), checked only by conservation (net current into an absorber = - its absorption): OpenMC 0.16 gets these wrong (3 x 3 lattice +0.169 against an absorption of 0.493; `runs/2026-10-30/v1.5/openmc_bugs.log`) | - | no | when OpenMC fixes it |
+| Current on a rotational periodic wall: signed against the wall the particle comes in through | built (v1.5), checked by beam unit tests; OpenMC 0.16 signs it against the wall it left, after turning (no current of either wall; same log). Translational walls agree with OpenMC | - | no | when OpenMC fixes it |
+| Current on a reflective or white wall | exactly 0 (v1.5), as OpenMC (+w then -w at every reflection); partial currents there are 0 too | - | no | - |
 | Point detectors (flux at a point; Kobayashi reports these) | not available | M | no under the idea of using v1.1 profile points as stand-in collision sites; that idea is a method decision for Phani | Phani decides |
 | `UnstructuredMesh` (tetrahedral) | refused | L | no, but large engineering | later |
 | Flux-map pictures (`run.py maps`) draw a rectilinear mesh's bins as equal widths; `.vtk` output writes only flux and absorption and assumes even spacing | cosmetic (v1.1.3) | S | no | later |

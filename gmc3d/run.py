@@ -117,7 +117,7 @@ def cmd_solve(args, log):
         extra["vs_openmc"] = cmp
     output.save_json(r, d / f"{stem}.json", extra)
     for name, t in r.tallies.items():
-        if t["filter"] == "mesh":
+        if t["filter"] == "mesh" and t.get("mesh_type", "rect") == "rect":
             output.save_vtk(t, d / f"{stem}_{name}.vtk")
     log(f"  written to {d}/{stem}.*")
     return stem

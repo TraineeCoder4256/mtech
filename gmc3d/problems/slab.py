@@ -12,7 +12,9 @@ towards -x) and x = 60 (transmission, positive).  Since v1.1.3 the total
 tally also scores scatter and total, and a 1D RegularMesh (30 bins in x,
 unbounded in y and z, all four scores) checks the 1D mesh path.  Since
 v1.3 the face currents are also scored with a cell-from and with a cell
-filter (on a vacuum face both are the slab itself).
+filter (on a vacuum face both are the slab itself).  Since v1.5 a
+MeshSurfaceFilter on a 1D mesh of 6 bins in x, whose end faces lie on the
+vacuum faces (OpenMC counts a particle leaving there).
 """
 import openmc
 
@@ -48,6 +50,11 @@ def build(thickness=60.0, sig_s=0.5, sig_a=0.005, half_width=100.0, bins=60):
         common.flux_tally("sides_cell", openmc.SurfaceFilter([x0, x1]),
                           scores=("current",)),
     ])
+    faces = openmc.RegularMesh()
+    faces.lower_left, faces.upper_right, faces.dimension = \
+        (0.0,), (thickness,), (6,)
+    tallies.append(common.flux_tally("faces1d", openmc.MeshSurfaceFilter(
+        faces), scores=("current",)))
     tallies[4].filters = tallies[4].filters + [openmc.SurfaceFilter([x0, x1])]
     tallies[5].filters = tallies[5].filters + [openmc.CellFilter([cell])]
     src = common.box_source((0.0, -half_width, -half_width),

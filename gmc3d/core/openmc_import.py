@@ -25,13 +25,16 @@ feature (S1-GEO-6), instead of being run wrongly:
                   (see sources.py)
     tallies       any combination of cell (at any level, filled cells
                   too), material, mesh (1D, 2D or 3D RegularMesh,
-                  RectilinearMesh) and energy filters, scoring flux,
+                  RectilinearMesh, CylindricalMesh, SphericalMesh) and
+                  energy filters, scoring flux,
                   absorption, scatter and total with the track-length
-                  estimator; or a surface filter on root-universe vacuum
-                  or transmission surfaces, alone or with cell, cell-from,
+                  estimator; or a surface filter (any surface, any level,
+                  any boundary condition), alone or with cell, cell-from,
                   material and energy filters, scoring current (weight
                   crossing, + towards the positive side, as OpenMC
-                  defines it; with a cell-from filter, a partial current)
+                  defines it; with a cell-from filter, a partial current);
+                  or a MeshSurfaceFilter on a Regular or Rectilinear mesh,
+                  alone, scoring current
     settings      fixed-source runs.  Settings that change only the noise
                   or the run's length, never the expected answer (survival
                   biasing, weight windows, cutoffs, temperatures, tally
@@ -84,7 +87,9 @@ class Filter:
     midpoint energy, as OpenMC does), or -1 if none.  For 'mesh', mesh
     holds (lower_left, upper_right, dimension) of the bounding box, always
     3 long (a 1D or 2D mesh gets one bin of +-tallies.BIG on each missing
-    axis), and edges the bin edges on each axis.
+    axis), and edges the bin edges on each axis.  mesh_type is 'rect',
+    'cyl' (axes r, phi, z) or 'sph' (r, theta, phi), origin a curved
+    mesh's origin; a curved mesh's box is in its own coordinates.
     """
     kind: str
     nbins: int
@@ -92,6 +97,9 @@ class Filter:
     bin_ids: list = field(default_factory=list)   # OpenMC ids / energies
     mesh: tuple = None
     edges: list = None
+    mesh_type: str = "rect"
+    origin: np.ndarray = None
+    ndim: int = 3                 # a MeshSurfaceFilter's mesh axes
 
 
 @dataclass
@@ -117,6 +125,7 @@ class Tally:
     bin_ids: list = field(default_factory=list)       # OpenMC ids of bins
     mesh: tuple = None
     edges: list = None
+    mesh_type: str = "rect"
 
     @property
     def nbins(self):
@@ -219,7 +228,8 @@ def _plane(surf):
 
 def _periodic_shifts(surfs):
     """For each periodic surface, how a particle leaving through it reaches
-    the same spot on its partner plane: (shift, angle).
+    the same spot on its partner plane: (shift with the partner's index in
+    column 3, angle).
 
     Partners as OpenMC pairs them: `periodic_surface` if set, otherwise the
     one other periodic plane of the same axis (X, Y or Z planes only).
@@ -228,7 +238,8 @@ def _periodic_shifts(surfs):
     contain the z axis, and a particle leaving through one is turned about
     z by angle = theta(partner normal) + pi - theta(own normal).  Like
     OpenMC, this takes the problem to lie on the + side of both planes."""
-    shift = np.zeros((len(surfs), 3))
+    shift = np.zeros((len(surfs), 4))
+    shift[:, 3] = -1.0                    # the partner's index, as a float
     angle = np.zeros(len(surfs))
     per = [s for s in surfs if s.boundary_type == "periodic"]
     for s in per:
@@ -249,12 +260,13 @@ def _periodic_shifts(surfs):
         if partner.boundary_type != "periodic":
             raise Unsupported(f"surface {s.id}'s periodic partner "
                               f"{partner.id} is not periodic")
+        shift[index[s.id], 3] = index.get(partner.id, -1)   # -1: unused
         n1, d1 = _plane(s)
         n2, d2 = _plane(partner)
         if np.linalg.norm(np.cross(n1, n2)) <= 1e-9:
             if np.dot(n1, n2) < 0:
                 n2, d2 = -n2, -d2
-            shift[index[s.id]] = (d2 - d1) * n1
+            shift[index[s.id], :3] = (d2 - d1) * n1
             continue
         for o, n, d in ((s, n1, d1), (partner, n2, d2)):
             if abs(n[2]) > 1e-12 or abs(d) > 1e-10:
@@ -374,8 +386,26 @@ SCORES = ("flux", "absorption", "scatter", "total")
 
 
 def _mesh(t, m):
-    """An OpenMC mesh -> (bounding box, bin edges on x, y, z)."""
+    """An OpenMC mesh -> (bounding box, bin edges on each axis, type,
+    origin).  Curved meshes keep OpenMC's axes and origin."""
     from .tallies import BIG
+    if isinstance(m, (openmc.CylindricalMesh, openmc.SphericalMesh)):
+        cyl = isinstance(m, openmc.CylindricalMesh)
+        names = ("r", "phi", "z") if cyl else ("r", "theta", "phi")
+        edges = [np.asarray(getattr(m, f"{a}_grid"), float) for a in names]
+        top = {"r": np.inf, "phi": 2 * np.pi, "z": np.inf, "theta": np.pi}
+        for a, e in zip(names, edges):
+            if e.size < 2 or np.any(np.diff(e) <= 0):
+                raise Unsupported(f"tally {t.id}: mesh {m.id} {a}_grid "
+                                  f"must rise strictly")
+            if a != "z" and (e[0] < 0.0 or e[-1] > top[a] * (1 + 1e-12)):
+                raise Unsupported(f"tally {t.id}: mesh {m.id} {a}_grid "
+                                  f"must lie in [0, {top[a]:g}]")
+        box = (np.array([e[0] for e in edges]),
+               np.array([e[-1] for e in edges]),
+               np.array([e.size - 1 for e in edges], np.int64))
+        return box, edges, "cyl" if cyl else "sph", \
+            np.asarray(m.origin, float)
     if isinstance(m, openmc.RegularMesh):
         nd = len(m.dimension)
         ll = np.asarray(m.lower_left, float)
@@ -392,11 +422,12 @@ def _mesh(t, m):
     else:
         raise Unsupported(f"tally {t.id}: mesh {m.id} is a "
                           f"{type(m).__name__}; stage 1 handles "
-                          f"RegularMesh (1D, 2D, 3D) and RectilinearMesh")
+                          f"RegularMesh (1D, 2D, 3D), RectilinearMesh, "
+                          f"CylindricalMesh and SphericalMesh")
     edges += [np.array([-BIG, BIG])] * (3 - len(edges))
     box = (np.array([e[0] for e in edges]), np.array([e[-1] for e in edges]),
            np.array([e.size - 1 for e in edges], np.int64))
-    return box, edges
+    return box, edges, "rect", None
 
 
 def _check_tally(t, warn):
@@ -422,24 +453,24 @@ def _check_tally(t, warn):
 
 # OpenMC filter classes gmc3d accepts, by exact type (several of OpenMC's
 # other filters are subclasses of these and mean something else:
-# MeshSurfaceFilter and MeshBornFilter of MeshFilter, for instance).
+# MeshBornFilter of MeshFilter, for instance).
 _FILTER_KIND = {openmc.CellFilter: "cell", openmc.CellFromFilter: "cellfrom",
                 openmc.MaterialFilter: "material", openmc.MeshFilter: "mesh",
+                openmc.MeshSurfaceFilter: "meshsurface",
                 openmc.SurfaceFilter: "surface",
                 openmc.EnergyFilter: "energy"}
 
 
-def _tallies(model, mats, cell_index, mat_index, surf_index, root_surfs,
-             warn):
+def _tallies(model, mats, cell_index, mat_index, surf_index, warn):
     out = []
     for t in model.tallies:
         _check_tally(t, warn)
-        out.append(_tally(t, model, mats, cell_index, mat_index, surf_index,
-                          root_surfs))
+        out.append(_tally(t, model, mats, cell_index, mat_index,
+                          surf_index))
     return out
 
 
-def _tally(t, model, mats, cell_index, mat_index, surf_index, root_surfs):
+def _tally(t, model, mats, cell_index, mat_index, surf_index):
     scores = list(t.scores)
     kinds = []
     for f in t.filters:
@@ -448,12 +479,17 @@ def _tally(t, model, mats, cell_index, mat_index, surf_index, root_surfs):
             raise Unsupported(
                 f"tally {t.id} filter {type(f).__name__}; gmc3d handles "
                 f"Cell, CellFrom (with a Surface filter), Material, Mesh, "
-                f"Surface and Energy filters")
+                f"MeshSurface, Surface and Energy filters")
         if k in kinds:
             raise Unsupported(f"tally {t.id} has two {type(f).__name__}s")
         kinds.append(k)
     surface = "surface" in kinds
-    if surface:
+    if "meshsurface" in kinds:
+        if kinds != ["meshsurface"] or scores != ["current"]:
+            raise Unsupported(f"tally {t.id} has a MeshSurfaceFilter; gmc3d "
+                              f"scores only current there, with no other "
+                              f"filter")
+    elif surface:
         if scores != ["current"]:
             raise Unsupported(f"tally {t.id} has a SurfaceFilter; gmc3d "
                               f"scores only current there, alone")
@@ -474,20 +510,19 @@ def _tally(t, model, mats, cell_index, mat_index, surf_index, root_surfs):
                               f"it with a SurfaceFilter for partial "
                               f"currents")
     filters = [_filter(t, f, k, model, mats, cell_index, mat_index,
-                       surf_index, root_surfs)
+                       surf_index)
                for f, k in zip(t.filters, kinds)]
     tl = Tally(t.id, t.name, "total" if not kinds else " x ".join(kinds),
                scores, filters)
     if len(filters) == 1:
         tl.bins, tl.bin_ids = filters[0].bins, filters[0].bin_ids
     for f in filters:
-        if f.kind == "mesh":
-            tl.mesh, tl.edges = f.mesh, f.edges
+        if f.kind in ("mesh", "meshsurface"):
+            tl.mesh, tl.edges, tl.mesh_type = f.mesh, f.edges, f.mesh_type
     return tl
 
 
-def _filter(t, f, kind, model, mats, cell_index, mat_index, surf_index,
-            root_surfs):
+def _filter(t, f, kind, model, mats, cell_index, mat_index, surf_index):
     if kind in ("cell", "cellfrom"):
         # Cells at ANY level count, filled ones included: a filled cell
         # scores whatever happens inside it (OpenMC's rule; transport.py
@@ -500,31 +535,38 @@ def _filter(t, f, kind, model, mats, cell_index, mat_index, surf_index,
         return Filter(kind, len(ids), np.array([mat_index[b] for b in ids],
                                                np.int64), ids)
     if kind == "mesh":
-        box, edges = _mesh(t, f.mesh)
-        return Filter(kind, int(np.prod(box[2])), mesh=box, edges=edges)
+        box, edges, mtype, origin = _mesh(t, f.mesh)
+        return Filter(kind, int(np.prod(box[2])), mesh=box, edges=edges,
+                      mesh_type=mtype, origin=origin)
+    if kind == "meshsurface":
+        # OpenMC's bins: per element (first axis fastest), per axis of the
+        # mesh, (out through the low face, in through it, out through the
+        # high face, in through it): 4 x ndim bins per element
+        box, edges, mtype, origin = _mesh(t, f.mesh)
+        if mtype != "rect":
+            raise Unsupported(f"tally {t.id}: a MeshSurfaceFilter on a "
+                              f"{type(f.mesh).__name__}; gmc3d handles "
+                              f"Regular and Rectilinear meshes there")
+        ndim = len(f.mesh.dimension) if isinstance(
+            f.mesh, openmc.RegularMesh) else 3
+        return Filter(kind, int(np.prod(box[2])) * 4 * ndim, mesh=box,
+                      edges=edges, mesh_type=mtype, ndim=ndim)
     if kind == "energy":
         e = np.asarray(f.values, float)
         hit = int(np.searchsorted(e, mats.energy, side="right")) - 1
         if not 0 <= hit < e.size - 1:
             hit = -1                      # the group lies outside every bin
         return Filter(kind, e.size - 1, np.array([hit], np.int64), list(e))
-    # surface: only surfaces of the root universe (inside a translated or
-    # rotated universe the crossing direction would need the local frame),
-    # and not reflective ones (a reflection is a crossing that comes
-    # straight back).  Balls never cross a surface -- a ball lies inside
-    # one cell -- so every crossing is an ordinary flight and the tally is
-    # exact whatever the ball backend.
-    all_surfs = model.geometry.get_all_surfaces()
+    # surface: any surface, at any universe level and with any boundary
+    # condition (v1.5; transport.py scores each kind as OpenMC does).
+    # Balls never cross a surface -- a ball lies inside one cell -- so
+    # every crossing is an ordinary flight and the tally is exact whatever
+    # the ball backend.
     ids = [int(b) for b in f.bins]
     for sid in ids:
-        if sid not in root_surfs:
+        if sid not in surf_index:
             raise Unsupported(f"tally {t.id} filters on surface {sid}, "
-                              f"which is not a surface of the root "
-                              f"universe's cells")
-        bt = all_surfs[sid].boundary_type
-        if bt in ("reflective", "white", "periodic"):
-            raise Unsupported(f"tally {t.id} filters on surface {sid}, "
-                              f"which is {bt}")
+                              f"which no cell of the geometry uses")
     return Filter(kind, len(ids), np.array([surf_index[b] for b in ids],
                                            np.int64), ids)
 
@@ -749,12 +791,8 @@ def load(model):
         lat_ll, lat_pitch, lat_shape, as_int(lat_ndim),
         lat_type, lat_rings, lat_ustart, as_int(lat_univs), as_int(lat_outer),
         univ_index[geo.root_universe.id])
-    root_surfs = set()
-    for c in geo.root_universe.cells.values():
-        _region_tokens(c.region, surf_index, [], root_surfs)
-    root_surfs = {surfs[i].id for i in root_surfs}
     tallies = _tallies(model, mats, cell_index, mat_index, surf_index,
-                       root_surfs, warn)
+                       warn)
     src = sources.make(model, geom, cell_index, mat_index, univ_index,
                        Unsupported)
     warn += src.warnings

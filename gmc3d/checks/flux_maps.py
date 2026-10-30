@@ -119,7 +119,7 @@ def plot(ours, ref, path, title, label="GMC"):
 
 def mesh_name(results):
     for name, t in results.tallies.items():
-        if t["filter"] == "mesh":
+        if t["filter"] == "mesh" and t.get("mesh_type", "rect") == "rect":
             return name
     return None
 

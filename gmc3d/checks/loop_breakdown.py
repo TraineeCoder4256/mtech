@@ -63,7 +63,7 @@ def _bench_descend(g, xs, ys, zs, us, vs, ws, want_near, reps):
     path = np.full(G.MAX_LEVELS, -1, np.int64)
     for _ in range(reps):
         for i in range(xs.size):
-            cell, mat, near, t_ray, surf, at_root = G._descend(
+            cell, mat, near, t_ray, surf, lvl, sg = G._descend(
                 g, xs[i], ys[i], zs[i], us[i], vs[i], ws[i], want_near, True,
                 path)
             acc += t_ray + near + cell + mat
@@ -114,7 +114,7 @@ def run_split(problem, particles, batches, seed, backend, r_star,
     line by line; the phases are the only addition.
     """
     g, m = problem.geom, problem.mats
-    ph, L, _ = TR.physics(problem, backend, r_star, None, mesh_rule)
+    ph, L, _, X = TR.physics(problem, backend, r_star, None, mesh_rule)
     accum = T.Accumulator(L)
     cnt = np.zeros((nchunk, len(TR.COUNTERS)), np.int64)
     ph_t = dict(allocate=0.0, birth=0.0, advance=0.0, gather=0.0,
@@ -137,7 +137,7 @@ def run_split(problem, particles, batches, seed, backend, r_star,
 
         while True:
             t = time.perf_counter()
-            TR._advance(g, ph, L, P, acc, cnt, nchunk)
+            TR._advance(g, ph, L, X, P, acc, cnt, nchunk)
             ph_t["advance"] += time.perf_counter() - t
 
             t = time.perf_counter()

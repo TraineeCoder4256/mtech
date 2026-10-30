@@ -1,0 +1,62 @@
+Three places where OpenMC 0.16.0 (multigroup) disagrees with an exact or
+conservation answer, found while validating v1.5 (30 Oct 2026).  Scripts
+in probes/ (run from gmc3d/: python runs/2026-10-30/v1.5/probes/X.py OUTDIR).
+In each case gmc3d agrees with the exact answer, so these tallies are
+checked by unit tests (tests/test_tallies_v150.py), not against OpenMC.
+
+1. SphericalMesh, a theta edge at pi/2 (the plane z = 0)
+   Pure absorber sphere (R 10, sigma_a 0.1), point source; exact
+   uncollided flux per bin by quadrature (400k directions x 4000 steps).
+   probes/sphabs.py, mesh r 0-12 (5), theta [0, .8, pi/2, 2.4, pi], phi 4,
+   origin (1, -.5, .5), source at (0, 0, 0):
+     ours   vs exact: chi2/dof 0.82      max|z| 2.08
+     OpenMC vs exact: chi2/dof 15096.91  max|z| 313.34
+   probes/sphiso.py (OpenMC only, 100k x 20 batches):
+     A origin 0, source at origin, theta bins   chi2/dof 1.8   max|z| 3.0
+       (tracks from the apex never cross a cone: not a real test)
+     B offset origin, phi bins only             chi2/dof 1.0   max|z| 1.8
+     C offset origin, theta bins (with pi/2)    chi2/dof 33713 max|z| 342
+     D offset origin, r bins only               chi2/dof 0.3   max|z| 1.0
+     E z-offset origin, theta bins (with pi/2)  chi2/dof 33167 max|z| 318
+   probes/sphiso2.py, origin 0, source at (-1, .5, -.5):
+     theta with pi/2:      ours 0.5 / 2.2    OpenMC 38437 / 358  (chi2/dof / max|z|)
+     theta = [0, pi/2, pi]: ours 0.6 / 1.2   OpenMC 47357 / 276
+     theta = [0, .8, pi]:  ours 0.1 / 0.5    OpenMC 3.2 / 3.5   (20 batches)
+   probes/sphiso3.py, same, OpenMC 100k x 80 batches:
+     theta [0, .9, 2.3, pi]: ours 1.0 / 2.3  OpenMC 0.7 / 2.0
+     theta [0, .8, pi]:      ours 0.1 / 0.5  OpenMC 1.0 / 2.0
+     theta [0, 2.0, pi]:     ours 1.7 / 1.6  OpenMC 0.3 / 0.9
+   => OpenMC is wrong at the pi/2 edge only; other cones are fine.  The
+   validation meshes (sphere.py, curved.py) avoid pi/2.
+
+2. Surface currents on surfaces inside a universe whose frame is moved
+   An absorbing sphere (r 2, sigma_a 2) in a moderator box, point source
+   outside it: the net current into the sphere must be minus its
+   absorption (no source inside).  probes/innerprobe.py, innerprobe2.py
+   (OpenMC 20k x 20; ours 100k x 8):
+     root            OpenMC current -0.1320 abs 0.1315 | ours -0.1328 abs 0.1327
+     universe        OpenMC current -0.1320 abs 0.1315 | ours -0.1328 abs 0.1327
+     1x1 lattice     OpenMC current -0.1320 abs 0.1315 | ours -0.1328 abs 0.1327
+     3x3 lattice     OpenMC current +0.1691 abs 0.4931 | ours -0.4922 abs 0.4922
+     translated      OpenMC current -0.2902 abs 0.3122 | ours -0.3143 abs 0.3142
+   => OpenMC is right only when the universe's frame is the root's.  In
+   the nested problem (pins in a lattice) it gave pin currents of +0.089
+   (more leaving the absorbing pins than entering), ours -0.69.
+
+3. Rotational periodic walls: the sign
+   Quarter cylinder, walls x = 0 and y = 0, near-void (sigma_a 0.01),
+   one beam.  probes/rotbeam.py, rotbeam2.py, [x0, y0] currents:
+     out via x0 along -x:           OpenMC [0, -0.9961]  ours [0, +0.995]
+     out via y0 along -y:           OpenMC [-0.9961, 0]  ours [+0.995, 0]
+     out via x0 twice:              OpenMC [0, -0.0615]  ours [0, +1.9297]
+     out via x0 once, oblique:      OpenMC [0, +0.9922]  ours [0, +0.9917]
+   OpenMC scores the crossing on the partner wall (as we do) but signs it
+   by the TURNED direction against the normal of the wall it LEFT:
+   (0, 1).(1, 0) = 0 -> -1; twice: -0.995 + 0.935 = -0.06; oblique +.  That
+   is no current of either wall.  Ours: signed against the wall the
+   particle comes in through (always + for a particle coming in).  For
+   translational walls the two normals are parallel and both rules agree
+   (tilted.py: walls chi2/dof 0.66-1.15 against OpenMC).
+   probes/rotprobe.py (scattering medium, OpenMC 20k x 20): OpenMC
+   [0.0818, 0.0824], ours [0.9186, 0.809]; with a lattice of pins
+   OpenMC [0.0782, 0.0785], ours [0.8369, 0.7279].

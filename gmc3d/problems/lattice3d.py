@@ -8,6 +8,9 @@ checked against gmc2d's own Monte Carlo as well as OpenMC.
 Every cell is about one mean free path across, so balls are small: the ball
 step should gain nothing here.  `scale` multiplies all cross sections, as
 in gmc2d.
+
+Since v1.5 a current tally on the reflective top and bottom (OpenMC scores
+each reflection +w and then -w, so it is exactly 0, and so is ours).
 """
 import openmc
 
@@ -46,6 +49,8 @@ def build(scale=1.0, mesh_per_cm=1):
             [m["scatterer"], m["absorber"]])),
         common.flux_tally("mesh", common.mesh_filter(
             (0.0, 0.0, -0.5), (7.0, 7.0, 0.5), (n, n, 1))),
+        common.flux_tally("mirrors", openmc.SurfaceFilter(
+            [box.zmin, box.zmax]), scores=("current",)),
     ])
     src = common.box_source((3.0, 3.0, -0.5), (4.0, 4.0, 0.5))
     return openmc.Model(geometry, materials, common.settings(src), tallies)

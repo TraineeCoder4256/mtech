@@ -55,7 +55,10 @@ def save_json(results, path, extra=None):
 
 
 def save_vtk(tally, path, title="gmc3d mesh tally"):
-    """One mesh tally (an entry of Results.tallies) -> a .vtk file."""
+    """One rectangular mesh tally (an entry of Results.tallies) -> a .vtk
+    file.  (Curved meshes are not written: they need an unstructured grid.)"""
+    if tally.get("mesh_type", "rect") != "rect":
+        raise ValueError("save_vtk writes rectangular meshes only")
     ll, ur, dim = (np.asarray(a) for a in tally["mesh"])
     spacing = (ur - ll) / dim
     n = int(np.prod(dim))

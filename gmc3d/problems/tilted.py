@@ -18,6 +18,12 @@ and cone kernels (the distance field sees them too, so balls shrink
 against tilted walls) and both new boundary conditions.  The pipe and the
 cone run into the periodic and white faces, so particles cross those
 boundaries inside the inserts as well as in the block.
+
+Since v1.5 currents on the periodic and white faces too (OpenMC scores a
+white face as exactly 0, and a periodic crossing once, on the face the
+particle comes back through), and partial currents through the periodic
+faces: the pipe is not periodic, so a particle can leave in the pipe and
+come back in the block.
 """
 import openmc
 
@@ -56,6 +62,14 @@ def build():
             (-10.0, -10.0, -15.0), (10.0, 10.0, 15.0), (10, 10, 15))),
         common.flux_tally("faces", openmc.SurfaceFilter([z0, z1]),
                           scores=("current",)),
+        common.flux_tally("walls", openmc.SurfaceFilter([x0, x1, y0, y1]),
+                          scores=("current",)),
+        common.flux_tally("walls_from", openmc.CellFromFilter(cells),
+                          scores=("current",)),
+        common.flux_tally("walls_cell", openmc.SurfaceFilter([x0, x1]),
+                          scores=("current",)),
     ])
+    tallies[5].filters = tallies[5].filters + [openmc.SurfaceFilter([x0, x1])]
+    tallies[6].filters = tallies[6].filters + [openmc.CellFilter(cells)]
     src = common.box_source((-2.0, -6.0, -12.0), (2.0, -2.0, -8.0))
     return openmc.Model(geometry, materials, common.settings(src), tallies)

@@ -7,7 +7,9 @@ see the "model change?" column in `GAPS.md`), so none waits on model work.
 
 Status: proposed 27 Oct 2026; Phani gave the go on 29 Oct 2026. v1.1.3
 v1.2.0 (sources), v1.3.0 (multi-filter tallies), v1.4.0 and v1.4.1
-(geometry) are done; v1.5 (the medium tally items) is next.
+(geometry) and v1.5.0 (the medium tally items) are done. Phani, 30 Oct
+2026: the remaining decisions (point detectors, the slab reference rerun)
+go into v1.6.
 
 Numbering (Phani, 29 Oct 2026): v1.1.x is the mesh work and the easy
 tally items; each later area gets its own minor version (v1.2 sources,
@@ -100,7 +102,10 @@ Check: locate vs OpenMC on random points (as for Stage 1), then a solve.
 Check: locate and solve vs OpenMC on a new problem per item (a hex
 assembly, a torus/quadric shape, a rotational sector).
 
-## v1.5: tallies, the medium items
+## v1.5: tallies, the medium items (done, v1.5.0, 30 Oct 2026)
+
+Built as below, except that reflective walls score exactly 0 (OpenMC
+scores +w then -w, which nets to 0), not a crossing and a return.
 
 | item | how |
 |---|---|

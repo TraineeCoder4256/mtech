@@ -200,11 +200,13 @@ def test_albedo_is_refused():
     _refuse(model, "albedo")
 
 
-def test_current_on_a_white_surface_is_refused():
+def test_current_on_a_white_surface_is_zero():
+    """Refused in v1.4.0; since v1.5 scored as OpenMC does: exactly 0."""
     model = PROBLEMS["tilted"]()
     y = [s for s in model.geometry.get_all_surfaces().values()
          if s.boundary_type == "white"]
     t = openmc.Tally(name="w")
     t.filters, t.scores = [openmc.SurfaceFilter(y)], ["current"]
     model.tallies.append(t)
-    _refuse(model, "white")
+    r = transport.run(openmc_import.load(model), 5000, 2, seed=1)
+    assert (r.tallies["w"]["mean"][:, 0] == 0.0).all()

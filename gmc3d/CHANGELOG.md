@@ -7,6 +7,47 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v1.5.0 (30 Oct 2026): curved meshes, currents on any surface, mesh surface currents
+
+- **`CylindricalMesh` and `SphericalMesh`** in a `MeshFilter`, with any
+  origin, partial angle ranges and other filters alongside. A flight is
+  cut wherever it meets an edge surface (cylinder or sphere for r,
+  half-plane for phi, cone or the plane z = 0 for theta, plane for z) and
+  each piece goes to the bin of its midpoint. Checked against brute force
+  along random flights (to the sampling step) and against OpenMC. Balls
+  work unchanged ('profile' rule: bin of a point; 'cap' rule: distance to
+  the nearest edge surface). Curved meshes are not written to `.vtk` or
+  drawn as flux maps.
+- **Currents on every surface**: reflective and white walls (exactly 0, as
+  OpenMC scores them), periodic walls (scored once, on the wall the
+  particle comes back through), and surfaces inside universes and
+  lattices (signed in the surface's own frame; counted only if the cell at
+  that level changes). The geometry descent now also returns the level
+  and the sign of the surface a flight stops at.
+- **`MeshSurfaceFilter`** on Regular (1D, 2D, 3D) and Rectilinear meshes,
+  alone: the weight through each element face, in and out, in OpenMC's bin
+  order. Faces lying on surfaces and on vacuum boundaries are counted as
+  OpenMC counts them. While one is present, balls are shrunk to stay
+  inside one voxel of its mesh, whatever the mesh rule.
+- **Three OpenMC 0.16 errors found** (`runs/2026-10-30/v1.5/openmc_bugs.log`):
+  theta bins at pi/2, currents inside moved universe frames, and the sign
+  on rotational walls. In each case gmc3d agrees with an exact or
+  conservation answer, and those tallies are checked by unit tests rather
+  than against OpenMC.
+- **Speed: plain MC as fast as v1.4.1** (200k x 4 histories, best of 3:
+  cask 19.73 s against 20.0-20.3 s, hexcore 28.32 s against 27.2-28.9 s).
+  Found on the way: every array added to the tally `Layout` or to
+  `Geometry` is paid for on every call that receives it. The first build
+  of v1.5 put seven new arrays in `Layout` and made cask 43% slower with
+  no curved mesh in it. The new mesh data now lives in its own
+  `tallies.MeshExtra`, passed only to the new kernels; the periodic
+  partner sits in `surf_shift`'s fourth column; and the descent works out
+  a crossing's sign only when a current tally exists.
+- New test tallies: sphere (spherical mesh), curved (cylindrical mesh,
+  alone and x material; spherical mesh), lattice3d (reflective walls),
+  tilted (periodic and white walls, partial currents), slab (1D mesh
+  surface), nested (3D rectilinear mesh surface). `tests/test_tallies_v150.py`.
+
 ## v1.4.1 (29 Oct 2026): hex lattices, tori, quadrics, rotation, distributed materials
 
 - **`HexLattice`**, both orientations ('y' flat tops, 'x' flat sides), 2D

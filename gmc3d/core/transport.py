@@ -236,7 +236,7 @@ def source_rng(seed, batch):
 
 # ------------------------------------------------------------ one history
 @njit(cache=True)
-def _track(i, g, ph, L, P, row, cnt, pth, last, to, univ, scr):
+def _track(i, g, ph, L, X, P, row, cnt, pth, last, to, univ, scr):
     """Run particle i until it dies or asks for a ball step.
 
     pth, last, to, univ (MAX_LEVELS each) and scr (tallies.scratch) are
@@ -266,12 +266,13 @@ def _track(i, g, ph, L, P, row, cnt, pth, last, to, univ, scr):
                            ph.prof_cdf, P.ball_R[i], sa / ss,
                            P.s[i], P.seed, i) * d / P.ball_R[i]  # in cm
                 px, py, pz = rng.isotropic(P.seed, i)
-                T.score_ball_mesh(row, L, cell, path, mat, sa, ss, flux / k_pts,
-                                  x + r * px, y + r * py, z + r * pz, scr)
+                T.score_ball_mesh(row, L, X, cell, path, mat, sa, ss,
+                                  flux / k_pts, x + r * px, y + r * py,
+                                  z + r * pz, scr)
             cnt[C_POINTS] += k_pts
         elif L.has_mesh:
-            T.score_ball_mesh(row, L, cell, path, mat, sa, ss, flux, x, y,
-                              z, scr)
+            T.score_ball_mesh(row, L, X, cell, path, mat, sa, ss, flux,
+                              x, y, z, scr)
         wgt *= np.exp(-sa * s_cm)
         nx, ny, nz = rng.isotropic(P.seed, i)    # exit point
         x, y, z = x + d * nx, y + d * ny, z + d * nz
@@ -292,8 +293,9 @@ def _track(i, g, ph, L, P, row, cnt, pth, last, to, univ, scr):
     last[0] = -1
     for _ in range(MAX_EVENTS):
         want_near = fresh and ph.ball_on
-        cell, mat, near, t_ray, surf, at_root = G._descend(
-            g, x, y, z, u, v, w, want_near, True, pth)
+        cell, mat, near, t_ray, surf, lvl, sg = G._descend(
+            g, x, y, z, u, v, w, want_near, True, pth, L.has_surface)
+        at_root = lvl == 0
 
         if mat == G.LOST:
             # Just past a boundary surface that a lattice wall or an inner
@@ -320,6 +322,13 @@ def _track(i, g, ph, L, P, row, cnt, pth, last, to, univ, scr):
                 P.status[i] = DEAD
                 return
             x, y, z, u, v, w = _boundary(g, k, P, i, x, y, z, u, v, w)
+            if g.surf_bc[k] == G.BC_PERIODIC and L.has_surface:
+                k2 = int(g.surf_shift[k, 3])         # as at a crossing
+                to[:] = -1
+                m_to = G._path(g, x + TINY * u, y + TINY * v, z + TINY * w,
+                               to, univ)
+                T.score_surface(row, L, k2, _crossing_sign(
+                    g, k2, x, y, z, u, v, w) * wgt, last, to, m_to, scr)
             x, y, z = x + 2.0 * TINY * u, y + 2.0 * TINY * v, \
                 z + 2.0 * TINY * w
             continue
@@ -339,7 +348,10 @@ def _track(i, g, ph, L, P, row, cnt, pth, last, to, univ, scr):
         if want_near and ss > 0.0:
             room = near - GUARD
             if ph.mesh_cap:
-                room = min(room, T.mesh_room(L, x, y, z) - GUARD)
+                room = min(room, T.mesh_room(L, X, x, y, z) - GUARD)
+            elif L.has_meshsurf:      # a ball must not cross a mesh face
+                room = min(room,
+                           T.mesh_room(L, X, x, y, z, True) - GUARD)
             R = room * ss
             if R >= ph.r_star:
                 if R > ph.r_max:
@@ -368,6 +380,24 @@ def _track(i, g, ph, L, P, row, cnt, pth, last, to, univ, scr):
             return
         T.score_segment(row, L, cell, pth, mat, sa, ss, wgt, x, y, z, u, v,
                         w, step, scr)
+        if L.has_curved:
+            T.score_segment_curved(row, L, X, cell, pth, mat, sa, ss,
+                                   wgt, x, y, z, u, v, w, step, scr)
+        if L.has_meshsurf:
+            # Mesh faces crossed, as OpenMC sees them: a flight that ends
+            # by passing through a surface (or out through vacuum) is seen
+            # up to TINY beyond it, where the next flight starts, so a
+            # mesh face lying ON that surface is counted; one that ends at
+            # a reflective, white or periodic wall stops TINY short of it,
+            # so a face on such a wall is not (OpenMC moves the particle
+            # by TINY_BIT the same ways).
+            reach = step
+            if not scatter:
+                bc = g.surf_bc[surf] if at_root else G.BC_TRANSMISSION
+                reach = step + TINY if bc == G.BC_VACUUM or \
+                    bc == G.BC_TRANSMISSION else step - TINY
+            T.score_mesh_faces(row, L, X, sa, wgt, x, y, z, u, v, w,
+                               reach)
         wgt *= np.exp(-sa * step)
         x, y, z = x + step * u, y + step * v, z + step * w
         cnt[C_FLIGHT] += 1
@@ -378,29 +408,54 @@ def _track(i, g, ph, L, P, row, cnt, pth, last, to, univ, scr):
             cnt[C_SCATTER] += 1
         else:
             cnt[C_CROSS] += 1
-            if at_root and surf >= 0 and L.has_surface:
-                sgn = _crossing_sign(g, surf, x, y, z, u, v, w) * wgt
-                if g.surf_bc[surf] == G.BC_VACUUM:
-                    T.score_surface(row, L, surf, sgn, pth, pth, mat, scr)
-                else:
-                    # the cells on the far side (OpenMC's cell and
-                    # material filters see the cell entered).  A crossing
-                    # that stays in the same root cell is the surface's
-                    # extension beyond the cell's real boundary (the plane
-                    # of a box face, outside the face): OpenMC does not
-                    # count it, so neither does this (measured, v1.3).
+            bc = g.surf_bc[surf] if at_root else G.BC_TRANSMISSION
+            if surf >= 0 and L.has_surface:
+                # Current, as OpenMC 0.16 scores it (measured, v1.3 and
+                # v1.5): signed by the side the flight crosses to, in the
+                # surface's own frame (sg), at any universe level.
+                #   vacuum      the cell left is also the 'cell entered'
+                #   reflective  OpenMC scores +w then -w: exactly 0, so
+                #   / white     nothing is scored
+                #   periodic    scored after the jump, below
+                #   otherwise   the cells on the far side (cell and
+                #               material filters see the cell entered).
+                #               A crossing that leaves the cell at the
+                #               surface's level (and above) unchanged is
+                #               the surface's extension beyond the cell's
+                #               real boundary (the plane of a box face,
+                #               outside the face): OpenMC does not count
+                #               it, so neither does this.
+                if bc == G.BC_VACUUM:
+                    T.score_surface(row, L, surf, sg * wgt, pth, pth, mat,
+                                    scr)
+                elif bc == G.BC_TRANSMISSION:
                     to[:] = -1
                     m_to = G._path(g, x + TINY * u, y + TINY * v,
                                    z + TINY * w, to, univ)
-                    if to[0] != pth[0]:
-                        T.score_surface(row, L, surf, sgn, pth, to, m_to,
-                                        scr)
-            if at_root and g.surf_bc[surf] == G.BC_VACUUM:
+                    moved = False
+                    for lv in range(lvl + 1):
+                        if to[lv] != pth[lv]:
+                            moved = True
+                    if moved:
+                        T.score_surface(row, L, surf, sg * wgt, pth, to,
+                                        m_to, scr)
+            if bc == G.BC_VACUUM:
                 row[T.LEAKAGE] += wgt
                 P.status[i] = DEAD
                 return
-            if at_root and g.surf_bc[surf] != G.BC_TRANSMISSION:
+            if bc != G.BC_TRANSMISSION:
                 x, y, z, u, v, w = _boundary(g, surf, P, i, x, y, z, u, v, w)
+                if bc == G.BC_PERIODIC and L.has_surface:
+                    # OpenMC scores a periodic crossing once, at the
+                    # PARTNER plane, signed by the direction after the
+                    # jump; cell-from is the cell left, cell the one
+                    # arrived in (measured, v1.5)
+                    k2 = int(g.surf_shift[surf, 3])
+                    to[:] = -1
+                    m_to = G._path(g, x + TINY * u, y + TINY * v,
+                                   z + TINY * w, to, univ)
+                    T.score_surface(row, L, k2, _crossing_sign(
+                        g, k2, x, y, z, u, v, w) * wgt, pth, to, m_to, scr)
             x, y, z = x + TINY * u, y + TINY * v, z + TINY * w
 
         if wgt < ph.w_cut * P.w0[i]:
@@ -415,7 +470,7 @@ def _track(i, g, ph, L, P, row, cnt, pth, last, to, univ, scr):
 
 
 @njit(cache=True, parallel=True)
-def _advance(g, ph, L, P, acc, cnt, nchunk):
+def _advance(g, ph, L, X, P, acc, cnt, nchunk):
     """Run every live particle until it dies or waits for a ball.
 
     Chunk c takes particles [c*per, min(n, (c+1)*per)).  Each chunk is a
@@ -434,8 +489,8 @@ def _advance(g, ph, L, P, acc, cnt, nchunk):
         for i in range(c * per, min(n, (c + 1) * per)):
             st = P.status[i]
             if st == MOVING or st == READY:
-                _track(i, g, ph, L, P, acc[c], cnt[c], pth, last, to, univ,
-                       scr)
+                _track(i, g, ph, L, X, P, acc[c], cnt[c], pth, last, to,
+                       univ, scr)
 
 
 # ------------------------------------------------------------- the driver
@@ -443,14 +498,16 @@ def physics(problem, backend=None, r_star=3.0, r_max=None,
             mesh_rule="profile", w_cut=0.25, w_surv=1.0, k_max=None):
     """The Physics and tally Layout a run uses (also used by
     checks/loop_breakdown.py, which times run() phase by phase).
-    Returns (ph, L, r_max actually used)."""
+    Returns (ph, L, r_max actually used, X): X is the tallies.MeshExtra,
+    passed to the kernels as its own argument (Numba's parallel loop
+    cannot take it inside Physics)."""
     if mesh_rule not in ("profile", "cap"):
         raise ValueError("mesh_rule must be 'profile' or 'cap'")
     k_max = K_MAX if k_max is None else k_max
     g, m = problem.geom, problem.mats
-    L = T.compile_layout(problem.tallies, len(problem.cell_ids),
-                         len(m.ids), len(g.surf_kind),
-                         leaf=g.cell_fill_type <= G.FILL_VOID)
+    L, X = T.compile_layouts(problem.tallies, len(problem.cell_ids),
+                             len(m.ids), len(g.surf_kind),
+                             leaf=g.cell_fill_type <= G.FILL_VOID)
     use_profile = backend is not None and mesh_rule == "profile" and \
         L.has_mesh
     if backend is not None:
@@ -459,8 +516,9 @@ def physics(problem, backend=None, r_star=3.0, r_max=None,
         if r_star < backend.r_min:
             raise ValueError(f"r_star {r_star} is below the backend's "
                              f"smallest ball {backend.r_min}")
-    mesh_h = float(L.mesh_dw[L.mesh_on].min()) if L.has_mesh \
-        else 1.0
+    mesh_h = float(X.mesh_h[L.mesh_on & ((L.kind == T.VOLUME) |
+                                         (L.kind == T.CURVED))].min()) \
+        if L.has_mesh else 1.0
     if use_profile:
         prof = ball_profile.get()
         r_max = min(r_max, prof.r_max)       # the profile's range
@@ -476,7 +534,7 @@ def physics(problem, backend=None, r_star=3.0, r_max=None,
                  float(w_cut), float(w_surv), backend is not None,
                  float(r_star), float(r_max or INF), mesh_rule == "cap",
                  use_profile, mesh_h, int(k_max), *tab)
-    return ph, L, r_max
+    return ph, L, r_max, X
 
 
 def _particles(n):
@@ -503,7 +561,7 @@ def run(problem, particles=100_000, batches=20, seed=1, backend=None,
     Returns tallies.Results: per-source-particle means and standard errors.
     """
     g = problem.geom
-    ph, L, r_max = physics(problem, backend, r_star, r_max, mesh_rule,
+    ph, L, r_max, X = physics(problem, backend, r_star, r_max, mesh_rule,
                            w_cut, w_surv, k_max)
     accum = T.Accumulator(L)
     cnt = np.zeros((nchunk, len(COUNTERS)), np.int64)
@@ -520,7 +578,7 @@ def run(problem, particles=100_000, batches=20, seed=1, backend=None,
         redrawn += sites.redrawn
         _birth(sites.xyz, sites.uvw, sites.wgt, sites.iso, P, cnt, nchunk)
         while True:
-            _advance(g, ph, L, P, acc, cnt, nchunk)
+            _advance(g, ph, L, X, P, acc, cnt, nchunk)
             t1 = time.perf_counter()
             t_track += t1 - t0
             idx = np.flatnonzero(P.status == WAITING)

@@ -85,23 +85,24 @@ def test_track_length_estimator_and_total_nuclide_are_accepted():
                                    nuclides=["total"]))
 
 
-@pytest.mark.parametrize("cls", [openmc.MeshSurfaceFilter,
-                                 openmc.MeshBornFilter])
-def test_mesh_filter_relatives_are_refused(cls):
-    """Before v1.1.3 these passed the isinstance(MeshFilter) check and
-    were scored as an ordinary mesh: silently wrong."""
+def test_mesh_born_filter_is_refused():
+    """Before v1.1.3 it passed the isinstance(MeshFilter) check and was
+    scored as an ordinary mesh: silently wrong.  (MeshSurfaceFilter, the
+    other relative, is handled since v1.5.)"""
     m = openmc.RegularMesh()
     m.lower_left, m.upper_right, m.dimension = (0, -1, -1), (60, 1, 1), \
         (6, 1, 1)
-    with pytest.raises(Unsupported, match=cls.__name__):
-        openmc_import.load(_slab_tally(filters=[cls(m)]))
+    with pytest.raises(Unsupported, match="MeshBornFilter"):
+        openmc_import.load(_slab_tally(filters=[openmc.MeshBornFilter(m)]))
 
 
-def test_cylindrical_mesh_is_refused():
+def test_mesh_surface_filter_on_a_cylindrical_mesh_is_refused():
     m = openmc.CylindricalMesh(r_grid=[0, 1, 2], z_grid=[0, 1],
                                phi_grid=[0, 2 * np.pi])
+    model = _slab_tally(filters=[openmc.MeshSurfaceFilter(m)],
+                        scores=["current"])
     with pytest.raises(Unsupported, match="CylindricalMesh"):
-        openmc_import.load(_slab_tally(filters=[openmc.MeshFilter(m)]))
+        openmc_import.load(model)
 
 
 # ------------------------------------------------- scores and mesh shapes
