@@ -1,0 +1,22 @@
+=== SCORER ABLATIONS ===
+T_ABL_READY
+ROW base tabl sphere no_t 2.902 with_t 3.725 adv 2.805 flights 9297937 leak 0.031802 ntally 3
+ROW base tabl slab no_t 3.810 with_t 4.750 adv 3.695 flights 11338773 leak 0.860791 ntally 2
+ROW base tabl cask no_t 6.332 with_t 8.310 adv 6.246 flights 20025215 leak 0.002349 ntally 3
+OWN base sphere  all    6.60 s   none    3.07 s   tallies    3.53 s   ntally 4
+OWN base slab    all    7.25 s   none    3.85 s   tallies    3.41 s   ntally 7
+OWN base cask    all   10.94 s   none    5.45 s   tallies    5.49 s   ntally 6
+ROW add1 tabl sphere no_t 2.877 with_t 4.006 adv 2.752 flights 9297937 leak 0.031802 ntally 3
+ROW add1 tabl slab no_t 3.618 with_t 4.766 adv 3.452 flights 11338773 leak 0.860791 ntally 2
+ROW add1 tabl cask no_t 5.395 with_t 7.287 adv 5.302 flights 20025215 leak 0.002349 ntally 3
+OWN add1 sphere  all    6.36 s   none    2.58 s   tallies    3.77 s   ntally 4
+OWN add1 slab    all    6.72 s   none    3.61 s   tallies    3.11 s   ntally 7
+OWN add1 cask    all   10.91 s   none    5.88 s   tallies    5.03 s   ntally 6
+ROW noexp tabl sphere no_t 2.465 with_t 4.025 adv 2.383 flights 9297937 leak 0.031802 ntally 3
+ROW noexp tabl slab no_t 3.646 with_t 4.643 adv 3.556 flights 11338773 leak 0.860791 ntally 2
+ROW noexp tabl cask no_t 5.207 with_t 7.139 adv 5.115 flights 20025215 leak 0.002349 ntally 3
+OWN noexp sphere  all    6.10 s   none    2.56 s   tallies    3.54 s   ntally 4
+OWN noexp slab    all    6.59 s   none    3.41 s   tallies    3.18 s   ntally 7
+OWN noexp cask    all   10.16 s   none    5.63 s   tallies    4.53 s   ntally 6
+TABL_DONE
+CHAIN8_DONE

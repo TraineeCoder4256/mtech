@@ -353,6 +353,14 @@ behind `E.n`.
    before touching it.  That needs a build flag, which is a code change,
    so it waits for you.
 
+## Correction, same day
+
+The paragraph above that splits the sphere's increase into 28% transport
+and 72% tally scoring is right about our own growth, but it should not be
+read as "the tally path is the bigger half of the gap to OpenMC".  Timing
+each tally separately against OpenMC the same afternoon shows the gap is
+almost entirely the bare transport: see `TALLIES.md`.
+
 ## What this does not say
 
 * It says nothing about the ball step or the network: every number here

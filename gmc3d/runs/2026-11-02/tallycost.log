@@ -1,0 +1,24 @@
+TC sphere  none       ours    3.08 s   openmc    0.71 s   bins       0
+TC sphere  total      ours    2.92 s   openmc    1.21 s   bins       2
+TC sphere  cell       ours    2.70 s   openmc    1.36 s   bins       2
+TC sphere  mesh       ours    3.76 s   openmc    1.57 s   bins   16000
+TC sphere  sphmesh    ours    5.30 s   openmc    2.06 s   bins     120
+TC sphere  all        ours    6.59 s   openmc    3.46 s   bins   16124
+TC cask    none       ours    5.53 s   openmc    1.21 s   bins       0
+TC cask    total      ours    5.41 s   openmc    3.30 s   bins       2
+TC cask    cell       ours    5.49 s   openmc    3.10 s   bins      21
+TC cask    material   ours    5.87 s   openmc    3.73 s   bins      12
+TC cask    mesh       ours    7.28 s   openmc    2.43 s   bins    3456
+TC cask    plan2d     ours    7.43 s   openmc    2.51 s   bins    1152
+TC cask    duct_grid  ours    7.22 s   openmc    2.73 s   bins     825
+TC cask    all        ours   10.35 s   openmc    7.54 s   bins    5468
+TC slab    none       ours    3.57 s   openmc    0.86 s   bins       0
+TC slab    total      ours    3.68 s   openmc    1.74 s   bins       4
+TC slab    depth1d    ours    4.66 s   openmc    1.93 s   bins     120
+TC slab    depth      ours    5.05 s   openmc    1.77 s   bins     120
+TC slab    sides      ours    3.79 s   openmc    1.00 s   bins       2
+TC slab    sides_from ours    4.26 s   openmc    0.79 s   bins       2
+TC slab    sides_cell ours    4.12 s   openmc    0.99 s   bins       2
+TC slab    faces1d    ours    5.02 s   openmc    1.17 s   bins      24
+TC slab    all        ours    7.28 s   openmc    3.61 s   bins     274
+TC_DONE
