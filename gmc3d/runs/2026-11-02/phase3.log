@@ -1,0 +1,12 @@
+=== OPENMC, same session (v1.6.1 tree) ===
+sphere    ours    7.16 s   OpenMC implicit    3.12 s    2.29x   flights/history   18.57     771 ns/flight   leakage 0.031752 vs 0.031643
+/opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=9.
+  warn(msg, IDWarning)
+slab      ours    6.93 s   OpenMC implicit    3.84 s    1.81x   flights/history   22.60     613 ns/flight   leakage 0.861053 vs 0.860396
+cask      ours   10.77 s   OpenMC implicit    8.24 s    1.31x   flights/history   40.01     538 ns/flight   leakage 0.002363 vs 0.002322
+sphere    OpenMC analog    2.17 s   leakage 0.031584 +- 0.00026
+/opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=6.
+  warn(msg, IDWarning)
+slab      OpenMC analog    2.47 s   leakage 0.861412 +- 0.00048
+cask      OpenMC analog    4.20 s   leakage 0.002346 +- 6.5e-05
+CHAIN2_DONE

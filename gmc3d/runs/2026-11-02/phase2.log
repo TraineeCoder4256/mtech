@@ -1,0 +1,176 @@
+=== DESCEND COST ===
+DESC v1.0 sphere      608 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.0 slab        801 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.0 cask        734 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.1.0 sphere      668 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.1.0 slab        765 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.1.0 cask        721 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.1.3 sphere      667 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.1.3 slab        707 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.1.3 cask        732 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.2.0 sphere      672 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.2.0 slab        757 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.2.0 cask        647 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.3.0 sphere      684 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.3.0 slab        820 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.3.0 cask        717 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.4.0 sphere      645 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.4.0 slab        786 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.4.0 cask        703 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.4.1 sphere      914 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.4.1 slab       1161 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.4.1 cask        898 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.5.0 sphere      874 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.5.0 slab       1152 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.5.0 cask        962 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.6.0 sphere      878 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.6.0 slab       1180 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.6.0 cask        869 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.6.1 sphere      883 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.6.1 slab       1218 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.6.1 cask        940 ns per _descend (5000 points, want_near+want_ray)
+DESC_DONE
+=== SOURCE COST ===
+SRC v1.2.0 sphere    125.6 ms per batch of 100k   ->  0.63 s of a 5-batch run   redrawn 0
+SRC v1.2.0 slab      134.9 ms per batch of 100k   ->  0.67 s of a 5-batch run   redrawn 0
+SRC v1.2.0 cask      124.3 ms per batch of 100k   ->  0.62 s of a 5-batch run   redrawn 0
+SRC v1.3.0 sphere    114.8 ms per batch of 100k   ->  0.57 s of a 5-batch run   redrawn 0
+SRC v1.3.0 slab      128.8 ms per batch of 100k   ->  0.64 s of a 5-batch run   redrawn 0
+SRC v1.3.0 cask      122.2 ms per batch of 100k   ->  0.61 s of a 5-batch run   redrawn 0
+SRC v1.4.0 sphere    113.7 ms per batch of 100k   ->  0.57 s of a 5-batch run   redrawn 0
+SRC v1.4.0 slab      133.4 ms per batch of 100k   ->  0.67 s of a 5-batch run   redrawn 0
+SRC v1.4.0 cask      117.7 ms per batch of 100k   ->  0.59 s of a 5-batch run   redrawn 0
+SRC v1.4.1 sphere    141.0 ms per batch of 100k   ->  0.71 s of a 5-batch run   redrawn 0
+SRC v1.4.1 slab      153.9 ms per batch of 100k   ->  0.77 s of a 5-batch run   redrawn 0
+SRC v1.4.1 cask      150.7 ms per batch of 100k   ->  0.75 s of a 5-batch run   redrawn 0
+SRC v1.5.0 sphere    123.2 ms per batch of 100k   ->  0.62 s of a 5-batch run   redrawn 0
+SRC v1.5.0 slab      123.9 ms per batch of 100k   ->  0.62 s of a 5-batch run   redrawn 0
+SRC v1.5.0 cask      123.5 ms per batch of 100k   ->  0.62 s of a 5-batch run   redrawn 0
+SRC v1.6.0 sphere    135.4 ms per batch of 100k   ->  0.68 s of a 5-batch run   redrawn 0
+SRC v1.6.0 slab      137.2 ms per batch of 100k   ->  0.69 s of a 5-batch run   redrawn 0
+SRC v1.6.0 cask      148.3 ms per batch of 100k   ->  0.74 s of a 5-batch run   redrawn 0
+SRC v1.6.1 sphere    139.2 ms per batch of 100k   ->  0.70 s of a 5-batch run   redrawn 0
+SRC v1.6.1 slab      149.3 ms per batch of 100k   ->  0.75 s of a 5-batch run   redrawn 0
+SRC v1.6.1 cask      149.1 ms per batch of 100k   ->  0.75 s of a 5-batch run   redrawn 0
+SRC_DONE
+=== PADS ===
+117:    coef = np.zeros(11)   # PAD
+355:        as_int(kinds), np.asarray(coefs, float).reshape(-1, 11), as_int(bcs),
+/tmp/claude-0/-home-claude-mtech/59c0a5da-f9a2-52ca-86e4-11e0c02c807a/scratchpad/padgeo/core/geometry.py:75:    "pad0", "pad1", "pad2", "pad3", "pad4", "pad5", "pad6", "pad7",  # PAD
+/tmp/claude-0/-home-claude-mtech/59c0a5da-f9a2-52ca-86e4-11e0c02c807a/scratchpad/padgeo/core/openmc_import.py:363:        *[np.zeros(8) for _ in range(8)])      # PAD
+PADS_READY
+DESC v1.0 sphere      648 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.0 slab        822 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.0 cask        653 ns per _descend (5000 points, want_near+want_ray)
+ROW v1.0 pad sphere no_t 1.264 with_t 1.542 adv 1.191 flights 9295209 leak 0.031860 ntally 3
+ROW v1.0 pad slab no_t 1.939 with_t 2.277 adv 1.856 flights 11355294 leak 0.860640 ntally 2
+ROW v1.0 pad cask no_t 2.927 with_t 3.610 adv 2.850 flights 20028516 leak 0.002394 ntally 3
+DESC padcoef sphere      653 ns per _descend (5000 points, want_near+want_ray)
+DESC padcoef slab        835 ns per _descend (5000 points, want_near+want_ray)
+DESC padcoef cask        716 ns per _descend (5000 points, want_near+want_ray)
+ROW padcoef pad sphere no_t 1.111 with_t 1.652 adv 1.039 flights 9295209 leak 0.031860 ntally 3
+ROW padcoef pad slab no_t 1.721 with_t 2.021 adv 1.653 flights 11355294 leak 0.860640 ntally 2
+ROW padcoef pad cask no_t 2.818 with_t 3.578 adv 2.745 flights 20028516 leak 0.002394 ntally 3
+DESC padgeo sphere      860 ns per _descend (5000 points, want_near+want_ray)
+DESC padgeo slab        879 ns per _descend (5000 points, want_near+want_ray)
+DESC padgeo cask        870 ns per _descend (5000 points, want_near+want_ray)
+ROW padgeo pad sphere no_t 1.625 with_t 1.954 adv 1.552 flights 9295209 leak 0.031860 ntally 3
+ROW padgeo pad slab no_t 2.099 with_t 2.482 adv 2.021 flights 11355294 leak 0.860640 ntally 2
+ROW padgeo pad cask no_t 3.614 with_t 4.238 adv 3.538 flights 20028516 leak 0.002394 ntally 3
+PAD_DONE
+=== INTERLEAVED ROUNDS (fixed tally set) ===
+ROW v1.0 1 sphere no_t 1.199 with_t 1.660 adv 1.127 flights 9295209 leak 0.031860 ntally 3
+ROW v1.0 1 slab no_t 1.897 with_t 2.082 adv 1.818 flights 11355294 leak 0.860640 ntally 2
+ROW v1.0 1 cask no_t 3.112 with_t 3.595 adv 3.032 flights 20028516 leak 0.002394 ntally 3
+ROW v1.1.0 1 sphere no_t 1.344 with_t 1.748 adv 1.264 flights 9295209 leak 0.031860 ntally 3
+ROW v1.1.0 1 slab no_t 1.961 with_t 2.231 adv 1.886 flights 11355294 leak 0.860640 ntally 2
+ROW v1.1.0 1 cask no_t 3.118 with_t 3.744 adv 3.044 flights 20028516 leak 0.002394 ntally 3
+ROW v1.1.3 1 sphere no_t 1.254 with_t 2.265 adv 1.179 flights 9295209 leak 0.031860 ntally 3
+ROW v1.1.3 1 slab no_t 1.886 with_t 2.706 adv 1.798 flights 11355294 leak 0.860640 ntally 2
+ROW v1.1.3 1 cask no_t 3.626 with_t 4.774 adv 3.542 flights 20028516 leak 0.002394 ntally 3
+ROW v1.2.0 1 sphere no_t 2.032 with_t 2.877 adv 1.960 flights 9297937 leak 0.031802 ntally 3
+ROW v1.2.0 1 slab no_t 2.352 with_t 3.319 adv 2.273 flights 11338773 leak 0.860791 ntally 2
+ROW v1.2.0 1 cask no_t 3.618 with_t 5.025 adv 3.542 flights 20025215 leak 0.002349 ntally 3
+ROW v1.3.0 1 sphere no_t 2.230 with_t 3.315 adv 2.111 flights 9297937 leak 0.031802 ntally 3
+ROW v1.3.0 1 slab no_t 3.036 with_t 3.781 adv 2.849 flights 11338773 leak 0.860791 ntally 2
+ROW v1.3.0 1 cask no_t 4.026 with_t 5.878 adv 3.931 flights 20025215 leak 0.002349 ntally 3
+ROW v1.4.0 1 sphere no_t 2.611 with_t 3.273 adv 2.511 flights 9297937 leak 0.031802 ntally 3
+ROW v1.4.0 1 slab no_t 2.875 with_t 4.504 adv 2.695 flights 11338773 leak 0.860791 ntally 2
+ROW v1.4.0 1 cask no_t 4.215 with_t 6.262 adv 4.121 flights 20025215 leak 0.002349 ntally 3
+ROW v1.4.1 1 sphere no_t 2.192 with_t 3.379 adv 2.108 flights 9297937 leak 0.031802 ntally 3
+ROW v1.4.1 1 slab no_t 3.050 with_t 4.184 adv 2.920 flights 11338773 leak 0.860791 ntally 2
+ROW v1.4.1 1 cask no_t 4.561 with_t 6.292 adv 4.466 flights 20025215 leak 0.002349 ntally 3
+ROW v1.5.0 1 sphere no_t 2.488 with_t 3.426 adv 2.395 flights 9297937 leak 0.031802 ntally 3
+ROW v1.5.0 1 slab no_t 3.107 with_t 4.475 adv 2.939 flights 11338773 leak 0.860791 ntally 2
+ROW v1.5.0 1 cask no_t 4.631 with_t 6.615 adv 4.540 flights 20025215 leak 0.002349 ntally 3
+ROW v1.6.0 1 sphere no_t 2.499 with_t 3.602 adv 2.408 flights 9297937 leak 0.031802 ntally 3
+ROW v1.6.0 1 slab no_t 3.287 with_t 4.324 adv 3.196 flights 11338773 leak 0.860791 ntally 2
+ROW v1.6.0 1 cask no_t 4.668 with_t 6.582 adv 4.530 flights 20025215 leak 0.002349 ntally 3
+ROW v1.6.1 1 sphere no_t 2.712 with_t 3.692 adv 2.622 flights 9297937 leak 0.031802 ntally 3
+ROW v1.6.1 1 slab no_t 3.912 with_t 4.788 adv 3.821 flights 11338773 leak 0.860791 ntally 2
+ROW v1.6.1 1 cask no_t 5.522 with_t 7.633 adv 5.439 flights 20025215 leak 0.002349 ntally 3
+ROW v1.0 2 sphere no_t 1.199 with_t 1.563 adv 1.127 flights 9295209 leak 0.031860 ntally 3
+ROW v1.0 2 slab no_t 2.081 with_t 2.161 adv 2.001 flights 11355294 leak 0.860640 ntally 2
+ROW v1.0 2 cask no_t 2.983 with_t 3.338 adv 2.902 flights 20028516 leak 0.002394 ntally 3
+ROW v1.1.0 2 sphere no_t 1.540 with_t 1.705 adv 1.459 flights 9295209 leak 0.031860 ntally 3
+ROW v1.1.0 2 slab no_t 2.014 with_t 2.366 adv 1.936 flights 11355294 leak 0.860640 ntally 2
+ROW v1.1.0 2 cask no_t 3.004 with_t 4.008 adv 2.899 flights 20028516 leak 0.002394 ntally 3
+ROW v1.1.3 2 sphere no_t 1.088 with_t 2.055 adv 1.018 flights 9295209 leak 0.031860 ntally 3
+ROW v1.1.3 2 slab no_t 2.031 with_t 2.725 adv 1.949 flights 11355294 leak 0.860640 ntally 2
+ROW v1.1.3 2 cask no_t 3.209 with_t 5.111 adv 3.134 flights 20028516 leak 0.002394 ntally 3
+ROW v1.2.0 2 sphere no_t 1.719 with_t 2.793 adv 1.648 flights 9297937 leak 0.031802 ntally 3
+ROW v1.2.0 2 slab no_t 2.383 with_t 3.259 adv 2.309 flights 11338773 leak 0.860791 ntally 2
+ROW v1.2.0 2 cask no_t 3.629 with_t 5.040 adv 3.553 flights 20025215 leak 0.002349 ntally 3
+ROW v1.3.0 2 sphere no_t 2.221 with_t 3.176 adv 2.124 flights 9297937 leak 0.031802 ntally 3
+ROW v1.3.0 2 slab no_t 2.596 with_t 4.059 adv 2.503 flights 11338773 leak 0.860791 ntally 2
+ROW v1.3.0 2 cask no_t 3.896 with_t 5.699 adv 3.806 flights 20025215 leak 0.002349 ntally 3
+ROW v1.4.0 2 sphere no_t 2.141 with_t 3.081 adv 2.050 flights 9297937 leak 0.031802 ntally 3
+ROW v1.4.0 2 slab no_t 3.005 with_t 3.806 adv 2.858 flights 11338773 leak 0.860791 ntally 2
+ROW v1.4.0 2 cask no_t 3.987 with_t 5.966 adv 3.901 flights 20025215 leak 0.002349 ntally 3
+ROW v1.4.1 2 sphere no_t 2.405 with_t 3.256 adv 2.324 flights 9297937 leak 0.031802 ntally 3
+ROW v1.4.1 2 slab no_t 3.222 with_t 4.317 adv 3.095 flights 11338773 leak 0.860791 ntally 2
+ROW v1.4.1 2 cask no_t 4.905 with_t 6.432 adv 4.750 flights 20025215 leak 0.002349 ntally 3
+ROW v1.5.0 2 sphere no_t 2.243 with_t 3.506 adv 2.158 flights 9297937 leak 0.031802 ntally 3
+ROW v1.5.0 2 slab no_t 3.459 with_t 4.298 adv 3.295 flights 11338773 leak 0.860791 ntally 2
+ROW v1.5.0 2 cask no_t 4.977 with_t 6.936 adv 4.842 flights 20025215 leak 0.002349 ntally 3
+ROW v1.6.0 2 sphere no_t 2.589 with_t 3.298 adv 2.497 flights 9297937 leak 0.031802 ntally 3
+ROW v1.6.0 2 slab no_t 3.393 with_t 4.405 adv 3.160 flights 11338773 leak 0.860791 ntally 2
+ROW v1.6.0 2 cask no_t 4.762 with_t 7.072 adv 4.597 flights 20025215 leak 0.002349 ntally 3
+ROW v1.6.1 2 sphere no_t 2.877 with_t 3.942 adv 2.790 flights 9297937 leak 0.031802 ntally 3
+ROW v1.6.1 2 slab no_t 3.498 with_t 4.686 adv 3.389 flights 11338773 leak 0.860791 ntally 2
+ROW v1.6.1 2 cask no_t 5.696 with_t 7.144 adv 5.607 flights 20025215 leak 0.002349 ntally 3
+ROW v1.0 3 sphere no_t 1.180 with_t 1.638 adv 1.106 flights 9295209 leak 0.031860 ntally 3
+ROW v1.0 3 slab no_t 1.786 with_t 2.202 adv 1.712 flights 11355294 leak 0.860640 ntally 2
+ROW v1.0 3 cask no_t 3.067 with_t 3.598 adv 2.996 flights 20028516 leak 0.002394 ntally 3
+ROW v1.1.0 3 sphere no_t 1.362 with_t 1.658 adv 1.289 flights 9295209 leak 0.031860 ntally 3
+ROW v1.1.0 3 slab no_t 1.712 with_t 2.253 adv 1.638 flights 11355294 leak 0.860640 ntally 2
+ROW v1.1.0 3 cask no_t 2.826 with_t 3.645 adv 2.751 flights 20028516 leak 0.002394 ntally 3
+ROW v1.1.3 3 sphere no_t 1.222 with_t 2.137 adv 1.147 flights 9295209 leak 0.031860 ntally 3
+ROW v1.1.3 3 slab no_t 1.755 with_t 2.757 adv 1.681 flights 11355294 leak 0.860640 ntally 2
+ROW v1.1.3 3 cask no_t 3.054 with_t 4.438 adv 2.976 flights 20028516 leak 0.002394 ntally 3
+ROW v1.2.0 3 sphere no_t 1.767 with_t 2.770 adv 1.698 flights 9297937 leak 0.031802 ntally 3
+ROW v1.2.0 3 slab no_t 2.472 with_t 3.463 adv 2.398 flights 11338773 leak 0.860791 ntally 2
+ROW v1.2.0 3 cask no_t 3.553 with_t 4.820 adv 3.481 flights 20025215 leak 0.002349 ntally 3
+ROW v1.3.0 3 sphere no_t 1.912 with_t 2.881 adv 1.800 flights 9297937 leak 0.031802 ntally 3
+ROW v1.3.0 3 slab no_t 2.621 with_t 3.953 adv 2.534 flights 11338773 leak 0.860791 ntally 2
+ROW v1.3.0 3 cask no_t 3.696 with_t 5.832 adv 3.605 flights 20025215 leak 0.002349 ntally 3
+ROW v1.4.0 3 sphere no_t 1.995 with_t 3.153 adv 1.908 flights 9297937 leak 0.031802 ntally 3
+ROW v1.4.0 3 slab no_t 2.764 with_t 3.783 adv 2.547 flights 11338773 leak 0.860791 ntally 2
+ROW v1.4.0 3 cask no_t 3.992 with_t 5.962 adv 3.904 flights 20025215 leak 0.002349 ntally 3
+ROW v1.4.1 3 sphere no_t 2.331 with_t 3.495 adv 2.244 flights 9297937 leak 0.031802 ntally 3
+ROW v1.4.1 3 slab no_t 3.277 with_t 4.128 adv 3.124 flights 11338773 leak 0.860791 ntally 2
+ROW v1.4.1 3 cask no_t 4.641 with_t 6.452 adv 4.552 flights 20025215 leak 0.002349 ntally 3
+ROW v1.5.0 3 sphere no_t 2.270 with_t 3.448 adv 2.152 flights 9297937 leak 0.031802 ntally 3
+ROW v1.5.0 3 slab no_t 3.200 with_t 4.296 adv 3.060 flights 11338773 leak 0.860791 ntally 2
+ROW v1.5.0 3 cask no_t 4.696 with_t 6.903 adv 4.536 flights 20025215 leak 0.002349 ntally 3
+ROW v1.6.0 3 sphere no_t 2.494 with_t 3.440 adv 2.405 flights 9297937 leak 0.031802 ntally 3
+ROW v1.6.0 3 slab no_t 3.190 with_t 4.330 adv 3.089 flights 11338773 leak 0.860791 ntally 2
+ROW v1.6.0 3 cask no_t 4.666 with_t 6.567 adv 4.576 flights 20025215 leak 0.002349 ntally 3
+ROW v1.6.1 3 sphere no_t 2.734 with_t 3.747 adv 2.609 flights 9297937 leak 0.031802 ntally 3
+ROW v1.6.1 3 slab no_t 3.777 with_t 5.043 adv 3.686 flights 11338773 leak 0.860791 ntally 2
+ROW v1.6.1 3 cask no_t 5.290 with_t 7.252 adv 5.207 flights 20025215 leak 0.002349 ntally 3
+Terminated
+CHAIN_DONE
+ROW v1.0 4 sphere no_t 1.267 with_t 1.599 adv 1.193 flights 9295209 leak 0.031860 ntally 3
+ROW v1.0 4 slab no_t 1.866 with_t 2.320 adv 1.792 flights 11355294 leak 0.860640 ntally 2
+ROW v1.0 4 cask no_t 3.684 with_t 3.837 adv 3.604 flights 20028516 leak 0.002394 ntally 3

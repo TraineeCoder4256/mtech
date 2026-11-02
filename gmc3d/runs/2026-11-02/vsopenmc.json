@@ -1,0 +1,32 @@
+{
+ "sphere": {
+  "ours_s": 7.161340623999877,
+  "openmc_implicit_s": 3.120471871999999,
+  "ratio": 2.2949543907953798,
+  "flights": 9285112,
+  "flights_per_history": 18.570224,
+  "ns_per_flight": 771.2713238138514,
+  "ours_leakage": 0.03175169258755254,
+  "openmc_leakage": 0.031642570728699464
+ },
+ "slab": {
+  "ours_s": 6.931260485999701,
+  "openmc_implicit_s": 3.839197536,
+  "ratio": 1.8053930335716128,
+  "flights": 11298905,
+  "flights_per_history": 22.59781,
+  "ns_per_flight": 613.445328197706,
+  "ours_leakage": 0.8610525771619442,
+  "openmc_leakage": 0.8603963306844575
+ },
+ "cask": {
+  "ours_s": 10.767234911999822,
+  "openmc_implicit_s": 8.236420012999995,
+  "ratio": 1.3072712288840664,
+  "flights": 20003652,
+  "flights_per_history": 40.007304,
+  "ns_per_flight": 538.2634586924338,
+  "ours_leakage": 0.0023631861743579337,
+  "openmc_leakage": 0.002322007102770053
+ }
+}
