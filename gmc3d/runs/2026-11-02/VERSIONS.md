@@ -37,6 +37,7 @@ tally with four scores, a 2D mesh and a rectilinear mesh) and the slab
 and sphere gained scores.  So the runs were repeated with the tally set
 cut back to v1.0's in every version -- v1.0's tallies, by name, scoring
 flux and absorption only.
+
 ## The short answer
 
 Plain Monte Carlo, with no tallies at all, is **2.30x slower on the
@@ -52,12 +53,12 @@ It is not one commit.  Step by step, each version against the one before
 | v1.0 -> v1.1.0 | 1.14x | 0.96x | 0.97x | free |
 | v1.1.0 -> v1.1.3 | 0.81x | 1.02x | 1.08x | free |
 | **v1.1.3 -> v1.2.0** | **1.58x** | **1.34x** | **1.16x** | the source sampler |
-| v1.2.0 -> v1.3.0 | 1.11x | 1.11x | 1.04x | `_track`'s argument list |
+| v1.2.0 -> v1.3.0 | 1.11x | 1.11x | 1.04x | `_track` itself grew |
 | v1.3.0 -> v1.4.0 | 1.05x | 1.06x | 1.08x | small |
 | **v1.4.0 -> v1.4.1** | **1.10x** | **1.11x** | **1.14x** | the `Geometry` namedtuple |
 | v1.4.1 -> v1.5.0 | 1.02x | 1.02x | 1.02x | free |
-| v1.5.0 -> v1.6.0 | 1.11x | 1.03x | 1.01x | `_track`'s argument list |
-| v1.6.0 -> v1.6.1 | 1.09x | 1.10x | 1.13x | `_track`'s argument list |
+| v1.5.0 -> v1.6.0 | 1.11x | 1.03x | 1.01x | `_track` itself grew |
+| v1.6.0 -> v1.6.1 | 1.09x | 1.10x | 1.13x | `_track` itself grew |
 
 Two causes carry most of it, and both are now proved by ablation rather
 than inferred from the diff.
@@ -163,7 +164,17 @@ of a copy of v1.4.1 and re-running in the same pass:
 * the six floats `_descend` keeps at v1.5.0 to remember the winning
   surface's frame: removing them gave 788 / 978 / 963 ns against v1.5.0's
   839 / 1013 / 867, which is why the v1.5.0 step is only 2%.
-## Cause 3: `_track` itself, v1.3.0 and v1.6.x, about 10% a time
+* the growth of the surface kernels themselves.  v1.4.1 added the torus
+  and the quadric to `value`, `ray`, `nearest` and `normal`, which are
+  inlined into `_descend` at every surface a cell mentions, so a bigger
+  body could have cost by itself.  Running v1.4.1 with v1.4.0's
+  `surfaces.py` (the three test problems use only planes, spheres and
+  cylinders, so no kernel is missing) gave 721 / 1149 / 810 ns against
+  v1.4.1's own 749 / 1149 / 921 in the same pass, and 2.211 / 3.437 /
+  4.505 s on the run against 2.242 / 3.076 / 4.637.  The slab, which took
+  the step hardest, recovers nothing at all.  Free.
+
+## Cause 3: `_track` itself, v1.3.0 and v1.6.x, about 10% a step
 
 Three steps -- v1.2.0 -> v1.3.0, v1.5.0 -> v1.6.0 and v1.6.0 -> v1.6.1 --
 each cost about 10% and none of it is in the geometry walk (flat across
@@ -213,6 +224,7 @@ So scoring the same tallies costs 2.7x (sphere), 4.0x (slab) and 4.5x
 (cask) what it did at v1.0, and it all arrived in two steps: v1.1.3,
 which made the scorer general enough for the extra score types, and
 v1.3.0, which made it walk the filter list.  It has been flat since.
+
 ## Against OpenMC: what actually changed
 
 The 6 Oct rules still apply -- same session, name the OpenMC mode, and
@@ -253,6 +265,7 @@ bigger half of the gap to OpenMC is the tally scorer, not the transport.
 Asking for more tallies is a deliberate coverage choice and not a bug;
 scoring them 2.7-4.5x less efficiently per tally than v1.0 did is the
 part worth looking at.
+
 ## What each version added to the code every flight runs
 
 Read from the diffs, one step at a time.  "Guarded" means the new work
@@ -320,6 +333,7 @@ detector hook is behind `D.on`.
 2.75x v1.0's.  `surf_shift` gained an albedo column, checked on every
 reflective, white or periodic crossing.  Everything `ext.py` does is
 behind `E.n`.
+
 ## What I would look at, in order (nothing landed, nothing approved)
 
 1. **The source sampler.**  The clearest win and the least risky, because
@@ -353,9 +367,10 @@ behind `E.n`.
   same pass.
 
 ## The full tables
-## Plain MC, no tallies at all: seconds for 500,000 histories
 
-### no tallies
+### Plain MC, no tallies at all: seconds for 500,000 histories
+
+#### no tallies
 
 | version | sphere | slab | cask | sphere vs v1.0 | slab vs v1.0 | cask vs v1.0 |
 |---|---|---|---|---|---|---|
@@ -370,9 +385,15 @@ behind `E.n`.
 | v1.6.0 | 2.49 | 3.19 | 4.67 | 2.11x | 1.79x | 1.59x |
 | v1.6.1 | 2.71 | 3.50 | 5.29 | 2.30x | 1.96x | 1.81x |
 
-## Where that time sits
+### Where that time sits
 
-### advance s / rest s, then ns per _descend, then source ms per batch
+#### advance s / rest s, then ns per _descend, then source ms per batch
+
+`advance` is what `run()` reports as `transport_s`, which starts its clock
+before the source is sampled, so from v1.2 on it CONTAINS the source
+sampler's 0.6-0.75 s; `rest` is only the per-batch array allocation and
+the reduce.  That is why `rest` stays at 0.1 s throughout and the source
+had to be timed separately.
 
 | version | sphere adv/rest | slab adv/rest | cask adv/rest | sphere desc ns | slab desc ns | cask desc ns | sphere src ms | slab src ms | cask src ms |
 |---|---|---|---|---|---|---|---|---|---|
@@ -387,9 +408,9 @@ behind `E.n`.
 | v1.6.0 | 2.40 / 0.09 | 3.09 / 0.10 | 4.53 / 0.14 | 878 | 1180 | 869 | 135 | 137 | 148 |
 | v1.6.1 | 2.61 / 0.10 | 3.39 / 0.11 | 5.21 / 0.08 | 883 | 1218 | 940 | 139 | 149 | 149 |
 
-## The tally side
+### The tally side
 
-### tally cost: the problem's own set, then v1.0's set, then how many tallies v1.0's set is
+#### tally cost: the problem's own set, then v1.0's set, then how many tallies v1.0's set is
 
 | version | sphere own | slab own | cask own | sphere fixed | slab fixed | cask fixed | sphere n | slab n | cask n |
 |---|---|---|---|---|---|---|---|---|---|

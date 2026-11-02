@@ -1,0 +1,22 @@
+=== OLDSURF retry ===
+ABL2_READY
+DESC v1.4.0 sphere      629 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.4.0 slab        734 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.4.0 cask        749 ns per _descend (5000 points, want_near+want_ray)
+ROW v1.4.0 abl2 sphere no_t 2.067 with_t 3.107 adv 1.974 flights 9297937 leak 0.031802 ntally 3
+ROW v1.4.0 abl2 slab no_t 2.777 with_t 3.797 adv 2.581 flights 11338773 leak 0.860791 ntally 2
+ROW v1.4.0 abl2 cask no_t 3.872 with_t 5.618 adv 3.759 flights 20025215 leak 0.002349 ntally 3
+DESC v1.4.1 sphere      749 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.4.1 slab       1149 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.4.1 cask        921 ns per _descend (5000 points, want_near+want_ray)
+ROW v1.4.1 abl2 sphere no_t 2.242 with_t 3.374 adv 2.163 flights 9297937 leak 0.031802 ntally 3
+ROW v1.4.1 abl2 slab no_t 3.076 with_t 4.252 adv 2.957 flights 11338773 leak 0.860791 ntally 2
+ROW v1.4.1 abl2 cask no_t 4.637 with_t 6.646 adv 4.505 flights 20025215 leak 0.002349 ntally 3
+DESC oldsurf sphere      721 ns per _descend (5000 points, want_near+want_ray)
+DESC oldsurf slab       1149 ns per _descend (5000 points, want_near+want_ray)
+DESC oldsurf cask        810 ns per _descend (5000 points, want_near+want_ray)
+ROW oldsurf abl2 sphere no_t 2.211 with_t 3.377 adv 2.123 flights 9297937 leak 0.031802 ntally 3
+ROW oldsurf abl2 slab no_t 3.437 with_t 4.665 adv 3.320 flights 11338773 leak 0.860791 ntally 2
+ROW oldsurf abl2 cask no_t 4.505 with_t 6.191 adv 4.352 flights 20025215 leak 0.002349 ntally 3
+ABL2_DONE
+CHAIN7_DONE
