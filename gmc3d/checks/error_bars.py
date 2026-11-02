@@ -79,7 +79,7 @@ def study(names, runs=30, particles=10_000, batches=20, backend=None,
         for k in range(runs):
             r = transport.run(pr, particles, batches, seed=1 + 1000 * k,
                               backend=be, r_star=r_star,
-                              mesh_rule="centre", nchunk=nchunk)
+                              mesh_rule="profile", nchunk=nchunk)
             rows.append(r)
         groups = rows[0].groups
         log(f"\n== {name}{'' if be is None else ' + ' + be.name}: "

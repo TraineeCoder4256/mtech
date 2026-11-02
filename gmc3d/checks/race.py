@@ -33,8 +33,9 @@ answer at all (see checks/openmc_ref.py).  That puts both error bars at
 about 2%, so a FOM ratio is good to a few per cent rather than a factor.
 Timings themselves still repeat to only about 10%.
 
-Ball runs use the 'centre' mesh rule (balls kept full-size; mesh tallies
-smeared, research item R4), as in measure.py.  The answers checked are
+Ball runs use the 'profile' mesh rule (balls kept full-size; since v1.1 the
+mesh tallies are right on average too; before v1.1 this was the 'centre'
+rule, which smeared them).  The answers checked are
 leakage, total flux and, where a problem has one, its detector.
 """
 
@@ -123,7 +124,7 @@ def race(names, backends, particles=100_000, batches=40, seed=11,
                 continue
             be = backends.get(b) if b else None
             r = transport.run(pr, particles, batches, seed=seed, backend=be,
-                              r_star=rs or 3.0, mesh_rule="centre")
+                              r_star=rs or 3.0, mesh_rule="profile")
             sec = r.timing["transport_s"] + r.timing["backend_s"]
             lab = label + (f" (R* = {rs:g})" if rs else "")
             rows.append(_row(lab, name, r, sec,

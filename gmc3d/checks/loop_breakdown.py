@@ -60,10 +60,12 @@ HERE = Path(__file__).resolve().parent.parent
 @njit(cache=True)
 def _bench_descend(g, xs, ys, zs, us, vs, ws, want_near, reps):
     acc = 0.0
+    path = np.full(G.MAX_LEVELS, -1, np.int64)
     for _ in range(reps):
         for i in range(xs.size):
-            cell, mat, near, t_ray, surf, at_root = G._descend(
-                g, xs[i], ys[i], zs[i], us[i], vs[i], ws[i], want_near, True)
+            cell, mat, near, t_ray, surf, lvl, sg = G._descend(
+                g, xs[i], ys[i], zs[i], us[i], vs[i], ws[i], want_near, True,
+                path)
             acc += t_ray + near + cell + mat
     return acc
 
@@ -71,11 +73,14 @@ def _bench_descend(g, xs, ys, zs, us, vs, ws, want_near, reps):
 @njit(cache=True)
 def _bench_score(row, L, cells, mats, xs, ys, zs, us, vs, ws, steps, reps):
     acc = 0.0
+    path = np.full(G.MAX_LEVELS, -1, np.int64)
+    scr = T.scratch(G.MAX_LEVELS)
     for _ in range(reps):
         for i in range(xs.size):
-            T.score_segment(row, L, cells[i], mats[i], 0.1, 1.0,
+            path[0] = cells[i]          # one level: enough for the timing
+            T.score_segment(row, L, cells[i], path, mats[i], 0.1, 0.9, 1.0,
                             xs[i], ys[i], zs[i], us[i], vs[i], ws[i],
-                            steps[i])
+                            steps[i], scr)
             acc += row[0]
     return acc
 
@@ -102,24 +107,14 @@ def _best(fn, args, reps, n, tries=5):
 
 # --------------------------------------------------------------- Part A
 def run_split(problem, particles, batches, seed, backend, r_star,
-              mesh_rule="centre", nchunk=32):
+              mesh_rule="profile", nchunk=32):
     """core/transport.run, with a stopwatch on every phase.
 
     Kept deliberately close to the original so the two can be compared
     line by line; the phases are the only addition.
     """
     g, m = problem.geom, problem.mats
-    r_max = None
-    if backend is not None:
-        r_max = backend.r_max
-    ph = TR.Physics(m.sig_s.astype(float), m.sig_a.astype(float),
-                    np.flatnonzero(g.surf_bc != G.BC_TRANSMISSION),
-                    0.25, 1.0, backend is not None, float(r_star),
-                    float(r_max or TR.INF), mesh_rule == "cap")
-    s = problem.source
-    src = TR.SourceArrays(s.kind, s.lo, s.hi, s.mono.astype(np.bool_),
-                          s.direction, s.cdf)
-    L = T.compile_layout(problem.tallies, len(problem.cell_ids), len(m.ids))
+    ph, L, _, X = TR.physics(problem, backend, r_star, None, mesh_rule)
     accum = T.Accumulator(L)
     cnt = np.zeros((nchunk, len(TR.COUNTERS)), np.int64)
     ph_t = dict(allocate=0.0, birth=0.0, advance=0.0, gather=0.0,
@@ -133,15 +128,18 @@ def run_split(problem, particles, batches, seed, backend, r_star,
         P = TR._particles(particles)
         P.seed[:] = rng.streams(np.uint64(seed), b * particles, particles)
         acc = np.zeros((nchunk, L.n_entries))
+        D = TR._no_detectors(L.n_entries, len(problem.mats.ids))
+        E, XS = TR.EX.empty()[0], TR._ext_state(particles, 0, False)
         ph_t["allocate"] += time.perf_counter() - t
 
         t = time.perf_counter()
-        TR._birth(g, src, P, cnt, nchunk)
+        st = problem.source.sample(particles, TR.source_rng(seed, b))
+        TR._birth(st.xyz, st.uvw, st.wgt, st.iso, P, cnt, nchunk)
         ph_t["birth"] += time.perf_counter() - t
 
         while True:
             t = time.perf_counter()
-            TR._advance(g, ph, L, P, acc, cnt, nchunk)
+            TR._advance(g, ph, L, X, D, P, acc, cnt, nchunk, E, XS)
             ph_t["advance"] += time.perf_counter() - t
 
             t = time.perf_counter()
@@ -200,9 +198,9 @@ def main():
           f"{a.particles * a.batches:,} histories")
 
     TR.run(pr, 1000, 1, seed=1, backend=be, r_star=a.r_star,
-           mesh_rule="centre")                       # compile the kernels
+           mesh_rule="profile")                       # compile the kernels
     ref = TR.run(pr, a.particles, a.batches, seed=1, backend=be,
-                 r_star=a.r_star, mesh_rule="centre")
+                 r_star=a.r_star, mesh_rule="profile")
     res, ph_t, wall, sites = run_split(pr, a.particles, a.batches, 1, be,
                                        a.r_star)
 
@@ -243,7 +241,9 @@ def main():
     d = gen.normal(size=(3, n))
     d /= np.linalg.norm(d, axis=0)
     us, vs, ws = d
-    L = T.compile_layout(pr.tallies, len(pr.cell_ids), len(pr.mats.ids))
+    L = T.compile_layout(pr.tallies, len(pr.cell_ids), len(pr.mats.ids),
+                         len(pr.geom.surf_kind),
+                         leaf=pr.geom.cell_fill_type <= G.FILL_VOID)
     row = np.zeros(L.n_entries)
     steps = np.full(n, 0.5)
     args = (pr.geom, sites["x"], sites["y"], sites["z"], us, vs, ws)

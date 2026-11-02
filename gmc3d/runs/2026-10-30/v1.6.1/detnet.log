@@ -1,0 +1,11 @@
+plain MC 120 s
+network r* 1.0: 150 s, 4,392,170 balls
+  cavity       plain 0.000890178 +- 6.6e-06  network 0.000873868 +- 6.4e-06  z -1.77
+  outside      plain 1.04306e-05 +- 1.3e-07  network 1.03711e-05 +- 1.3e-07  z -0.32
+  medium       plain 0.00204192 +- 2.3e-05  network 0.00204402 +- 2.5e-05  z +0.06
+  medium_deep  plain 0.00880665 +- 5e-05  network 0.00871368 +- 5.9e-05  z -1.20
+network r* 3.0: 122 s, 3,078,063 balls
+  cavity       plain 0.000890178 +- 6.6e-06  network 0.00087729 +- 6.9e-06  z -1.35
+  outside      plain 1.04306e-05 +- 1.3e-07  network 1.02936e-05 +- 1.3e-07  z -0.73
+  medium       plain 0.00204192 +- 2.3e-05  network 0.00201523 +- 2.2e-05  z -0.84
+  medium_deep  plain 0.00880665 +- 5e-05  network 0.00872501 +- 5.8e-05  z -1.07

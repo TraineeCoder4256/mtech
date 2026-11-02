@@ -1,0 +1,14 @@
+mesh noise and cost: plain MC vs network balls ('profile' and 'cap'), 2M histories, seed 5
+problem  run           time s   median rel.err of mesh flux   FOM (1/(err^2 t)) vs plain
+sphere   plain MC         9.7      3.844%     1.00
+sphere   net profile     18.1      3.700%     0.58
+sphere   net cap         10.8      3.844%     0.90
+slab     plain MC        12.2      0.513%     1.00
+slab     net profile     19.1      0.467%     0.77
+slab     net cap         16.2      0.513%     0.75
+cask     plain MC        22.2     16.234%     1.00
+cask     net profile     33.9     16.108%     0.67
+cask     net cap         30.8     16.238%     0.72
+curved   plain MC        50.8      2.037%     1.00
+curved   net profile     67.7      1.994%     0.78
+curved   net cap         59.2      2.037%     0.86

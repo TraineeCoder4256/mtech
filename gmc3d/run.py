@@ -8,6 +8,21 @@
     python run.py ballcheck                        backends vs exact walk
     python run.py measure                          speed study, all problems
     python run.py race                             OpenMC vs ours, head to head
+    python run.py meshcheck                        mesh profile vs exact walks
+    python run.py maps                             flux maps vs OpenMC, as PNG
+    python run.py robust                           random models vs OpenMC
+    python run.py detcheck                         point detectors: exact,
+                                                   balls vs plain, vs OpenMC
+    python run.py gapcheck                         the v1.6.1 features (albedo,
+                                                   new filters, sources,
+                                                   triggers, ...) vs OpenMC
+    python run.py score                            one number out of 10 from
+                                                   the latest test, validate,
+                                                   robust and detector runs
+    python run.py check model.py                   what gmc3d will use, refuse
+                                                   and warn about, without
+                                                   running (also a problem
+                                                   name, model.xml or folder)
 
 Backends: mc (no balls), oracle (exact walk), table, network.
 --device cuda runs the network on a GPU (the transport stays on the CPU);
@@ -30,9 +45,11 @@ sys.path.insert(0, str(HERE))
 from ball import network, table                              # noqa: E402
 from ball.oracle import Oracle                                # noqa: E402
 from checks import ball_metrics, compare, measure, openmc_ref  # noqa: E402
-from checks import race, validate                             # noqa: E402
+from checks import flux_maps, mesh_profile, race, validate    # noqa: E402
+from checks import source_check                               # noqa: E402
 from core import openmc_import, output, transport             # noqa: E402
 from problems import PROBLEMS                                 # noqa: E402
+from core.tallies import SCORES                               # noqa: E402
 
 DATA = HERE / "data"
 TABLE_FILE = DATA / "ball" / "table.npz"
@@ -82,6 +99,8 @@ def out_dir(args):
 def cmd_solve(args, log):
     model = PROBLEMS[args.problem]()
     pr = openmc_import.load(model)
+    for line in pr.warnings:
+        log(f"  WARNING {line}")
     be = backend(args.backend, args.device)
     r = transport.run(pr, args.particles, args.batches, seed=args.seed,
                       backend=be, r_star=args.r_star,
@@ -89,9 +108,14 @@ def cmd_solve(args, log):
     log(f"{args.problem} with {args.backend}: leakage {r.leakage:.6g} +- "
         f"{r.leakage_se:.2g}")
     for name, t in r.tallies.items():
-        if t["mean"].shape[0] == 1:
-            log(f"  {name}: flux {t['mean'][0, 0]:.6g} +- {t['se'][0, 0]:.2g}"
-                f", absorption {t['mean'][0, 1]:.6g} +- {t['se'][0, 1]:.2g}")
+        if t["filter"] == "surface":
+            for sid, m_, e_ in zip(t["bin_ids"], t["mean"][:, 0],
+                                   t["se"][:, 0]):
+                log(f"  {name}: surface {sid} current {m_:.6g} +- {e_:.2g}")
+        elif t["mean"].shape[0] == 1:
+            log(f"  {name}: " + ", ".join(
+                f"{sc} {t['mean'][0, k]:.6g} +- {t['se'][0, k]:.2g}"
+                for k, sc in enumerate(SCORES) if sc in t["scores"]))
     log(f"  counters {r.counters}")
     log(f"  timing {r.timing}")
     d = out_dir(args)
@@ -106,7 +130,7 @@ def cmd_solve(args, log):
         extra["vs_openmc"] = cmp
     output.save_json(r, d / f"{stem}.json", extra)
     for name, t in r.tallies.items():
-        if t["filter"] == "mesh":
+        if t["filter"] == "mesh" and t.get("mesh_type", "rect") == "rect":
             output.save_vtk(t, d / f"{stem}_{name}.vtk")
     log(f"  written to {d}/{stem}.*")
     return stem
@@ -165,6 +189,76 @@ def cmd_race(args, log):
     return "race"
 
 
+def cmd_meshcheck(args, log):
+    rows = mesh_profile.run(log=log)
+    (out_dir(args) / "meshcheck.json").write_text(
+        json.dumps(output._plain(rows), indent=1))
+    return "meshcheck"
+
+
+def cmd_maps(args, log):
+    res = flux_maps.run(args.problems or list(validate.VALIDATE_ORDER),
+                        backend(args.backend, args.device),
+                        out_dir(args) / "maps", DATA / "openmc",
+                        args.particles, args.batches, seed=args.seed,
+                        r_star=args.r_star, log=log)
+    (out_dir(args) / "maps.json").write_text(
+        json.dumps(output._plain(res), indent=1))
+    return "maps"
+
+
+def cmd_sourcecheck(args, log):
+    res = source_check.run(DATA / "openmc", args.particles, args.batches,
+                           seed=args.seed, names=args.cases or None, log=log)
+    (out_dir(args) / "sourcecheck.json").write_text(
+        json.dumps(output._plain(res), indent=1))
+    return "sourcecheck"
+
+
+def cmd_check(args, log):
+    from core import model_check
+    rep = model_check.check(model_check.load_model(args.model))
+    for line in rep.lines():
+        log(line)
+    return None
+
+
+def cmd_robust(args, log):
+    from checks import robust
+    res = robust.suite(DATA / "openmc", args.models, log=log)
+    (out_dir(args) / "robust.json").write_text(
+        json.dumps(output._plain(res), indent=1))
+    return "robust"
+
+
+def cmd_detcheck(args, log):
+    from checks import detcheck
+    res = detcheck.run(DATA / "openmc", args.particles, args.batches,
+                       seed=args.seed, log=log)
+    (out_dir(args) / "detcheck.json").write_text(
+        json.dumps(output._plain(res), indent=1))
+    return "detcheck"
+
+
+def cmd_gapcheck(args, log):
+    from checks import gapcheck
+    res = gapcheck.suite(DATA / "openmc", args.particles, args.batches,
+                         names=args.cases or None, log=log)
+    (out_dir(args) / "gapcheck.json").write_text(
+        json.dumps(output._plain(res), indent=1))
+    return "gapcheck"
+
+
+def cmd_score(args, log):
+    from checks import score
+    parts, total = score.score(out_dir(args))
+    text = score.report(parts, total)
+    log(text)
+    (out_dir(args) / "SCORE.md").write_text(
+        f"# gmc3d check score: {total:.1f} / 10\n\n{text}\n")
+    return "score"
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawTextHelpFormatter)
@@ -183,7 +277,8 @@ def main():
     s.add_argument("--backend", default="mc",
                    choices=["mc", "oracle", "table", "network"])
     s.add_argument("--r-star", type=float, default=3.0)
-    s.add_argument("--mesh-rule", default="cap", choices=["cap", "centre"])
+    s.add_argument("--mesh-rule", default="profile",
+                   choices=["profile", "cap"])
     s.add_argument("--openmc", action="store_true")
     common(s)
 
@@ -216,6 +311,41 @@ def main():
     s.add_argument("--backends", nargs="+",
                    default=["oracle", "network", "table"])
     common(s, batches=40)
+
+    s = sub.add_parser("meshcheck")
+    common(s)
+
+    s = sub.add_parser("sourcecheck")
+    s.add_argument("cases", nargs="*", help=" ".join(source_check.CASES))
+    common(s)
+    s.set_defaults(seed=5)
+
+    s = sub.add_parser("maps")
+    s.add_argument("problems", nargs="*")
+    s.add_argument("--backend", default="network",
+                   choices=["oracle", "table", "network"])
+    s.add_argument("--r-star", type=float, default=3.0)
+    common(s)
+    s.set_defaults(seed=5)
+
+    s = sub.add_parser("robust")
+    s.add_argument("--models", type=int, default=30)
+    common(s)
+
+    s = sub.add_parser("detcheck")
+    common(s)
+    s.set_defaults(seed=7)
+
+    s = sub.add_parser("gapcheck")
+    s.add_argument("cases", nargs="*")
+    common(s, particles=20_000)
+
+    s = sub.add_parser("score")
+    common(s)
+
+    s = sub.add_parser("check")
+    s.add_argument("model", help="problem name, .py file, model.xml or "
+                   "folder of OpenMC xml files")
 
     args = p.parse_args()
     log = Log()

@@ -1,0 +1,6 @@
+depth: 60 bins, effective independent bins N_eff = 6.4
+   chi2/dof 2.156 (v1.6 validate, seed 1 vs OpenMC 20M seed 101): p 5.3e-07 if bins were independent, p 0.040 with N_eff
+   chi2/dof 1.766 (v1.5 validate, seed 1 vs OpenMC 2M seed 101): p 2.3e-04 if bins were independent, p 0.096 with N_eff
+depth1d: 30 bins, effective independent bins N_eff = 5.8
+   chi2/dof 2.240 (v1.6 validate): p 1.1e-04 if bins were independent, p 0.039 with N_eff
+   chi2/dof 1.819 (v1.5 validate): p 4.0e-03 if bins were independent, p 0.094 with N_eff

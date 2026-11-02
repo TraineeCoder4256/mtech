@@ -1,0 +1,6 @@
+sphere with mc: leakage 0 +- 0
+  total: flux 10.766 +- 1.7, absorption 1.0766 +- 0.17
+  cell: flux 10.766 +- 1.7, absorption 1.0766 +- 0.17
+  counters {'histories': 10, 'flights': 204, 'scatters': 204, 'crossings': 0, 'balls': 0, 'ball_skipped': 0, 'roulette_killed': 10, 'lost': 0, 'rescued': 0, 'mesh_points': 0, 'backend_calls': 0}
+  timing {'transport_s': 0.03658897999957844, 'backend_s': 0.0}
+  written to /home/claude/mtech/gmc3d/runs/2026-10-27/sphere_mc.*

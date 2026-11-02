@@ -1,0 +1,8 @@
+cask: best 21.73 s of [23.53, 21.73, 22.77]
+hexcore: best 31.31 s of [33.27, 33.43, 31.31]
+same machine, same session, v1.5.0 (commit ef479a3, a scratch worktree):
+v1.5.0 cask: best 22.53 s of [24.9, 22.72, 22.53]
+v1.5.0 hexcore: best 29.98 s of [30.65, 29.98, 32.89]
+=> v1.6 vs v1.5.0: cask -3.6%, hexcore +4.4%: inside this container's
+   run-to-run spread (the three repeats differ by up to 10%). No slowdown
+   from the detector plumbing.

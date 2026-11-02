@@ -1,0 +1,9 @@
+........................................................................ [ 52%]
+..................................................................       [100%]
+=============================== warnings summary ===============================
+tests/test_sources.py::test_unsupported_sources_are_refused[<lambda>-fissionable1]
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/stats/multivariate.py:1115: FutureWarning: The 'only_fissionable' has been deprecated. Use the 'constraints' argument when defining a source instead.
+    warn("The 'only_fissionable' has been deprecated. Use the "
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+138 passed, 1 warning in 238.68s (0:03:58)

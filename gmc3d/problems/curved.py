@@ -7,7 +7,15 @@
 
 Exercises cylinders, spheres, cones, unions and complements, void cells,
 and balls that shrink as they approach a curved wall.
+
+Since v1.5 a CylindricalMesh (origin on the tank's floor, 4 rings out to
+the outer box's corner region, 6 phi sectors, 4 z layers) checks the
+curved-mesh walk, and the same mesh times a material filter checks it
+with another filter.  A SphericalMesh about the origin (4 shells, 3 theta
+cones, 3 phi sectors) checks theta bins away from the mesh's apex.  (No
+theta edge at pi/2: OpenMC 0.16 gets that one wrong, see sphere.py.)
 """
+import numpy as np
 import openmc
 
 from . import common
@@ -41,5 +49,18 @@ def build(sig_s=0.4, sig_a=0.004):
         common.flux_tally("mesh", common.mesh_filter(
             (-35.0, -35.0, -35.0), (35.0, 35.0, 35.0), (14, 14, 14))),
     ])
+    cyl = openmc.CylindricalMesh(r_grid=[0.0, 10.0, 20.0, 30.0, 40.0],
+                                 phi_grid=np.linspace(0.0, 2 * np.pi, 7),
+                                 z_grid=[0.0, 15.0, 30.0, 45.0, 60.0],
+                                 origin=(0.0, 0.0, -30.0))
+    tallies.append(common.flux_tally("cylmesh", openmc.MeshFilter(cyl),
+                                     scores=("flux", "absorption")))
+    tallies.append(common.flux_tally("cylmesh_mat", openmc.MeshFilter(cyl)))
+    tallies[-1].filters = tallies[-1].filters + [openmc.MaterialFilter(
+        [m["water"], m["steel"]])]
+    tallies.append(common.flux_tally("sphmesh", openmc.MeshFilter(
+        openmc.SphericalMesh(r_grid=[0.0, 8.0, 16.0, 26.0, 40.0],
+                             theta_grid=[0.0, 0.9, 2.3, np.pi],
+                             phi_grid=[0.0, 2.0, 4.2, 2 * np.pi]))))
     src = common.point_source((-15.0, -10.0, 10.0))
     return openmc.Model(geometry, materials, common.settings(src), tallies)

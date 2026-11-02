@@ -1,0 +1,114 @@
+........................................................................ [ 39%]
+........................................................................ [ 78%]
+.......................................                                  [100%]
+=============================== warnings summary ===============================
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=69.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Material instance already exists with id=40.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Surface instance already exists with id=119.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Surface instance already exists with id=120.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Surface instance already exists with id=121.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Surface instance already exists with id=122.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Surface instance already exists with id=123.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Surface instance already exists with id=124.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Cell instance already exists with id=62.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another UniverseBase instance already exists with id=36.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another MeshBase instance already exists with id=33.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another MeshBase instance already exists with id=34.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another MeshBase instance already exists with id=35.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=67.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=68.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=70.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=74.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=72.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Tally instance already exists with id=78.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Tally instance already exists with id=79.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Tally instance already exists with id=80.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Tally instance already exists with id=81.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Tally instance already exists with id=82.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Tally instance already exists with id=83.
+    warn(msg, IDWarning)
+
+tests/test_detectors_v160.py::test_check_reads_xml_and_python_files
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Tally instance already exists with id=84.
+    warn(msg, IDWarning)
+
+tests/test_general_v161.py::test_mu_filter_carries_the_previous_histories_cosine
+  /home/claude/mtech/gmc3d/tests/test_general_v161.py:75: IgnoredSetting: tallies 285: a filter on the direction or the collision count along tracks (Polar, Azimuthal, SphericalHarmonics, Mu or Collision) cannot be scored inside a ball, whose walk is not seen: this model runs without balls (plain Monte Carlo, exact)
+    t = transport.run(openmc_import.load(model), **RUN).tallies
+
+tests/test_sources.py::test_unsupported_sources_are_refused[<lambda>-fissionable1]
+  /opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/stats/multivariate.py:1115: FutureWarning: The 'only_fissionable' has been deprecated. Use the 'constraints' argument when defining a source instead.
+    warn("The 'only_fissionable' has been deprecated. Use the "
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+183 passed, 27 warnings in 472.66s (0:07:52)

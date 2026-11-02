@@ -1,0 +1,92 @@
+# Rechecks of the three v1.2 fails, other seeds (29 Oct 2026). 2M histories unless stated.
+# OpenMC reference for these: seed 105 (validate itself used seed 101).
+
+## slab, plain MC, seeds 6-10
+seed 6 PASS
+    leakage           ours 0.860874 +- 0.00018   ref 0.860577 +- 0.00024   z +0.98
+    total/flux        ours 27.8132 +- 0.039   ref 27.8847 +- 0.05   z -1.13
+    depth1d/flux          30 bins   chi2/dof 0.864   max|z| 2.29   |z|>3 0.00%
+    depth/flux            60 bins   chi2/dof 0.852   max|z| 2.32   |z|>3 0.00%
+seed 7 PASS
+    leakage           ours 0.860225 +- 0.00019   ref 0.860577 +- 0.00024   z -1.13
+    total/flux        ours 27.9419 +- 0.041   ref 27.8847 +- 0.05   z +0.89
+    depth1d/flux          30 bins   chi2/dof 0.543   max|z| 2.19   |z|>3 0.00%
+    depth/flux            60 bins   chi2/dof 0.527   max|z| 2.00   |z|>3 0.00%
+seed 8 PASS
+    leakage           ours 0.86023 +- 0.00019   ref 0.860577 +- 0.00024   z -1.13
+    total/flux        ours 27.9054 +- 0.039   ref 27.8847 +- 0.05   z +0.33
+    depth1d/flux          30 bins   chi2/dof 0.731   max|z| 2.05   |z|>3 0.00%
+    depth/flux            60 bins   chi2/dof 0.714   max|z| 2.30   |z|>3 0.00%
+seed 9 PASS
+    leakage           ours 0.860473 +- 0.00018   ref 0.860577 +- 0.00024   z -0.34
+    total/flux        ours 27.9215 +- 0.038   ref 27.8847 +- 0.05   z +0.59
+    depth1d/flux          30 bins   chi2/dof 0.748   max|z| 2.06   |z|>3 0.00%
+    depth/flux            60 bins   chi2/dof 0.702   max|z| 2.41   |z|>3 0.00%
+seed 10 PASS
+    leakage           ours 0.860441 +- 0.00019   ref 0.860577 +- 0.00024   z -0.44
+    total/flux        ours 27.8934 +- 0.04   ref 27.8847 +- 0.05   z +0.14
+    depth1d/flux          30 bins   chi2/dof 0.420   max|z| 2.22   |z|>3 0.00%
+    depth/flux            60 bins   chi2/dof 0.407   max|z| 2.07   |z|>3 0.00%
+
+## nested, exact balls (R*=1), seeds 6-10
+seed 6 FAIL
+    leakage           ours 0.203655 +- 0.00021   ref 0.203923 +- 0.00029   z -0.75
+    total/flux        ours 17.4468 +- 0.014   ref 17.5042 +- 0.019   z -2.46
+    material/flux          3 bins   chi2/dof 3.761   max|z| 2.65   |z|>3 0.00%
+    mesh/flux           1000 bins   chi2/dof 1.211   max|z| 3.46   |z|>3 0.90%
+seed 7 PASS
+    leakage           ours 0.20376 +- 0.00021   ref 0.203923 +- 0.00029   z -0.46
+    total/flux        ours 17.488 +- 0.014   ref 17.5042 +- 0.019   z -0.69
+    material/flux          3 bins   chi2/dof 0.915   max|z| 1.44   |z|>3 0.00%
+    mesh/flux           1000 bins   chi2/dof 1.033   max|z| 3.23   |z|>3 0.10%
+seed 8 PASS
+    leakage           ours 0.203309 +- 0.0002   ref 0.203923 +- 0.00029   z -1.74
+    total/flux        ours 17.4642 +- 0.014   ref 17.5042 +- 0.019   z -1.72
+    material/flux          3 bins   chi2/dof 1.578   max|z| 1.88   |z|>3 0.00%
+    mesh/flux           1000 bins   chi2/dof 1.136   max|z| 3.70   |z|>3 0.40%
+seed 9 FAIL
+    leakage           ours 0.20322 +- 0.00019   ref 0.203923 +- 0.00029   z -2.03
+    total/flux        ours 17.4362 +- 0.013   ref 17.5042 +- 0.019   z -2.99
+    material/flux          3 bins   chi2/dof 6.048   max|z| 2.90   |z|>3 0.00%
+    mesh/flux           1000 bins   chi2/dof 1.116   max|z| 3.22   |z|>3 0.50%
+seed 10 PASS
+    leakage           ours 0.203896 +- 0.00021   ref 0.203923 +- 0.00029   z -0.08
+    total/flux        ours 17.4692 +- 0.013   ref 17.5042 +- 0.019   z -1.53
+    material/flux          3 bins   chi2/dof 1.019   max|z| 1.58   |z|>3 0.00%
+    mesh/flux           1000 bins   chi2/dof 1.034   max|z| 3.12   |z|>3 0.30%
+
+## nested, plain MC, seeds 6-10
+seed 6 PASS
+    leakage           ours 0.203282 +- 0.0002   ref 0.203923 +- 0.00029   z -1.83
+    total/flux        ours 17.4603 +- 0.013   ref 17.5042 +- 0.019   z -1.91
+    material/flux          3 bins   chi2/dof 3.087   max|z| 2.15   |z|>3 0.00%
+    mesh/flux           1000 bins   chi2/dof 1.100   max|z| 3.40   |z|>3 0.30%
+seed 7 FAIL
+    leakage           ours 0.20375 +- 0.0002   ref 0.203923 +- 0.00029   z -0.49
+    total/flux        ours 17.4673 +- 0.014   ref 17.5042 +- 0.019   z -1.60
+    material/flux          3 bins   chi2/dof 1.674   max|z| 1.73   |z|>3 0.00%
+    mesh/flux           1000 bins   chi2/dof 1.176   max|z| 4.06   |z|>3 1.10%
+seed 8 FAIL
+    leakage           ours 0.203221 +- 0.00021   ref 0.203923 +- 0.00029   z -1.98
+    total/flux        ours 17.4569 +- 0.014   ref 17.5042 +- 0.019   z -2.01
+    material/flux          3 bins   chi2/dof 2.290   max|z| 2.14   |z|>3 0.00%
+    mesh/flux           1000 bins   chi2/dof 1.201   max|z| 3.60   |z|>3 0.50%
+seed 9 FAIL
+    leakage           ours 0.20309 +- 0.0002   ref 0.203923 +- 0.00029   z -2.37
+    total/flux        ours 17.4303 +- 0.013   ref 17.5042 +- 0.019   z -3.24
+    material/flux          3 bins   chi2/dof 7.099   max|z| 3.23   |z|>3 33.33%
+    mesh/flux           1000 bins   chi2/dof 1.177   max|z| 3.42   |z|>3 0.80%
+seed 10 PASS
+    leakage           ours 0.203818 +- 0.00021   ref 0.203923 +- 0.00029   z -0.29
+    total/flux        ours 17.4767 +- 0.014   ref 17.5042 +- 0.019   z -1.18
+    material/flux          3 bins   chi2/dof 0.724   max|z| 1.38   |z|>3 0.00%
+    mesh/flux           1000 bins   chi2/dof 1.116   max|z| 3.56   |z|>3 0.50%
+
+## nested at 10M histories: OpenMC 25,000 x 400 (seed 777) vs plain MC 500,000 x 20 (seed 31)
+  leakage           ours 0.203623 +- 9.4e-05   ref 0.2035 +- 0.00012   z +0.79
+  total/flux        ours 17.4709 +- 0.006   ref 17.4597 +- 0.008   z +1.12
+  total/absorption  ours 0.796536 +- 0.00011   ref 0.796172 +- 0.00023   z +1.41
+  material/flux          3 bins   chi2/dof 1.140   max|z| 1.25
+
+## source case cylindrical, seeds 6 and 7: plain MC and exact balls PASS both
+  seed 6 balls plan2d/flux 484 bins chi2/dof 0.921; seed 7 0.832 (seed 5 was 1.252)

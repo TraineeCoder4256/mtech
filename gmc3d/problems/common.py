@@ -86,3 +86,16 @@ def mesh_filter(lower_left, upper_right, dimension):
     m.lower_left, m.upper_right, m.dimension = lower_left, upper_right, \
         dimension
     return openmc.MeshFilter(m)
+
+
+def point_detector(model, name, xyz, r0=0.0):
+    """Ask gmc3d for the flux at one point (gmc3d's own; OpenMC 0.16 has no
+    point detector, so the reference run ignores it).  Scored with the
+    next-event estimator (core/detectors.py).  r0 > 0 (cm) averages
+    contributions from closer than r0 to keep the variance finite: biased
+    by O(r0), see that file.  Returns the model."""
+    if not hasattr(model, "gmc3d_detectors"):
+        model.gmc3d_detectors = []
+    model.gmc3d_detectors.append((str(name), tuple(float(c) for c in xyz),
+                                  float(r0)))
+    return model

@@ -46,14 +46,19 @@ def save_json(results, path, extra=None):
         data["tallies"][name] = {
             k: t[k] for k in ("id", "filter", "bin_ids", "mesh", "mean", "se")
             if k in t}
-        data["tallies"][name]["columns"] = ["flux", "absorption"]
+        data["tallies"][name]["columns"] = \
+            ["current", "-"] if "surface" in t.get("filter", "") else \
+            ["flux", "absorption"]
     if extra:
         data.update(extra)
     path.write_text(json.dumps(_plain(data), indent=1))
 
 
 def save_vtk(tally, path, title="gmc3d mesh tally"):
-    """One mesh tally (an entry of Results.tallies) -> a .vtk file."""
+    """One rectangular mesh tally (an entry of Results.tallies) -> a .vtk
+    file.  (Curved meshes are not written: they need an unstructured grid.)"""
+    if tally.get("mesh_type", "rect") != "rect":
+        raise ValueError("save_vtk writes rectangular meshes only")
     ll, ur, dim = (np.asarray(a) for a in tally["mesh"])
     spacing = (ur - ll) / dim
     n = int(np.prod(dim))

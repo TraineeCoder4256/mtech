@@ -1,0 +1,5 @@
+OpenMC seed 207, 2M: leakage 0.107275 +- 0.00023
+plain MC seed 6, 2M: leakage 0.107022 +- 0.00014  z -0.94
+plain MC seed 7, 2M: leakage 0.107287 +- 0.00016  z +0.04
+exact balls seed 6, 2M: leakage 0.107139 +- 0.00015  z -0.50
+exact balls seed 7, 2M: leakage 0.107230 +- 0.00016  z -0.16
