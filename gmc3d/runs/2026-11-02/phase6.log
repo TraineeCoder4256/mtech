@@ -1,0 +1,29 @@
+=== PAD3 dose-response ===
+PAD3_READY_2
+PAD3_READY_4
+DESC padgeo2 sphere      673 ns per _descend (5000 points, want_near+want_ray)
+DESC padgeo2 slab        835 ns per _descend (5000 points, want_near+want_ray)
+DESC padgeo2 cask        730 ns per _descend (5000 points, want_near+want_ray)
+ROW padgeo2 pad3 sphere no_t 1.295 with_t 1.614 adv 1.219 flights 9295209 leak 0.031860 ntally 3
+ROW padgeo2 pad3 slab no_t 2.043 with_t 2.513 adv 1.970 flights 11355294 leak 0.860640 ntally 2
+ROW padgeo2 pad3 cask no_t 3.205 with_t 3.782 adv 3.134 flights 20028516 leak 0.002394 ntally 3
+DESC padgeo4 sphere      737 ns per _descend (5000 points, want_near+want_ray)
+DESC padgeo4 slab        902 ns per _descend (5000 points, want_near+want_ray)
+DESC padgeo4 cask        682 ns per _descend (5000 points, want_near+want_ray)
+ROW padgeo4 pad3 sphere no_t 1.334 with_t 1.729 adv 1.258 flights 9295209 leak 0.031860 ntally 3
+ROW padgeo4 pad3 slab no_t 2.035 with_t 2.256 adv 1.957 flights 11355294 leak 0.860640 ntally 2
+ROW padgeo4 pad3 cask no_t 3.181 with_t 3.807 adv 3.107 flights 20028516 leak 0.002394 ntally 3
+DESC v1.0c sphere      651 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.0c slab        780 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.0c cask        589 ns per _descend (5000 points, want_near+want_ray)
+ROW v1.0c pad3 sphere no_t 1.243 with_t 1.536 adv 1.173 flights 9295209 leak 0.031860 ntally 3
+ROW v1.0c pad3 slab no_t 1.892 with_t 2.083 adv 1.819 flights 11355294 leak 0.860640 ntally 2
+ROW v1.0c pad3 cask no_t 2.893 with_t 3.478 adv 2.820 flights 20028516 leak 0.002394 ntally 3
+DESC padgeo8 sphere      779 ns per _descend (5000 points, want_near+want_ray)
+DESC padgeo8 slab        852 ns per _descend (5000 points, want_near+want_ray)
+DESC padgeo8 cask        844 ns per _descend (5000 points, want_near+want_ray)
+ROW padgeo8 pad3 sphere no_t 1.414 with_t 1.811 adv 1.343 flights 9295209 leak 0.031860 ntally 3
+ROW padgeo8 pad3 slab no_t 2.165 with_t 2.425 adv 2.083 flights 11355294 leak 0.860640 ntally 2
+ROW padgeo8 pad3 cask no_t 3.552 with_t 3.890 adv 3.477 flights 20028516 leak 0.002394 ntally 3
+PAD3_DONE
+CHAIN5_DONE

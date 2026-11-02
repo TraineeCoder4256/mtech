@@ -1,0 +1,13 @@
+=== PAD2 ===
+PAD2_READY
+ROW v1.0b pad2 sphere no_t 1.287 with_t 1.728 adv 1.212 flights 9295209 leak 0.031860 ntally 3
+ROW v1.0b pad2 slab no_t 2.007 with_t 2.269 adv 1.929 flights 11355294 leak 0.860640 ntally 2
+ROW v1.0b pad2 cask no_t 2.893 with_t 3.465 adv 2.820 flights 20028516 leak 0.002394 ntally 3
+ROW padphys pad2 sphere no_t 1.140 with_t 1.553 adv 1.072 flights 9295209 leak 0.031860 ntally 3
+ROW padphys pad2 slab no_t 1.673 with_t 2.083 adv 1.601 flights 11355294 leak 0.860640 ntally 2
+ROW padphys pad2 cask no_t 3.191 with_t 4.374 adv 3.118 flights 20028516 leak 0.002394 ntally 3
+ROW padpart pad2 sphere no_t 1.157 with_t 1.616 adv 1.081 flights 9295209 leak 0.031860 ntally 3
+ROW padpart pad2 slab no_t 1.909 with_t 2.098 adv 1.829 flights 11355294 leak 0.860640 ntally 2
+ROW padpart pad2 cask no_t 2.826 with_t 3.499 adv 2.748 flights 20028516 leak 0.002394 ntally 3
+PAD2_DONE
+CHAIN4_DONE

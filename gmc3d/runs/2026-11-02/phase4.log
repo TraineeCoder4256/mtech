@@ -1,0 +1,38 @@
+=== ABLATIONS ===
+ABL_READY
+DESC v1.4.0 sphere      698 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.4.0 slab        884 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.4.0 cask        744 ns per _descend (5000 points, want_near+want_ray)
+ROW v1.4.0 abl sphere no_t 2.021 with_t 2.828 adv 1.933 flights 9297937 leak 0.031802 ntally 3
+ROW v1.4.0 abl slab no_t 2.944 with_t 3.738 adv 2.812 flights 11338773 leak 0.860791 ntally 2
+ROW v1.4.0 abl cask no_t 4.305 with_t 6.089 adv 4.137 flights 20025215 leak 0.002349 ntally 3
+DESC v1.4.1 sphere      772 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.4.1 slab       1119 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.4.1 cask        929 ns per _descend (5000 points, want_near+want_ray)
+ROW v1.4.1 abl sphere no_t 2.526 with_t 3.245 adv 2.424 flights 9297937 leak 0.031802 ntally 3
+ROW v1.4.1 abl slab no_t 3.260 with_t 4.222 adv 3.112 flights 11338773 leak 0.860791 ntally 2
+ROW v1.4.1 abl cask no_t 4.654 with_t 6.455 adv 4.498 flights 20025215 leak 0.002349 ntally 3
+DESC noinst sphere      884 ns per _descend (5000 points, want_near+want_ray)
+DESC noinst slab       1116 ns per _descend (5000 points, want_near+want_ray)
+DESC noinst cask        877 ns per _descend (5000 points, want_near+want_ray)
+ROW noinst abl sphere no_t 2.340 with_t 3.590 adv 2.233 flights 9297937 leak 0.031802 ntally 3
+ROW noinst abl slab no_t 3.109 with_t 4.285 adv 3.024 flights 11338773 leak 0.860791 ntally 2
+ROW noinst abl cask no_t 4.590 with_t 6.482 adv 4.505 flights 20025215 leak 0.002349 ntally 3
+Traceback (most recent call last):
+AttributeError: module 'core.surfaces' has no attribute 'X_TORUS'
+Traceback (most recent call last):
+AttributeError: module 'core.surfaces' has no attribute 'X_TORUS'
+DESC v1.5.0 sphere      839 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.5.0 slab       1013 ns per _descend (5000 points, want_near+want_ray)
+DESC v1.5.0 cask        867 ns per _descend (5000 points, want_near+want_ray)
+ROW v1.5.0 abl sphere no_t 2.233 with_t 3.529 adv 2.147 flights 9297937 leak 0.031802 ntally 3
+ROW v1.5.0 abl slab no_t 3.293 with_t 4.299 adv 3.200 flights 11338773 leak 0.860791 ntally 2
+ROW v1.5.0 abl cask no_t 4.689 with_t 6.552 adv 4.602 flights 20025215 leak 0.002349 ntally 3
+DESC noframe sphere      788 ns per _descend (5000 points, want_near+want_ray)
+DESC noframe slab        978 ns per _descend (5000 points, want_near+want_ray)
+DESC noframe cask        963 ns per _descend (5000 points, want_near+want_ray)
+ROW noframe abl sphere no_t 2.415 with_t 3.433 adv 2.324 flights 9297937 leak 0.031802 ntally 3
+ROW noframe abl slab no_t 3.359 with_t 4.279 adv 3.261 flights 11338773 leak 0.860791 ntally 2
+ROW noframe abl cask no_t 4.617 with_t 6.472 adv 4.526 flights 20025215 leak 0.002349 ntally 3
+ABL_DONE
+CHAIN3_DONE

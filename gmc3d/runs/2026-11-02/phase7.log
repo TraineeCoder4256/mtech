@@ -1,0 +1,5 @@
+=== OPENMC at v1.0, v1.0's own tally sets ===
+sphere    ours    1.61 s   OpenMC implicit    2.43 s    0.67x   flights/history   18.57     174 ns/flight   leakage 0.031910 vs 0.031643
+slab      ours    2.09 s   OpenMC implicit    2.32 s    0.90x   flights/history   22.69     184 ns/flight   leakage 0.860560 vs 0.860396
+cask      ours    3.48 s   OpenMC implicit    4.36 s    0.80x   flights/history   40.05     174 ns/flight   leakage 0.002299 vs 0.002322
+CHAIN6_DONE
