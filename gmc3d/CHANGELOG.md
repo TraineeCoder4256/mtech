@@ -7,6 +7,17 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v1.6.4 (5 Nov 2026): every model family raced on the reference problems
+
+Phani's ask: a full run of the reference problems with the new model
+(cVAE, m1.2) for accuracy and speed. `runs/2026-11-05/race-models/`:
+`race_models.py` (checks/race with every family as a contender), seed 1
+of 3 (`race_seed11.{log,json}`); seeds 2 and 3 follow. All 9 problems
+agree with OpenMC (|z| <= 2.5; cfm sphere leakage z -3.3). cVAE is the
+fastest model (6-32% under the flow) but 16-26% slower than the exact
+walk wherever balls are used. `superseded/` holds a first start stopped
+after the sphere (cfm and cVAE seed 1 sat at R* = 10, no balls).
+
 ## v1.6.3 (5 Nov 2026): checks follow the model store
 
 Development's m1.0 (96deaa0, `ball/models/CHANGELOG.md`) moved the flow
