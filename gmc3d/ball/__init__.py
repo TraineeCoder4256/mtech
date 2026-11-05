@@ -3,8 +3,12 @@
     walk.py     the exact walk (what everything here imitates)
     oracle.py   backend: run the exact walk live (the reference)
     table.py    backend: draw from walks pre-computed on a grid of radii
-    network.py  backend: a trained generative network
-    data.py     training data for network.py, made with walk.py
+    network.py  backend: a trained generative network (the flow; the
+                name older code imports -- the code is in models/)
+    models/     the model side: every generative family behind one
+                plug-in face, the shared training loop, fairness rules,
+                trained-model store, side-by-side comparison (m1.0)
+    data.py     training data for every family, made with walk.py
     interface.py  the model interface (inputs, outputs, ranges, version);
                 owned by Innovation, read by the model side (v1.6.2)
     profile.py  not a backend: where in a ball its flux lies, for mesh

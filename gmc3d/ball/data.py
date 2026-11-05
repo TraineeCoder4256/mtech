@@ -1,7 +1,8 @@
 """Training data for the network: exact walks at random radii.
 
-Used by: network.py (trains on it), checks/ball_metrics.py.
-Uses: walk.py.
+Used by: models/pipeline.py (every family trains on it),
+checks/ball_metrics.py.
+Uses: walk.py, models/encoding.py (the encoding).
 
 One row per walk: the radius R and what came out, (mu, s).  Radii are drawn
 log-uniformly between r_min and r_max, so every factor of two in R gets the
@@ -15,17 +16,10 @@ sphere with no geometry -- so a few million rows take seconds to minutes.
 That is one of the practical gains of the ball formulation over gmc2d,
 where data generation needed a sweep over cell shapes and entry states.
 
-ENCODING (what the network actually sees), in one place:
-
-    condition   c  = log R
-    target 1    y0 = log(mu / (1 - mu))       exit cosine, 0 < mu < 1,
-                                              stretched onto the real line
-    target 2    y1 = log(s / R - 1)           path beyond the straight line
-                                              (s > R always: it scattered)
-
-Then each is standardised (minus mean, over standard deviation, from the
-training rows).  `decode` undoes all of it.  Both targets are unbounded
-and smooth, which suits a flow with a Gaussian base.
+ENCODING (what a network actually sees) is the model side's choice and
+lives in models/encoding.py since model version m1.0.  This file makes the
+walks; `dataset` hands them to that encoding.  The encoding names (encode,
+decode, Norm, EPS) are re-exported here so older code keeps working.
 """
 
 from pathlib import Path
@@ -34,9 +28,9 @@ import numpy as np
 
 from core import rng
 from . import walk
+from .models.encoding import EPS, Norm, decode, encode, prepare  # noqa: F401
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "ball"
-EPS = 1.0e-7
 
 
 def make(n, r_min, r_max, seed=1):
@@ -46,39 +40,6 @@ def make(n, r_min, r_max, seed=1):
     R = np.exp(gen.uniform(np.log(r_min), np.log(r_max), n))
     mu, s, k = walk.walk_many(R, state, np.arange(n))
     return {"R": R, "mu": mu, "s": s, "k": k}
-
-
-def encode(R, mu, s):
-    """Physical (R, mu, s) -> raw network inputs/targets (not standardised)."""
-    mu = np.clip(mu, EPS, 1.0 - EPS)
-    c = np.log(R)[:, None]
-    y = np.stack([np.log(mu / (1.0 - mu)),
-                  np.log(np.maximum(s / R - 1.0, EPS))], axis=1)
-    return c, y
-
-
-def decode(R, y):
-    """Raw targets -> (mu, s).  The inverse of encode."""
-    mu = 1.0 / (1.0 + np.exp(-y[:, 0]))
-    s = R * (1.0 + np.exp(y[:, 1]))
-    return mu, s
-
-
-class Norm:
-    """Standardisation: z = (x - mean) / std, per column."""
-
-    def __init__(self, mean, std):
-        self.mean, self.std = np.asarray(mean), np.asarray(std)
-
-    @classmethod
-    def fit(cls, x):
-        return cls(x.mean(axis=0), x.std(axis=0))
-
-    def __call__(self, x):
-        return (x - self.mean) / self.std
-
-    def undo(self, z):
-        return z * self.std + self.mean
 
 
 def dataset(n_train, n_val, r_min, r_max, seed=1, cache=True):
@@ -91,10 +52,4 @@ def dataset(n_train, n_val, r_min, r_max, seed=1, cache=True):
         if cache:
             path.parent.mkdir(parents=True, exist_ok=True)
             np.savez(path, **d)
-    c, y = encode(d["R"], d["mu"], d["s"])
-    cn, yn = Norm.fit(c[:n_train]), Norm.fit(y[:n_train])
-    f32 = lambda a: np.ascontiguousarray(a, np.float32)
-    return {"c_train": f32(cn(c[:n_train])), "y_train": f32(yn(y[:n_train])),
-            "c_val": f32(cn(c[n_train:])), "y_val": f32(yn(y[n_train:])),
-            "cnorm": cn, "ynorm": yn, "mean_scatters": float(d["k"].mean()),
-            "r_min": r_min, "r_max": r_max}
+    return prepare(d, n_train, r_min, r_max)

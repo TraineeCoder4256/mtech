@@ -4,7 +4,10 @@
     python run.py solve slab --backend table --r-star 3 --openmc
     python run.py validate                         Stage 1 suite vs OpenMC
     python run.py table                            build the lookup table
-    python run.py train                            train the network
+    python run.py train                            train the network (the flow)
+    python run.py train --family cfm --seed 1      train any model family
+    python run.py compare                          every family vs the exact
+                                                   walk, and cost per draw
     python run.py ballcheck                        backends vs exact walk
     python run.py measure                          speed study, all problems
     python run.py race                             OpenMC vs ours, head to head
@@ -24,7 +27,10 @@
                                                    running (also a problem
                                                    name, model.xml or folder)
 
-Backends: mc (no balls), oracle (exact walk), table, network.
+Backends: mc (no balls), oracle (exact walk), table, network (the default
+model: the flow, seed 0), or any model family by name (nflow, cfm ...;
+`cfm_seed1` for another training seed).  The families live in ball/models/
+(the model side); adding one is a file plus a registry line there.
 --device cuda runs the network on a GPU (the transport stays on the CPU);
 checks/gpu_bench.py measures that without OpenMC.
 Every command writes its output into runs/<today>/ (text log + JSON, and
@@ -42,7 +48,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from ball import network, table                              # noqa: E402
+from ball import models, table                               # noqa: E402
+from ball.models import compare as model_compare             # noqa: E402
+from ball.models import store as model_store                 # noqa: E402
 from ball.oracle import Oracle                                # noqa: E402
 from checks import ball_metrics, compare, measure, openmc_ref  # noqa: E402
 from checks import flux_maps, mesh_profile, race, validate    # noqa: E402
@@ -53,7 +61,8 @@ from core.tallies import SCORES                               # noqa: E402
 
 DATA = HERE / "data"
 TABLE_FILE = DATA / "ball" / "table.npz"
-NETWORK_DIR = network.MODEL_DIR / "flow_seed0"
+DEFAULT_MODEL = ("nflow", 0)           # what `network` means; changes only
+                                       # when Innovation accepts a model
 
 
 def backend(name, device="cpu"):
@@ -66,11 +75,22 @@ def backend(name, device="cpu"):
             print("building the table (python run.py table) ...")
             table.Table.build().save(TABLE_FILE)
         return table.Table.load(TABLE_FILE)
-    if name == "network":
-        if not (NETWORK_DIR / "model.pt").exists():
-            sys.exit("no trained network: run  python run.py train  first")
-        return network.Network.load(NETWORK_DIR, device=device)
-    sys.exit(f"unknown backend {name!r}")
+    family, seed = DEFAULT_MODEL if name == "network" else _family(name)
+    if family is None:
+        sys.exit(f"unknown backend {name!r}: mc, oracle, table, network or "
+                 f"a model family ({', '.join(models.names())})")
+    try:
+        return models.load(family, seed, device=device, name=name)
+    except (FileNotFoundError, model_store.NotSupported) as e:
+        sys.exit(str(e))
+
+
+def _family(name):
+    """'cfm' -> ('cfm', 0); 'cfm_seed1' -> ('cfm', 1); else (None, 0)."""
+    base, _, seed = name.partition("_seed")
+    if base in models.REGISTRY and (not seed or seed.isdigit()):
+        return base, int(seed or 0)
+    return None, 0
 
 
 class Log:
@@ -153,10 +173,19 @@ def cmd_table(args, log):
 
 
 def cmd_train(args, log):
-    net = network.train(NETWORK_DIR if args.seed == 0 else None,
-                        steps=args.steps, seed=args.seed, log=log)
-    log(f"saved; {net.describe()}")
-    return f"train_seed{args.seed}"
+    be = models.train(args.family, seed=args.seed, steps=args.steps, log=log)
+    d = {k: v for k, v in be.describe().items() if k != "train"}
+    log(f"saved to data/models/{model_store.folder(args.family, args.seed)}"
+        f" (and the shared copy); {d}")
+    return f"train_{args.family}_seed{args.seed}"
+
+
+def cmd_compare(args, log):
+    res = model_compare.run({b: backend(b, args.device)
+                             for b in args.backends}, log=log)
+    (out_dir(args) / "compare.json").write_text(
+        json.dumps(output._plain(res), indent=1))
+    return "compare"
 
 
 def cmd_ballcheck(args, log):
@@ -274,8 +303,7 @@ def main():
 
     s = sub.add_parser("solve")
     s.add_argument("problem", choices=sorted(PROBLEMS))
-    s.add_argument("--backend", default="mc",
-                   choices=["mc", "oracle", "table", "network"])
+    s.add_argument("--backend", default="mc")
     s.add_argument("--r-star", type=float, default=3.0)
     s.add_argument("--mesh-rule", default="profile",
                    choices=["profile", "cap"])
@@ -290,9 +318,16 @@ def main():
     common(s)
 
     s = sub.add_parser("train")
-    s.add_argument("--steps", type=int, default=network.STEPS)
+    s.add_argument("--family", default="nflow", choices=models.names())
+    s.add_argument("--steps", type=int, default=None,
+                   help="default: the shared step budget (fairness.py)")
     common(s)
     s.set_defaults(seed=0)
+
+    s = sub.add_parser("compare")
+    s.add_argument("--backends", nargs="+", default=models.names(),
+                   help="families (cfm, cfm_seed1 ...), oracle, table")
+    common(s)
 
     s = sub.add_parser("ballcheck")
     s.add_argument("--backends", nargs="+", default=["table", "network"])
@@ -323,7 +358,7 @@ def main():
     s = sub.add_parser("maps")
     s.add_argument("problems", nargs="*")
     s.add_argument("--backend", default="network",
-                   choices=["oracle", "table", "network"])
+                   help="oracle, table, network or a model family")
     s.add_argument("--r-star", type=float, default=3.0)
     common(s)
     s.set_defaults(seed=5)
