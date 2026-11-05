@@ -42,3 +42,11 @@ Not yet: trained models at two seeds and the first comparison (next).
   per draw. Weights in `/mnt/project-files/models/`.
 - `store.py`: a manifest's "+dirty" flag now looks at code only (run
   outputs and data/ no longer count).
+
+## m1.2 (interface v1) - 5 Nov 2026
+
+- Family 3, `cvae`: conditional VAE, encoder 3 / decoder 4 FiLM blocks,
+  latent 2, 148,776 weights (+1.5%), one decoder pass per draw. Trained at
+  seeds 0 and 1 (code 3f96133). Worst |z| 3.9 / 4.7 (only the R = 29,
+  kappa 0.1 tail), -ELBO 2.164 below the flow's NLL 2.183, 2-3x cheaper
+  per draw than the flow. Results in `runs/2026-11-05/models/README.md`.

@@ -1,0 +1,20 @@
+data   4,000,000 + 500,000 walks, R in [1, 30], mean 72.6 scatters each, 3.2 s  (hash 472ebbedcf7d4093)
+model  cvae (interface v1, 1 network pass(es) per draw), seed 0, {'width': 64, 'enc_depth': 3, 'dec_depth': 4, 'emb': 32, 'latent': 2}
+step    500  train -ELBO 2.1865  val -ELBO (EMA) 2.7850  24 s
+step   1000  train -ELBO 2.1791  val -ELBO (EMA) 2.4694  49 s
+step   1500  train -ELBO 2.1717  val -ELBO (EMA) 2.3252  72 s
+step   2000  train -ELBO 2.1759  val -ELBO (EMA) 2.2396  97 s
+step   2500  train -ELBO 2.1717  val -ELBO (EMA) 2.1991  120 s
+step   3000  train -ELBO 2.1701  val -ELBO (EMA) 2.1856  144 s
+step   3500  train -ELBO 2.1683  val -ELBO (EMA) 2.1794  168 s
+step   4000  train -ELBO 2.1708  val -ELBO (EMA) 2.1681  189 s
+step   4500  train -ELBO 2.1659  val -ELBO (EMA) 2.1682  213 s
+step   5000  train -ELBO 2.1658  val -ELBO (EMA) 2.1626  235 s
+step   5500  train -ELBO 2.1648  val -ELBO (EMA) 2.1602  255 s
+step   6000  train -ELBO 2.1677  val -ELBO (EMA) 2.1736  276 s
+step   6500  train -ELBO 2.1653  val -ELBO (EMA) 2.1657  297 s
+step   7000  train -ELBO 2.1667  val -ELBO (EMA) 2.1656  319 s
+step   7500  train -ELBO 2.1605  val -ELBO (EMA) 2.1670  339 s
+step   8000  train -ELBO 2.1668  val -ELBO (EMA) 2.1640  358 s
+       148,776 weights, 8,000 steps in 358 s
+saved to data/models/cvae_seed0 (and the shared copy); {'name': 'cvae', 'family': 'cvae', 'nfe': 1, 'steps': 8000, 'steps_done': 8000, 'seed': 0, 'params': 148776, 'train_seconds': 357.7335031032562, 'loss_name': '-ELBO', 'r_min': 1.0, 'r_max': 30.0, 'n_train': 4000000, 'width': 64, 'enc_depth': 3, 'dec_depth': 4, 'emb': 32, 'latent': 2}

@@ -67,3 +67,54 @@ Where each family misses:
 Limits: one sample of 200,000 per radius (z values move by about 1 between
 runs); no tuning trials yet for cfm (budget 4); CPU timings only, on a
 container whose timings spread 8-15%.
+
+## Added later the same day: the conditional VAE (m1.2, commit 3f96133)
+
+Third family, `ball/models/cvae.py`: encoder 3 FiLM blocks, decoder 4,
+width 64, latent size 2, 148,776 weights (+1.5% on the flow; a draw uses
+the decoder only, 85,412). Same data, loop, 8,000 steps, seeds 0 and 1.
+`compare.log` / `compare.json` now hold all six models from one session;
+the flow and flow matching rows are identical to the first run above
+(their draws are seeded), only the timings moved.
+
+| model | final val loss (nats) | train time |
+|---|---|---|
+| cvae seed 0 | -ELBO 2.1640 | 358 s |
+| cvae seed 1 | -ELBO 2.1626 | 337 s |
+
+The negative ELBO is an upper bound on the cVAE's true NLL, so it can be
+read against the flow's exact NLL (2.1831 / 2.1902): the cVAE fits the
+held-out walks at least as well as the flow, on average.
+
+One session, all six (timings in this session ran about 1.5x slower than
+the first: compare rows within this table only):
+
+| backend | worst abs z | KS excess | us per draw at 1k / 10k / 100k |
+|---|---|---|---|
+| nflow seed 0 | 3.3 | +0.0022 | 7.8 / 3.3 / 6.2 |
+| nflow seed 1 | 4.2 | +0.0038 | 9.6 / 3.6 / 7.0 |
+| cfm seed 0 | 7.4 | +0.0079 | 32 / 16 / 30 |
+| cfm seed 1 | 5.7 | +0.0054 | 35 / 19 / 37 |
+| cvae seed 0 | 3.9 | +0.0043 | 4.0 / 1.15 / 2.7 |
+| cvae seed 1 | 4.7 | +0.0045 | 2.4 / 1.17 / 2.4 |
+| oracle (exact walk) | 2.2 | -0.0003 | 1.8 / 1.1 / 1.1 |
+| table | 2.7 | +0.0031 | 0.13 / 0.03 / 0.04 |
+
+Where the cVAE misses:
+
+- Its ONLY |z| > 3.1 is the R = 29 short-path tail at kappa 0.1 (+38% /
+  +48%, z 3.9 / 4.7), the same tail as the flow but smaller (flow +74% /
+  +69%). At kappa 0.01 it is inside the noise (+0.16% / +0.87%) where the
+  flow is not (+1.4% / +1.7%, z 3.3 / 4.1).
+- No small-ball path bias (s within 0.1-0.5%, |z| <= 2.6; the flow's was
+  z 2.7-4.1).
+- Its distribution SHAPE is slightly blurrier than the flow's: KS of mu
+  0.0055-0.0073 at most radii against the 0.0043 noise level (flow
+  0.0016-0.0065), while the means stay right. That is the known VAE habit
+  of smoothing.
+
+Verdict, updated: the cVAE is the best of the three on the numbers the
+transport cares about (means, surviving weight) and 2-3x cheaper per draw
+than the flow, about as cheap as running the exact walk on this CPU. The
+flow keeps the closest distribution shape. My prediction before the run
+(that the cVAE would be worse in the tail) was wrong.
