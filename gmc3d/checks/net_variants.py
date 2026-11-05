@@ -60,6 +60,7 @@ import torch.nn.functional as F
 
 from ball import data as D
 from ball import network as N
+from ball.models import store
 
 BATCHES = (1_000, 3_000, 10_000, 30_000, 100_000, 300_000)
 
@@ -115,8 +116,8 @@ def sample_columns(net, z, c, knots_fn=N._knots):
 
 # ------------------------------------------------------------------ harness
 def load(device):
-    path = N.MODEL_DIR / "flow_seed0"
-    if (path / "model.pt").exists():
+    path = store.locate("nflow", 0)       # local, or copied from the shared home
+    if path is not None:
         return N.Network.load(path, device=device), True
     info = {"r_min": N.R_MIN, "r_max": N.R_MAX}
     return N.Network(N.SplineFlow(), D.Norm(0.0, 1.0),

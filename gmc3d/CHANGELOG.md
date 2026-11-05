@@ -7,6 +7,18 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v1.6.3 (5 Nov 2026): checks follow the model store
+
+Development's m1.0 (96deaa0, `ball/models/CHANGELOG.md`) moved the flow
+behind a model registry; trained flows now live in
+`data/models/nflow_seed<k>/`, or in the shared home it copies from.
+m1.0 is in the tree, not yet accepted as a model (no gate run yet).
+
+- `checks/gpu_bench.py`, `net_profile.py`, `net_variants.py` find the
+  trained flow with `ball.models.store.locate("nflow", 0)` instead of the
+  old `flow_seed0/` folder, which no longer exists (they would have
+  fallen back to an untrained network). No other change.
+
 ## v1.6.2 (5 Nov 2026): interface v1, the model interface spec
 
 Phani's ask (5 Nov): bring the pluggable model pipeline into gmc3d, with

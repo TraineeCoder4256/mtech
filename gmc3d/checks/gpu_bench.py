@@ -12,7 +12,8 @@ Two parts:
  1. COST PER DRAW of the network on `device`, at batch sizes (requests per
     backend call) from 1,000 to 1,000,000.  The time is the backend's whole
     call: radii to the device, the flow, (mu, s) back to the CPU.  Uses the
-    trained network if data/models/flow_seed0/model.pt exists, otherwise
+    trained network if data/models/nflow_seed0/model.pt exists (or
+    the shared home has it), otherwise
     an untrained one of the same size, which costs the same (only the
     weights differ).  `--compile` runs the flow through torch.compile,
     which fuses its many small operations into fewer kernels.
@@ -43,6 +44,7 @@ import torch
 
 from ball import data as D
 from ball import network as N
+from ball.models import store
 
 RACE = Path(__file__).resolve().parent.parent / "runs" / "2026-10-05" / \
     "race.json"
@@ -51,8 +53,8 @@ BATCHES = (1_000, 3_000, 10_000, 30_000, 100_000, 300_000, 1_000_000)
 
 def load(device):
     """The trained network on `device`, or an untrained one of its size."""
-    path = N.MODEL_DIR / "flow_seed0"
-    if (path / "model.pt").exists():
+    path = store.locate("nflow", 0)       # local, or copied from the shared home
+    if path is not None:
         return N.Network.load(path, device=device), True
     info = {"r_min": N.R_MIN, "r_max": N.R_MAX}
     return N.Network(N.SplineFlow(), D.Norm(0.0, 1.0),
