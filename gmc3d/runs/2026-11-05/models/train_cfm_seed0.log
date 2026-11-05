@@ -1,0 +1,20 @@
+data   4,000,000 + 500,000 walks, R in [1, 30], mean 72.6 scatters each, 2.1 s  (hash 472ebbedcf7d4093)
+model  cfm (interface v1, 10 network pass(es) per draw), seed 0, {'width': 64, 'depth': 7, 'emb': 32, 't_dim': 32, 'ode_steps': 5, 'solver': 'heun'}
+step    500  train CFM loss 1.2355  val CFM loss (EMA) 1.8756  11 s
+step   1000  train CFM loss 1.2311  val CFM loss (EMA) 1.6269  23 s
+step   1500  train CFM loss 1.2266  val CFM loss (EMA) 1.4390  34 s
+step   2000  train CFM loss 1.2253  val CFM loss (EMA) 1.3146  45 s
+step   2500  train CFM loss 1.2248  val CFM loss (EMA) 1.2609  56 s
+step   3000  train CFM loss 1.2286  val CFM loss (EMA) 1.2486  68 s
+step   3500  train CFM loss 1.2240  val CFM loss (EMA) 1.2309  79 s
+step   4000  train CFM loss 1.2270  val CFM loss (EMA) 1.2194  91 s
+step   4500  train CFM loss 1.2259  val CFM loss (EMA) 1.2246  103 s
+step   5000  train CFM loss 1.2272  val CFM loss (EMA) 1.2222  115 s
+step   5500  train CFM loss 1.2208  val CFM loss (EMA) 1.2135  127 s
+step   6000  train CFM loss 1.2301  val CFM loss (EMA) 1.2262  139 s
+step   6500  train CFM loss 1.2214  val CFM loss (EMA) 1.2204  151 s
+step   7000  train CFM loss 1.2253  val CFM loss (EMA) 1.2127  164 s
+step   7500  train CFM loss 1.2184  val CFM loss (EMA) 1.2173  176 s
+step   8000  train CFM loss 1.2192  val CFM loss (EMA) 1.2242  189 s
+       149,090 weights, 8,000 steps in 189 s
+saved to data/models/cfm_seed0 (and the shared copy); {'name': 'cfm', 'family': 'cfm', 'nfe': 10, 'steps': 8000, 'steps_done': 8000, 'seed': 0, 'params': 149090, 'train_seconds': 188.95417642593384, 'loss_name': 'CFM loss', 'r_min': 1.0, 'r_max': 30.0, 'n_train': 4000000, 'width': 64, 'depth': 7, 'emb': 32, 't_dim': 32, 'ode_steps': 5, 'solver': 'heun'}

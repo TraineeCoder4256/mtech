@@ -1,0 +1,20 @@
+data   4,000,000 + 500,000 walks, R in [1, 30], mean 72.6 scatters each, 2.1 s  (hash 472ebbedcf7d4093)
+model  nflow (interface v1, 1 network pass(es) per draw), seed 1, {'layers': 6, 'width': 64, 'bins': 16, 'emb': 32}
+step    500  train NLL 2.2103  val NLL (EMA) 2.6216  26 s
+step   1000  train NLL 2.1987  val NLL (EMA) 2.4434  49 s
+step   1500  train NLL 2.2005  val NLL (EMA) 2.3126  72 s
+step   2000  train NLL 2.1941  val NLL (EMA) 2.2468  96 s
+step   2500  train NLL 2.1940  val NLL (EMA) 2.2181  119 s
+step   3000  train NLL 2.1933  val NLL (EMA) 2.1993  142 s
+step   3500  train NLL 2.1924  val NLL (EMA) 2.1879  166 s
+step   4000  train NLL 2.1901  val NLL (EMA) 2.1888  190 s
+step   4500  train NLL 2.1923  val NLL (EMA) 2.1892  213 s
+step   5000  train NLL 2.1904  val NLL (EMA) 2.1952  236 s
+step   5500  train NLL 2.1897  val NLL (EMA) 2.1888  260 s
+step   6000  train NLL 2.1881  val NLL (EMA) 2.1915  283 s
+step   6500  train NLL 2.1890  val NLL (EMA) 2.1962  306 s
+step   7000  train NLL 2.1927  val NLL (EMA) 2.1946  328 s
+step   7500  train NLL 2.1871  val NLL (EMA) 2.1888  351 s
+step   8000  train NLL 2.1880  val NLL (EMA) 2.1902  374 s
+       146,554 weights, 8,000 steps in 374 s
+saved to data/models/nflow_seed1 (and the shared copy); {'name': 'nflow', 'family': 'nflow', 'nfe': 1, 'steps': 8000, 'steps_done': 8000, 'seed': 1, 'params': 146554, 'train_seconds': 374.38892817497253, 'loss_name': 'NLL', 'r_min': 1.0, 'r_max': 30.0, 'n_train': 4000000, 'layers': 6, 'width': 64, 'bins': 16, 'emb': 32}

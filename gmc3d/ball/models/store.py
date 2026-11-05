@@ -57,9 +57,11 @@ def _commit():
         head = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
                               cwd=here, capture_output=True, text=True,
                               check=True).stdout.strip()
-        dirty = subprocess.run(["git", "status", "--porcelain", "--", "."],
-                               cwd=here.parent.parent, capture_output=True,
-                               text=True).stdout.strip() != ""
+        dirty = subprocess.run(            # code only: run outputs and
+            ["git", "status", "--porcelain", "--", ".",   # data don't count
+             ":(exclude)runs", ":(exclude)data"],
+            cwd=here.parent.parent, capture_output=True,
+            text=True).stdout.strip() != ""
         return head + ("+dirty" if dirty else "")
     except (OSError, subprocess.CalledProcessError):
         return "unknown"

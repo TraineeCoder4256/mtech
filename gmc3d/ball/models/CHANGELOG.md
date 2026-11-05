@@ -33,3 +33,12 @@ The pluggable pipeline from gmc2d, rebuilt for the ball step.
   refusal).
 
 Not yet: trained models at two seeds and the first comparison (next).
+
+## m1.1 (interface v1) - 5 Nov 2026
+
+- First comparison: nflow and cfm, seeds 0 and 1, trained on the full data
+  (`runs/2026-11-05/models/README.md`). Flow worst |z| 3.3-4.2 vs the
+  exact walk, flow matching 5.7-7.4; flow matching costs 3.5-7x the flow
+  per draw. Weights in `/mnt/project-files/models/`.
+- `store.py`: a manifest's "+dirty" flag now looks at code only (run
+  outputs and data/ no longer count).
