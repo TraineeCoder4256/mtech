@@ -6,6 +6,7 @@ is a family), ball/network.py (re-exports the flow for older code).
     base.py       the face every family implements, and why it is thin
     nflow.py      family 1: normalizing flow (one pass per draw)
     cfm.py        family 2: conditional flow matching (10 passes per draw)
+    cvae.py       family 3: conditional VAE (one decoder pass per draw)
     training.py   the training loop every family shares
     fairness.py   the rules of a fair comparison (data, steps, size, seeds)
     encoding.py   physical (R, mu, s) <-> what a network sees
@@ -40,6 +41,7 @@ import importlib
 REGISTRY = {
     "nflow": "nflow:NFlow",
     "cfm": "cfm:CFM",
+    "cvae": "cvae:CVAE",
 }
 
 
