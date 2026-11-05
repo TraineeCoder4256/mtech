@@ -7,6 +7,27 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v1.6.2 (5 Nov 2026): interface v1, the model interface spec
+
+Phani's ask (5 Nov): bring the pluggable model pipeline into gmc3d, with
+Innovation and Development sharing `3d-gmc` without clashes. Agreed split:
+Innovation owns what a learned backend takes in and gives out
+(`ball/interface.py`), the exact walk, the data generator, the profile,
+`checks/` (incl. the acceptance gate) and the top-level files;
+Development owns `ball/models/` (families, encodings, training, fairness,
+comparison) and numbers its pushes m1.0, m1.1 ... in
+`ball/models/CHANGELOG.md`. An interface change is its own commit tagged
+"interface vN"; Innovation then messages Development.
+
+- **`ball/interface.py`** (new), interface v1: input R in [1, 30] mfp;
+  outputs mu in (0, 1) and s > R, physical units, no encoding.
+  `INTERFACE_VERSION = 1`, `N_IN`, `N_OUT`, `R_MIN`, `R_MAX`, and
+  `check_outputs` (counts draws outside the ranges). On 200,000 exact
+  walks every draw is inside (mu 0.0075 to 0.99999999940, min s/R
+  1.00000013).
+- No other code changes; `ball/data.py` is unchanged and the results of
+  every check are the same as v1.6.1.
+
 ## v1.6.1 (30 Oct 2026): every OpenMC input that is not a physics stage
 
 Phani's ask: implement the 18 plain items of the v1.6.0 gaps list, then

@@ -21,6 +21,8 @@ Columns of part 1:
 - **model change?**: whether fixing it needs the trained network to change.
   The network sees only the ball's radius R and returns (mu, s), so
   geometry, sources, tallies and boundaries normally stay outside it.
+  Since v1.6.2 that input/output list is `ball/interface.py`
+  (interface v1); a "YES" row means a new interface version.
 - **plan**: a version, "hold" (waits for model work) or "later".
 
 Last updated: v1.6.1 (30 Oct 2026). v1.6.1 closed 20 rows of the v1.6.0

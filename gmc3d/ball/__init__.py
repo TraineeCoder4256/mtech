@@ -5,6 +5,8 @@
     table.py    backend: draw from walks pre-computed on a grid of radii
     network.py  backend: a trained generative network
     data.py     training data for network.py, made with walk.py
+    interface.py  the model interface (inputs, outputs, ranges, version);
+                owned by Innovation, read by the model side (v1.6.2)
     profile.py  not a backend: where in a ball its flux lies, for mesh
                 tallies (the 'profile' mesh rule, v1.1)
 
