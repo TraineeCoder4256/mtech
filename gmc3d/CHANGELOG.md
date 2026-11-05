@@ -7,6 +7,14 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v1.6.5 (5 Nov 2026): model race seeds 2 and 3, medians
+
+`runs/2026-11-05/race-models/`: seeds 12 and 13 plus `medians.py` and its
+log, and a README. The medians confirm seed 1. The cVAE agrees with OpenMC
+on all 9 problems (worst |z| 2.5). Where balls are used it is 8-31% faster
+than the flow and 18-26% slower than the exact walk. cfm biases sphere
+leakage (|z| 3.3 and 3.9).
+
 ## v1.6.4 (5 Nov 2026): every model family raced on the reference problems
 
 Phani's ask: a full run of the reference problems with the new model

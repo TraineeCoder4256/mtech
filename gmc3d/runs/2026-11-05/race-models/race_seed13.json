@@ -1,0 +1,3963 @@
+{
+ "sphere": [
+  {
+   "label": "OpenMC analog",
+   "seconds": 12.75944056299999,
+   "quantities": {
+    "leakage": [
+     0.03178375,
+     8.79625536711319e-05
+    ],
+    "total flux": [
+     9.681354668081333,
+     0.004625403220993835
+    ]
+   },
+   "fom": {
+    "leakage": 10232.528922622414,
+    "total flux": 343353.4619863603
+   },
+   "counters": {},
+   "timing": {
+    "openmc_transport_s": 12.75944056299999,
+    "openmc_total_s": 12.808319774,
+    "wall_s": 12.840381588997843
+   },
+   "groups": 0,
+   "leakage_se_batches": 0.0,
+   "startup_s": 0.0809410259978538
+  },
+  {
+   "label": "OpenMC implicit",
+   "seconds": 20.959962031999996,
+   "quantities": {
+    "leakage": [
+     0.0317243483631945,
+     6.320201462292084e-05
+    ],
+    "total flux": [
+     9.684905374705268,
+     0.002382907456188283
+    ]
+   },
+   "fom": {
+    "leakage": 12020.792061630791,
+    "total flux": 788108.3333640808
+   },
+   "counters": {},
+   "timing": {
+    "openmc_transport_s": 20.959962031999996,
+    "openmc_total_s": 21.013623196,
+    "wall_s": 21.03712533200087
+   },
+   "groups": 0,
+   "leakage_se_batches": 0.0,
+   "startup_s": 0.07716330000087268
+  },
+  {
+   "label": "ours, plain MC",
+   "seconds": 37.85025355000471,
+   "quantities": {
+    "leakage": [
+     0.031884048617782455,
+     6.001105237323872e-05
+    ],
+    "total flux": [
+     9.684137054581871,
+     0.002091788964906609
+    ]
+   },
+   "fom": {
+    "leakage": 7457.884389896244,
+    "total flux": 566261.8794793074
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 74338361,
+    "scatters": 74023145,
+    "crossings": 315216,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3684784,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 37.85025355000471,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 6.266237049818765e-05,
+   "compile_s": 0.3285737709993555,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 18.58459025
+  },
+  {
+   "label": "ours + exact walk (R* = 2)",
+   "seconds": 19.20627665099164,
+   "quantities": {
+    "leakage": [
+     0.031673514453029565,
+     8.63610865979534e-05
+    ],
+    "total flux": [
+     9.682332723005498,
+     0.0002684508894760372
+    ]
+   },
+   "fom": {
+    "leakage": 7003.467754089053,
+    "total flux": 67730944.2858601
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 146299,
+    "scatters": 0,
+    "crossings": 146299,
+    "balls": 3999810,
+    "ball_skipped": 190,
+    "roulette_killed": 3853701,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 63996960,
+    "backend_calls": 40,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 17.276326530987717,
+    "backend_s": 1.929950120003923
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.0001022180386791677,
+   "compile_s": 0.3285737709993555,
+   "backend_s": 1.929950120003923,
+   "balls_per_history": 0.9999525,
+   "flights_per_history": 0.03657475
+  },
+  {
+   "label": "ours + table (R* = 2)",
+   "seconds": 17.60503704498842,
+   "quantities": {
+    "leakage": [
+     0.03158650750153157,
+     8.720241322374673e-05
+    ],
+    "total flux": [
+     9.684217421237665,
+     0.00024412749667209407
+    ]
+   },
+   "fom": {
+    "leakage": 7452.6249688019925,
+    "total flux": 89383781.4012582
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 144424,
+    "scatters": 0,
+    "crossings": 144424,
+    "balls": 3999810,
+    "ball_skipped": 190,
+    "roulette_killed": 3855576,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 63996960,
+    "backend_calls": 40,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 17.533103252997535,
+    "backend_s": 0.07193379199088668
+   },
+   "groups": 1280,
+   "leakage_se_batches": 9.196204501882023e-05,
+   "compile_s": 0.3285737709993555,
+   "backend_s": 0.07193379199088668,
+   "balls_per_history": 0.9999525,
+   "flights_per_history": 0.036106
+  },
+  {
+   "label": "ours + nflow (R* = 3)",
+   "seconds": 35.6994909139903,
+   "quantities": {
+    "leakage": [
+     0.03164606832745901,
+     8.421342267663336e-05
+    ],
+    "total flux": [
+     9.683401485115056,
+     0.0002590142923258913
+    ]
+   },
+   "fom": {
+    "leakage": 3955.6227183120595,
+    "total flux": 39151318.84714176
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 146565,
+    "scatters": 0,
+    "crossings": 146565,
+    "balls": 3999810,
+    "ball_skipped": 190,
+    "roulette_killed": 3853435,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 63996960,
+    "backend_calls": 40,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 17.81217735798782,
+    "backend_s": 17.887313556002482
+   },
+   "groups": 1280,
+   "leakage_se_batches": 7.639765648137723e-05,
+   "compile_s": 0.3285737709993555,
+   "backend_s": 17.887313556002482,
+   "balls_per_history": 0.9999525,
+   "flights_per_history": 0.03664125
+  },
+  {
+   "label": "ours + nflow (R* = 10)",
+   "seconds": 37.722529512007895,
+   "quantities": {
+    "leakage": [
+     0.031884048617782455,
+     6.001105237323872e-05
+    ],
+    "total flux": [
+     9.684137054581871,
+     0.002091788964906609
+    ]
+   },
+   "fom": {
+    "leakage": 7483.135907265665,
+    "total flux": 568179.1754492858
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 74338361,
+    "scatters": 74023145,
+    "crossings": 315216,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3684784,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 37.722529512007895,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 6.266237049818765e-05,
+   "compile_s": 0.3285737709993555,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 18.58459025
+  },
+  {
+   "label": "ours + cvae (R* = 3)",
+   "seconds": 23.52948936899338,
+   "quantities": {
+    "leakage": [
+     0.03160054611075782,
+     8.853428238249014e-05
+    ],
+    "total flux": [
+     9.683556399194313,
+     0.00025198491546765325
+    ]
+   },
+   "fom": {
+    "leakage": 5414.442311026891,
+    "total flux": 62763648.77123743
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 146264,
+    "scatters": 0,
+    "crossings": 146264,
+    "balls": 3999810,
+    "ball_skipped": 190,
+    "roulette_killed": 3853736,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 63996960,
+    "backend_calls": 40,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 17.301979887975904,
+    "backend_s": 6.227509481017478
+   },
+   "groups": 1280,
+   "leakage_se_batches": 7.997793400853814e-05,
+   "compile_s": 0.3285737709993555,
+   "backend_s": 6.227509481017478,
+   "balls_per_history": 0.9999525,
+   "flights_per_history": 0.036566
+  },
+  {
+   "label": "ours + cvae (R* = 10)",
+   "seconds": 37.829448402997514,
+   "quantities": {
+    "leakage": [
+     0.031884048617782455,
+     6.001105237323872e-05
+    ],
+    "total flux": [
+     9.684137054581871,
+     0.002091788964906609
+    ]
+   },
+   "fom": {
+    "leakage": 7461.986019384506,
+    "total flux": 566573.3078015402
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 74338361,
+    "scatters": 74023145,
+    "crossings": 315216,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3684784,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 37.829448402997514,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 6.266237049818765e-05,
+   "compile_s": 0.3285737709993555,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 18.58459025
+  },
+  {
+   "label": "ours + cvae seed 1 (R* = 3)",
+   "seconds": 23.022062507017836,
+   "quantities": {
+    "leakage": [
+     0.03178205021895144,
+     8.542860320377879e-05
+    ],
+    "total flux": [
+     9.683349942928658,
+     0.0002517349339104196
+    ]
+   },
+   "fom": {
+    "leakage": 6011.917044609477,
+    "total flux": 64271738.78841981
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 147006,
+    "scatters": 0,
+    "crossings": 147006,
+    "balls": 3999810,
+    "ball_skipped": 190,
+    "roulette_killed": 3852994,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 63996960,
+    "backend_calls": 40,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 17.537210007012618,
+    "backend_s": 5.484852500005218
+   },
+   "groups": 1280,
+   "leakage_se_batches": 9.36664196043017e-05,
+   "compile_s": 0.3285737709993555,
+   "backend_s": 5.484852500005218,
+   "balls_per_history": 0.9999525,
+   "flights_per_history": 0.0367515
+  },
+  {
+   "label": "ours + cfm (R* = 3)",
+   "seconds": 117.40494435899382,
+   "quantities": {
+    "leakage": [
+     0.03131170678773861,
+     8.383708283193949e-05
+    ],
+    "total flux": [
+     9.686856651050515,
+     0.00025612494516406246
+    ]
+   },
+   "fom": {
+    "leakage": 1188.1048786920576,
+    "total flux": 12183599.152616315
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 144005,
+    "scatters": 0,
+    "crossings": 144005,
+    "balls": 3999810,
+    "ball_skipped": 190,
+    "roulette_killed": 3855995,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 63996960,
+    "backend_calls": 40,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 17.582128966998425,
+    "backend_s": 99.82281539199539
+   },
+   "groups": 1280,
+   "leakage_se_batches": 8.025657801799253e-05,
+   "compile_s": 0.3285737709993555,
+   "backend_s": 99.82281539199539,
+   "balls_per_history": 0.9999525,
+   "flights_per_history": 0.03600125
+  }
+ ],
+ "slab": [
+  {
+   "label": "OpenMC analog",
+   "seconds": 17.364481796000003,
+   "quantities": {
+    "leakage": [
+     0.86016325,
+     0.00017736825092225665
+    ],
+    "total flux": [
+     27.899605820858195,
+     0.036289708945479664
+    ]
+   },
+   "fom": {
+    "leakage": 1354403.830156537,
+    "total flux": 34038.258911215395
+   },
+   "counters": {},
+   "timing": {
+    "openmc_transport_s": 17.364481796000003,
+    "openmc_total_s": 17.39964835,
+    "wall_s": 17.413999186999717
+   },
+   "groups": 0,
+   "leakage_se_batches": 0.0,
+   "startup_s": 0.049517390999714195
+  },
+  {
+   "label": "OpenMC implicit",
+   "seconds": 24.117863339000017,
+   "quantities": {
+    "leakage": [
+     0.8602718317534088,
+     0.0001361995227256183
+    ],
+    "total flux": [
+     27.967850094258182,
+     0.02896706894788106
+    ]
+   },
+   "fom": {
+    "leakage": 1654174.8148303444,
+    "total flux": 38651.84508968054
+   },
+   "counters": {},
+   "timing": {
+    "openmc_transport_s": 24.117863339000017,
+    "openmc_total_s": 24.160804191,
+    "wall_s": 24.174150329999975
+   },
+   "groups": 0,
+   "leakage_se_batches": 0.0,
+   "startup_s": 0.05628699099995771
+  },
+  {
+   "label": "ours, plain MC",
+   "seconds": 41.24210712200147,
+   "quantities": {
+    "leakage": [
+     0.8605070208408585,
+     0.000131752109618525
+    ],
+    "total flux": [
+     27.905975632731188,
+     0.027999884482613074
+    ]
+   },
+   "fom": {
+    "leakage": 1034315.0271983937,
+    "total flux": 24084.691964219175
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 90855318,
+    "scatters": 86242739,
+    "crossings": 4612579,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 259781,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 41.24210712200147,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.0001168650768301937,
+   "compile_s": 0.011626169998635305,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 22.7138295
+  },
+  {
+   "label": "ours + exact walk (R* = 2)",
+   "seconds": 52.11803009601499,
+   "quantities": {
+    "leakage": [
+     0.8603390539181296,
+     0.00013222102758192307
+    ],
+    "total flux": [
+     27.945355221123243,
+     0.028330072372008585
+    ]
+   },
+   "fom": {
+    "leakage": 812363.1719824022,
+    "total flux": 18669.638490683552
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 68972142,
+    "scatters": 64364782,
+    "crossings": 4607360,
+    "balls": 4555028,
+    "ball_skipped": 553920,
+    "roulette_killed": 260936,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 72880448,
+    "backend_calls": 1943,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 51.243872463972366,
+    "backend_s": 0.8741576320426248
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00012771245066297359,
+   "compile_s": 0.011626169998635305,
+   "backend_s": 0.8741576320426248,
+   "balls_per_history": 1.138757,
+   "flights_per_history": 17.2430355
+  },
+  {
+   "label": "ours + table (R* = 2)",
+   "seconds": 50.86290267300137,
+   "quantities": {
+    "leakage": [
+     0.8604230405846103,
+     0.00013598971376636767
+    ],
+    "total flux": [
+     27.929860416039503,
+     0.028211523666640082
+    ]
+   },
+   "fom": {
+    "leakage": 787065.3667471062,
+    "total flux": 19270.070542116577
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 68912159,
+    "scatters": 64302552,
+    "crossings": 4609607,
+    "balls": 4550785,
+    "ball_skipped": 553005,
+    "roulette_killed": 260722,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 72812560,
+    "backend_calls": 1927,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 50.33350047595741,
+    "backend_s": 0.5294021970439644
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00012919993629966332,
+   "compile_s": 0.011626169998635305,
+   "backend_s": 0.5294021970439644,
+   "balls_per_history": 1.13769625,
+   "flights_per_history": 17.22803975
+  },
+  {
+   "label": "ours + nflow (R* = 3)",
+   "seconds": 46.19668570500289,
+   "quantities": {
+    "leakage": [
+     0.8605070208408585,
+     0.000131752109618525
+    ],
+    "total flux": [
+     27.905975632731188,
+     0.027999884482613074
+    ]
+   },
+   "fom": {
+    "leakage": 923385.0978403073,
+    "total flux": 21501.617071225628
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 90855318,
+    "scatters": 86242739,
+    "crossings": 4612579,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 259781,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 46.19668570500289,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.0001168650768301937,
+   "compile_s": 0.011626169998635305,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 22.7138295
+  },
+  {
+   "label": "ours + nflow (R* = 10)",
+   "seconds": 46.73182897501101,
+   "quantities": {
+    "leakage": [
+     0.8605070208408585,
+     0.000131752109618525
+    ],
+    "total flux": [
+     27.905975632731188,
+     0.027999884482613074
+    ]
+   },
+   "fom": {
+    "leakage": 912811.0772728848,
+    "total flux": 21255.39418797167
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 90855318,
+    "scatters": 86242739,
+    "crossings": 4612579,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 259781,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 46.73182897501101,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.0001168650768301937,
+   "compile_s": 0.011626169998635305,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 22.7138295
+  },
+  {
+   "label": "ours + cvae (R* = 3)",
+   "seconds": 45.98031154799537,
+   "quantities": {
+    "leakage": [
+     0.8605070208408585,
+     0.000131752109618525
+    ],
+    "total flux": [
+     27.905975632731188,
+     0.027999884482613074
+    ]
+   },
+   "fom": {
+    "leakage": 927730.3635727925,
+    "total flux": 21602.799384077698
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 90855318,
+    "scatters": 86242739,
+    "crossings": 4612579,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 259781,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 45.98031154799537,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.0001168650768301937,
+   "compile_s": 0.011626169998635305,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 22.7138295
+  },
+  {
+   "label": "ours + cvae (R* = 10)",
+   "seconds": 45.59337742500793,
+   "quantities": {
+    "leakage": [
+     0.8605070208408585,
+     0.000131752109618525
+    ],
+    "total flux": [
+     27.905975632731188,
+     0.027999884482613074
+    ]
+   },
+   "fom": {
+    "leakage": 935603.6678742404,
+    "total flux": 21786.134348623822
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 90855318,
+    "scatters": 86242739,
+    "crossings": 4612579,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 259781,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 45.59337742500793,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.0001168650768301937,
+   "compile_s": 0.011626169998635305,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 22.7138295
+  },
+  {
+   "label": "ours + cvae seed 1 (R* = 3)",
+   "seconds": 46.20481863501482,
+   "quantities": {
+    "leakage": [
+     0.8605070208408585,
+     0.000131752109618525
+    ],
+    "total flux": [
+     27.905975632731188,
+     0.027999884482613074
+    ]
+   },
+   "fom": {
+    "leakage": 923222.5644380205,
+    "total flux": 21497.83237621005
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 90855318,
+    "scatters": 86242739,
+    "crossings": 4612579,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 259781,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 46.20481863501482,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.0001168650768301937,
+   "compile_s": 0.011626169998635305,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 22.7138295
+  },
+  {
+   "label": "ours + cfm (R* = 3)",
+   "seconds": 45.825744126992504,
+   "quantities": {
+    "leakage": [
+     0.8605070208408585,
+     0.000131752109618525
+    ],
+    "total flux": [
+     27.905975632731188,
+     0.027999884482613074
+    ]
+   },
+   "fom": {
+    "leakage": 930859.5411216855,
+    "total flux": 21675.664299876687
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 90855318,
+    "scatters": 86242739,
+    "crossings": 4612579,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 259781,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 45.825744126992504,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.0001168650768301937,
+   "compile_s": 0.011626169998635305,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 22.7138295
+  }
+ ],
+ "curved": [
+  {
+   "label": "OpenMC analog",
+   "seconds": 60.22919002899996,
+   "quantities": {
+    "leakage": [
+     0.5805645000000005,
+     0.0002535991468388112
+    ],
+    "total flux": [
+     104.42425531189494,
+     0.041729636388523075
+    ]
+   },
+   "fom": {
+    "leakage": 87015.8473419248,
+    "total flux": 103969.64232297971
+   },
+   "counters": {},
+   "timing": {
+    "openmc_transport_s": 60.22919002899996,
+    "openmc_total_s": 60.294719062000006,
+    "wall_s": 60.31247638700006
+   },
+   "groups": 0,
+   "leakage_se_batches": 0.0,
+   "startup_s": 0.08328635800010176
+  },
+  {
+   "label": "OpenMC implicit",
+   "seconds": 87.69866145899988,
+   "quantities": {
+    "leakage": [
+     0.5805232859022242,
+     0.0001352162774541805
+    ],
+    "total flux": [
+     104.52418285332382,
+     0.02526707478691845
+    ]
+   },
+   "fom": {
+    "leakage": 210178.54141097455,
+    "total flux": 195132.9748965959
+   },
+   "counters": {},
+   "timing": {
+    "openmc_transport_s": 87.69866145899988,
+    "openmc_total_s": 87.779528854,
+    "wall_s": 87.79483577799692
+   },
+   "groups": 0,
+   "leakage_se_batches": 0.0,
+   "startup_s": 0.09617431899704343
+  },
+  {
+   "label": "ours, plain MC",
+   "seconds": 215.91203001499525,
+   "quantities": {
+    "leakage": [
+     0.5806799038257164,
+     0.00013152001576758352
+    ],
+    "total flux": [
+     104.47379183591379,
+     0.02597433389919004
+    ]
+   },
+   "fom": {
+    "leakage": 90284.46881739014,
+    "total flux": 74928.84467048974
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 243720787,
+    "scatters": 223800280,
+    "crossings": 19920507,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 440709,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 215.91203001499525,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00012803368483171803,
+   "compile_s": 0.06175986600283068,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 60.93019675
+  },
+  {
+   "label": "ours + exact walk (R* = 2)",
+   "seconds": 171.01942385100483,
+   "quantities": {
+    "leakage": [
+     0.5806903041897854,
+     0.00013542885418886904
+    ],
+    "total flux": [
+     104.47131444239753,
+     0.026486011698541752
+    ]
+   },
+   "fom": {
+    "leakage": 107503.17778588473,
+    "total flux": 90973.63455120828
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 126553362,
+    "scatters": 106654481,
+    "crossings": 19898881,
+    "balls": 15682773,
+    "ball_skipped": 1099228,
+    "roulette_killed": 441323,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 165386660,
+    "backend_calls": 1268,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 169.04817675701997,
+    "backend_s": 1.9712470939848572
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00012874223893457126,
+   "compile_s": 0.06175986600283068,
+   "backend_s": 1.9712470939848572,
+   "balls_per_history": 3.92069325,
+   "flights_per_history": 31.6383405
+  },
+  {
+   "label": "ours + table (R* = 2)",
+   "seconds": 166.2509032710077,
+   "quantities": {
+    "leakage": [
+     0.5804026730323308,
+     0.0001317158997286395
+    ],
+    "total flux": [
+     104.55267871807305,
+     0.025751971555859808
+    ]
+   },
+   "fom": {
+    "leakage": 116793.42343347483,
+    "total flux": 99148.31707020086
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 126594648,
+    "scatters": 106688250,
+    "crossings": 19906398,
+    "balls": 15685218,
+    "ball_skipped": 1097855,
+    "roulette_killed": 440932,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 165393916,
+    "backend_calls": 1224,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 165.5104093300215,
+    "backend_s": 0.7404939409861981
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00017025478905248055,
+   "compile_s": 0.06175986600283068,
+   "backend_s": 0.7404939409861981,
+   "balls_per_history": 3.9213045,
+   "flights_per_history": 31.648662
+  },
+  {
+   "label": "ours + nflow (R* = 3)",
+   "seconds": 213.42204065298938,
+   "quantities": {
+    "leakage": [
+     0.5806812022527682,
+     0.00013596967854352597
+    ],
+    "total flux": [
+     104.45985859412748,
+     0.025825897654103192
+    ]
+   },
+   "fom": {
+    "leakage": 85457.88198459701,
+    "total flux": 76656.4579165523
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 160030150,
+    "scatters": 140131803,
+    "crossings": 19898347,
+    "balls": 8649476,
+    "ball_skipped": 255599,
+    "roulette_killed": 441733,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 124795123,
+    "backend_calls": 707,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 183.03313108996008,
+    "backend_s": 30.3889095630293
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00014968244211359402,
+   "compile_s": 0.06175986600283068,
+   "backend_s": 30.3889095630293,
+   "balls_per_history": 2.162369,
+   "flights_per_history": 40.0075375
+  },
+  {
+   "label": "ours + nflow (R* = 10)",
+   "seconds": 211.9053132199915,
+   "quantities": {
+    "leakage": [
+     0.5806799038257164,
+     0.00013152001576758352
+    ],
+    "total flux": [
+     104.47379183591379,
+     0.02597433389919004
+    ]
+   },
+   "fom": {
+    "leakage": 91991.5722969668,
+    "total flux": 76345.60320197498
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 243720787,
+    "scatters": 223800280,
+    "crossings": 19920507,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 440709,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 211.9053132199915,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00012803368483171803,
+   "compile_s": 0.06175986600283068,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 60.93019675
+  },
+  {
+   "label": "ours + cvae (R* = 3)",
+   "seconds": 193.287683241997,
+   "quantities": {
+    "leakage": [
+     0.5808055980937878,
+     0.00013570167413331276
+    ],
+    "total flux": [
+     104.44776773300251,
+     0.026359029284279332
+    ]
+   },
+   "fom": {
+    "leakage": 94773.51662137991,
+    "total flux": 81233.52879906038
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 159991897,
+    "scatters": 140084529,
+    "crossings": 19907368,
+    "balls": 8646719,
+    "ball_skipped": 255575,
+    "roulette_killed": 441051,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 124759917,
+    "backend_calls": 710,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 180.86527707400455,
+    "backend_s": 12.422406167992449
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00013447287992921438,
+   "compile_s": 0.06175986600283068,
+   "backend_s": 12.422406167992449,
+   "balls_per_history": 2.16167975,
+   "flights_per_history": 39.99797425
+  },
+  {
+   "label": "ours + cvae (R* = 10)",
+   "seconds": 210.29920840600607,
+   "quantities": {
+    "leakage": [
+     0.5806799038257164,
+     0.00013152001576758352
+    ],
+    "total flux": [
+     104.47379183591379,
+     0.02597433389919004
+    ]
+   },
+   "fom": {
+    "leakage": 92694.13370094034,
+    "total flux": 76928.67263794063
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 243720787,
+    "scatters": 223800280,
+    "crossings": 19920507,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 440709,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 210.29920840600607,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00012803368483171803,
+   "compile_s": 0.06175986600283068,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 60.93019675
+  },
+  {
+   "label": "ours + cvae seed 1 (R* = 3)",
+   "seconds": 193.69515945598687,
+   "quantities": {
+    "leakage": [
+     0.5807634439097514,
+     0.00013031458502029276
+    ],
+    "total flux": [
+     104.478606627276,
+     0.02656541598888432
+    ]
+   },
+   "fom": {
+    "leakage": 102540.09737122527,
+    "total flux": 79855.11410482843
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 159961805,
+    "scatters": 140068840,
+    "crossings": 19892965,
+    "balls": 8641371,
+    "ball_skipped": 255621,
+    "roulette_killed": 441733,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 124687405,
+    "backend_calls": 709,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 181.3017301989712,
+    "backend_s": 12.393429257015669
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00014391666324413334,
+   "compile_s": 0.06175986600283068,
+   "backend_s": 12.393429257015669,
+   "balls_per_history": 2.16034275,
+   "flights_per_history": 39.99045125
+  },
+  {
+   "label": "ours + cfm (R* = 3)",
+   "seconds": 358.2488483540001,
+   "quantities": {
+    "leakage": [
+     0.5809550449618774,
+     0.00013538178201919662
+    ],
+    "total flux": [
+     104.42245639770447,
+     0.02630026808838161
+    ]
+   },
+   "fom": {
+    "leakage": 51401.97418071993,
+    "total flux": 44003.0374959919
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 160092903,
+    "scatters": 140185107,
+    "crossings": 19907796,
+    "balls": 8648782,
+    "ball_skipped": 256331,
+    "roulette_killed": 440227,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 124781584,
+    "backend_calls": 709,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 182.56205303199022,
+    "backend_s": 175.68679532200986
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00012790906549773435,
+   "compile_s": 0.06175986600283068,
+   "backend_s": 175.68679532200986,
+   "balls_per_history": 2.1621955,
+   "flights_per_history": 40.02322575
+  }
+ ],
+ "nested": [
+  {
+   "label": "OpenMC analog",
+   "seconds": 37.84608852399996,
+   "quantities": {
+    "leakage": [
+     0.20366175000000006,
+     0.0002008917791857219
+    ],
+    "total flux": [
+     17.470391732463842,
+     0.01352699996865183
+    ]
+   },
+   "fom": {
+    "leakage": 27156.488440895497,
+    "total flux": 44073.88227986547
+   },
+   "counters": {},
+   "timing": {
+    "openmc_transport_s": 37.84608852399996,
+    "openmc_total_s": 37.903533857,
+    "wall_s": 37.919469799999206
+   },
+   "groups": 0,
+   "leakage_se_batches": 0.0,
+   "startup_s": 0.07338127599924604
+  },
+  {
+   "label": "OpenMC implicit",
+   "seconds": 55.919073228,
+   "quantities": {
+    "leakage": [
+     0.20353172249334742,
+     0.00015886138017997522
+    ],
+    "total flux": [
+     17.464829508334688,
+     0.010626027780581155
+    ]
+   },
+   "fom": {
+    "leakage": 29354.020173148605,
+    "total flux": 48308.86586708017
+   },
+   "counters": {},
+   "timing": {
+    "openmc_transport_s": 55.919073228,
+    "openmc_total_s": 55.988497513,
+    "wall_s": 56.00522212600117
+   },
+   "groups": 0,
+   "leakage_se_batches": 0.0,
+   "startup_s": 0.08614889800116998
+  },
+  {
+   "label": "ours, plain MC",
+   "seconds": 106.69976093400692,
+   "quantities": {
+    "leakage": [
+     0.2037041606534659,
+     0.00014802953231931587
+    ],
+    "total flux": [
+     17.467492334756972,
+     0.010032705501127639
+    ]
+   },
+   "fom": {
+    "leakage": 17747.59945762246,
+    "total flux": 28409.36639601168
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 184681369,
+    "scatters": 117392955,
+    "crossings": 67288414,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 2474989,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 106.69976093400692,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00012741373582022354,
+   "compile_s": 0.030696196998178493,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 46.17034225
+  },
+  {
+   "label": "ours + exact walk (R* = 2)",
+   "seconds": 116.73101332302394,
+   "quantities": {
+    "leakage": [
+     0.20372066017741403,
+     0.0001456661029756747
+    ],
+    "total flux": [
+     17.475258357999177,
+     0.010072554146055228
+    ]
+   },
+   "fom": {
+    "leakage": 16755.86647577427,
+    "total flux": 25785.866711011106
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 179492651,
+    "scatters": 112196693,
+    "crossings": 67295958,
+    "balls": 1083651,
+    "ball_skipped": 133389,
+    "roulette_killed": 2474697,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 3849384,
+    "backend_calls": 354,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 116.5116585009855,
+    "backend_s": 0.21935482203844003
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00012697004453095167,
+   "compile_s": 0.030696196998178493,
+   "backend_s": 0.21935482203844003,
+   "balls_per_history": 0.27091275,
+   "flights_per_history": 44.87316275
+  },
+  {
+   "label": "ours + table (R* = 2)",
+   "seconds": 117.8076445649931,
+   "quantities": {
+    "leakage": [
+     0.20363394308469304,
+     0.00014891946794005974
+    ],
+    "total flux": [
+     17.471394282809012,
+     0.00994766214189657
+    ]
+   },
+   "fom": {
+    "leakage": 15871.717213591352,
+    "total flux": 26184.217707685835
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 179446461,
+    "scatters": 112160805,
+    "crossings": 67285656,
+    "balls": 1083077,
+    "ball_skipped": 133279,
+    "roulette_killed": 2475305,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 3847212,
+    "backend_calls": 367,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 117.66078750304587,
+    "backend_s": 0.14685706194723025
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00013173212981116322,
+   "compile_s": 0.030696196998178493,
+   "backend_s": 0.14685706194723025,
+   "balls_per_history": 0.27076925,
+   "flights_per_history": 44.86161525
+  },
+  {
+   "label": "ours + nflow (R* = 3)",
+   "seconds": 117.61088928098616,
+   "quantities": {
+    "leakage": [
+     0.20371334657822399,
+     0.00014811100468830276
+    ],
+    "total flux": [
+     17.468273420308595,
+     0.010066155719203699
+    ]
+   },
+   "fom": {
+    "leakage": 16084.841181616463,
+    "total flux": 25605.021178820167
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 184548821,
+    "scatters": 117257241,
+    "crossings": 67291580,
+    "balls": 19354,
+    "ball_skipped": 930,
+    "roulette_killed": 2474933,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 118686,
+    "backend_calls": 80,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 117.20552874698478,
+    "backend_s": 0.4053605340013746
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.0001284115943439657,
+   "compile_s": 0.030696196998178493,
+   "backend_s": 0.4053605340013746,
+   "balls_per_history": 0.0048385,
+   "flights_per_history": 46.13720525
+  },
+  {
+   "label": "ours + nflow (R* = 10)",
+   "seconds": 117.88227360398378,
+   "quantities": {
+    "leakage": [
+     0.2037041606534659,
+     0.00014802953231931587
+    ],
+    "total flux": [
+     17.467492334756972,
+     0.010032705501127639
+    ]
+   },
+   "fom": {
+    "leakage": 16064.03203286055,
+    "total flux": 25714.40565291757
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 184681369,
+    "scatters": 117392955,
+    "crossings": 67288414,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 2474989,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 117.88227360398378,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00012741373582022354,
+   "compile_s": 0.030696196998178493,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 46.17034225
+  },
+  {
+   "label": "ours + cvae (R* = 3)",
+   "seconds": 116.58758709200629,
+   "quantities": {
+    "leakage": [
+     0.20369991643089272,
+     0.00014802157357388318
+    ],
+    "total flux": [
+     17.46786606185005,
+     0.010058573251917913
+    ]
+   },
+   "fom": {
+    "leakage": 16243.490319763667,
+    "total flux": 25867.510032828217
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 184544801,
+    "scatters": 117254179,
+    "crossings": 67290622,
+    "balls": 19362,
+    "ball_skipped": 928,
+    "roulette_killed": 2475067,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 118728,
+    "backend_calls": 81,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 116.43893058400499,
+    "backend_s": 0.14865650800129515
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00012826897403748892,
+   "compile_s": 0.030696196998178493,
+   "backend_s": 0.14865650800129515,
+   "balls_per_history": 0.0048405,
+   "flights_per_history": 46.13620025
+  },
+  {
+   "label": "ours + cvae (R* = 10)",
+   "seconds": 116.46454291798364,
+   "quantities": {
+    "leakage": [
+     0.2037041606534659,
+     0.00014802953231931587
+    ],
+    "total flux": [
+     17.467492334756972,
+     0.010032705501127639
+    ]
+   },
+   "fom": {
+    "leakage": 16259.580571353627,
+    "total flux": 26027.428836222978
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 184681369,
+    "scatters": 117392955,
+    "crossings": 67288414,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 2474989,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 116.46454291798364,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00012741373582022354,
+   "compile_s": 0.030696196998178493,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 46.17034225
+  },
+  {
+   "label": "ours + cvae seed 1 (R* = 3)",
+   "seconds": 117.02158444299494,
+   "quantities": {
+    "leakage": [
+     0.20370530567432288,
+     0.00014766113696562102
+    ],
+    "total flux": [
+     17.46819300367267,
+     0.010046852212230555
+    ]
+   },
+   "fom": {
+    "leakage": 16263.210796885365,
+    "total flux": 25832.709587883623
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 184548759,
+    "scatters": 117257734,
+    "crossings": 67291025,
+    "balls": 19345,
+    "ball_skipped": 929,
+    "roulette_killed": 2474972,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 118632,
+    "backend_calls": 81,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 116.87458585299828,
+    "backend_s": 0.14699858999665594
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00012989312138059103,
+   "compile_s": 0.030696196998178493,
+   "backend_s": 0.14699858999665594,
+   "balls_per_history": 0.00483625,
+   "flights_per_history": 46.13718975
+  },
+  {
+   "label": "ours + cfm (R* = 3)",
+   "seconds": 117.20735072599564,
+   "quantities": {
+    "leakage": [
+     0.2037140880715601,
+     0.000148062465873205
+    ],
+    "total flux": [
+     17.468739303469288,
+     0.010056433342638666
+    ]
+   },
+   "fom": {
+    "leakage": 16150.92211409529,
+    "total flux": 25744.254442288282
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 184553911,
+    "scatters": 117261553,
+    "crossings": 67292358,
+    "balls": 19350,
+    "ball_skipped": 932,
+    "roulette_killed": 2474924,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 118657,
+    "backend_calls": 79,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 116.25603043199226,
+    "backend_s": 0.9513202940033807
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00012730987879418934,
+   "compile_s": 0.030696196998178493,
+   "backend_s": 0.9513202940033807,
+   "balls_per_history": 0.0048375,
+   "flights_per_history": 46.13847775
+  }
+ ],
+ "lattice3d": [
+  {
+   "label": "OpenMC analog",
+   "seconds": 7.780342079999992,
+   "quantities": {
+    "leakage": [
+     0.03328600000000002,
+     8.83197564499417e-05
+    ],
+    "total flux": [
+     2.6773535854533344,
+     0.0010570930065372768
+    ]
+   },
+   "fom": {
+    "leakage": 18256.133377720344,
+    "total flux": 824491.8536164536
+   },
+   "counters": {},
+   "timing": {
+    "openmc_transport_s": 7.780342079999992,
+    "openmc_total_s": 7.81231851,
+    "wall_s": 7.82620298799884
+   },
+   "groups": 0,
+   "leakage_se_batches": 0.0,
+   "startup_s": 0.04586090799884879
+  },
+  {
+   "label": "OpenMC implicit",
+   "seconds": 7.008840860000002,
+   "quantities": {
+    "leakage": [
+     0.033339999981236976,
+     8.988731679399704e-05
+    ],
+    "total flux": [
+     2.6786473728226494,
+     0.0010803877813355784
+    ]
+   },
+   "fom": {
+    "leakage": 19628.547267558537,
+    "total flux": 877052.4447968736
+   },
+   "counters": {},
+   "timing": {
+    "openmc_transport_s": 7.008840860000002,
+    "openmc_total_s": 7.036694458,
+    "wall_s": 7.049478334000014
+   },
+   "groups": 0,
+   "leakage_se_batches": 0.0,
+   "startup_s": 0.04063747400001194
+  },
+  {
+   "label": "ours, plain MC",
+   "seconds": 20.03176868499213,
+   "quantities": {
+    "leakage": [
+     0.0332272523952628,
+     8.65889985927443e-05
+    ],
+    "total flux": [
+     2.679865187855257,
+     0.0010459294766240986
+    ]
+   },
+   "fom": {
+    "leakage": 7350.961194581328,
+    "total flux": 327719.1294983748
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 32681235,
+    "scatters": 11915474,
+    "crossings": 20765761,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3846873,
+    "lost": 0,
+    "rescued": 2686,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 20.03176868499213,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 9.63736450229281e-05,
+   "compile_s": 0.006266031003178796,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 8.17030875
+  },
+  {
+   "label": "ours + exact walk (R* = 2)",
+   "seconds": 20.323825542000122,
+   "quantities": {
+    "leakage": [
+     0.0332272523952628,
+     8.65889985927443e-05
+    ],
+    "total flux": [
+     2.679865187855257,
+     0.0010459294766240986
+    ]
+   },
+   "fom": {
+    "leakage": 7245.326622091987,
+    "total flux": 323009.74942891416
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 32681235,
+    "scatters": 11915474,
+    "crossings": 20765761,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3846873,
+    "lost": 0,
+    "rescued": 2686,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 20.323825542000122,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 9.63736450229281e-05,
+   "compile_s": 0.006266031003178796,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 8.17030875
+  },
+  {
+   "label": "ours + table (R* = 2)",
+   "seconds": 20.54593032800767,
+   "quantities": {
+    "leakage": [
+     0.0332272523952628,
+     8.65889985927443e-05
+    ],
+    "total flux": [
+     2.679865187855257,
+     0.0010459294766240986
+    ]
+   },
+   "fom": {
+    "leakage": 7167.0034849420035,
+    "total flux": 319517.96248473943
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 32681235,
+    "scatters": 11915474,
+    "crossings": 20765761,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3846873,
+    "lost": 0,
+    "rescued": 2686,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 20.54593032800767,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 9.63736450229281e-05,
+   "compile_s": 0.006266031003178796,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 8.17030875
+  },
+  {
+   "label": "ours + nflow (R* = 3)",
+   "seconds": 20.331613498005026,
+   "quantities": {
+    "leakage": [
+     0.0332272523952628,
+     8.65889985927443e-05
+    ],
+    "total flux": [
+     2.679865187855257,
+     0.0010459294766240986
+    ]
+   },
+   "fom": {
+    "leakage": 7242.551324156111,
+    "total flux": 322886.02163338265
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 32681235,
+    "scatters": 11915474,
+    "crossings": 20765761,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3846873,
+    "lost": 0,
+    "rescued": 2686,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 20.331613498005026,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 9.63736450229281e-05,
+   "compile_s": 0.006266031003178796,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 8.17030875
+  },
+  {
+   "label": "ours + nflow (R* = 10)",
+   "seconds": 20.575733998000942,
+   "quantities": {
+    "leakage": [
+     0.0332272523952628,
+     8.65889985927443e-05
+    ],
+    "total flux": [
+     2.679865187855257,
+     0.0010459294766240986
+    ]
+   },
+   "fom": {
+    "leakage": 7156.622178169346,
+    "total flux": 319055.14507507894
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 32681235,
+    "scatters": 11915474,
+    "crossings": 20765761,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3846873,
+    "lost": 0,
+    "rescued": 2686,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 20.575733998000942,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 9.63736450229281e-05,
+   "compile_s": 0.006266031003178796,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 8.17030875
+  },
+  {
+   "label": "ours + cvae (R* = 3)",
+   "seconds": 20.25865208097821,
+   "quantities": {
+    "leakage": [
+     0.0332272523952628,
+     8.65889985927443e-05
+    ],
+    "total flux": [
+     2.679865187855257,
+     0.0010459294766240986
+    ]
+   },
+   "fom": {
+    "leakage": 7268.635330406264,
+    "total flux": 324048.8937525323
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 32681235,
+    "scatters": 11915474,
+    "crossings": 20765761,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3846873,
+    "lost": 0,
+    "rescued": 2686,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 20.25865208097821,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 9.63736450229281e-05,
+   "compile_s": 0.006266031003178796,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 8.17030875
+  },
+  {
+   "label": "ours + cvae (R* = 10)",
+   "seconds": 19.964260558987007,
+   "quantities": {
+    "leakage": [
+     0.0332272523952628,
+     8.65889985927443e-05
+    ],
+    "total flux": [
+     2.679865187855257,
+     0.0010459294766240986
+    ]
+   },
+   "fom": {
+    "leakage": 7375.818093894794,
+    "total flux": 328827.2949735297
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 32681235,
+    "scatters": 11915474,
+    "crossings": 20765761,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3846873,
+    "lost": 0,
+    "rescued": 2686,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 19.964260558987007,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 9.63736450229281e-05,
+   "compile_s": 0.006266031003178796,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 8.17030875
+  },
+  {
+   "label": "ours + cvae seed 1 (R* = 3)",
+   "seconds": 20.50514021399067,
+   "quantities": {
+    "leakage": [
+     0.0332272523952628,
+     8.65889985927443e-05
+    ],
+    "total flux": [
+     2.679865187855257,
+     0.0010459294766240986
+    ]
+   },
+   "fom": {
+    "leakage": 7181.260538844593,
+    "total flux": 320153.56770295394
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 32681235,
+    "scatters": 11915474,
+    "crossings": 20765761,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3846873,
+    "lost": 0,
+    "rescued": 2686,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 20.50514021399067,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 9.63736450229281e-05,
+   "compile_s": 0.006266031003178796,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 8.17030875
+  },
+  {
+   "label": "ours + cfm (R* = 3)",
+   "seconds": 20.15073284000755,
+   "quantities": {
+    "leakage": [
+     0.0332272523952628,
+     8.65889985927443e-05
+    ],
+    "total flux": [
+     2.679865187855257,
+     0.0010459294766240986
+    ]
+   },
+   "fom": {
+    "leakage": 7307.56322518697,
+    "total flux": 325784.36962474097
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 32681235,
+    "scatters": 11915474,
+    "crossings": 20765761,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3846873,
+    "lost": 0,
+    "rescued": 2686,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 20.15073284000755,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 9.63736450229281e-05,
+   "compile_s": 0.006266031003178796,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 8.17030875
+  }
+ ],
+ "cask": [
+  {
+   "label": "OpenMC analog",
+   "seconds": 28.787854380000002,
+   "quantities": {
+    "leakage": [
+     0.002366249999999985,
+     2.4668440758781593e-05
+    ],
+    "total flux": [
+     34.69792862404395,
+     0.02125035391779996
+    ],
+    "detector flux": [
+     0.0005384630062317876,
+     5.5802629512669056e-05
+    ]
+   },
+   "fom": {
+    "leakage": 319.6160336710897,
+    "total flux": 92611.61687633762,
+    "detector flux": 3.2343954521879748
+   },
+   "counters": {},
+   "timing": {
+    "openmc_transport_s": 28.787854380000002,
+    "openmc_total_s": 28.836383288,
+    "wall_s": 28.851921358000254
+   },
+   "groups": 0,
+   "leakage_se_batches": 0.0,
+   "startup_s": 0.06406697800025185
+  },
+  {
+   "label": "OpenMC implicit",
+   "seconds": 48.93703291400001,
+   "quantities": {
+    "leakage": [
+     0.002390327732627275,
+     1.819540227918079e-05
+    ],
+    "total flux": [
+     34.72346074979337,
+     0.013380603214246148
+    ],
+    "detector flux": [
+     0.0005688129959096118,
+     4.290854720804256e-05
+    ]
+   },
+   "fom": {
+    "leakage": 352.6581643598101,
+    "total flux": 137612.21556849816,
+    "detector flux": 3.590986442266295
+   },
+   "counters": {},
+   "timing": {
+    "openmc_transport_s": 48.93703291400001,
+    "openmc_total_s": 48.993409396,
+    "wall_s": 49.009798933999264
+   },
+   "groups": 0,
+   "leakage_se_batches": 0.0,
+   "startup_s": 0.07276601999925703
+  },
+  {
+   "label": "ours, plain MC",
+   "seconds": 63.44819525501225,
+   "quantities": {
+    "leakage": [
+     0.0023817562409583284,
+     1.832824154240872e-05
+    ],
+    "total flux": [
+     34.71350650915796,
+     0.013061197412857531
+    ],
+    "detector flux": [
+     0.0005393321740019546,
+     3.9836731315176015e-05
+    ]
+   },
+   "fom": {
+    "leakage": 266.1544618137159,
+    "total flux": 111329.87200703607,
+    "detector flux": 2.888856648512568
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 160229193,
+    "scatters": 155288912,
+    "crossings": 4940281,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3979735,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 63.44819525501225,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 1.4508699062478229e-05,
+   "compile_s": 0.020247794996976154,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 40.05729825
+  },
+  {
+   "label": "ours + exact walk (R* = 2)",
+   "seconds": 52.98792501699063,
+   "quantities": {
+    "leakage": [
+     0.0023929338195119135,
+     1.7964446880326942e-05
+    ],
+    "total flux": [
+     34.70941231619093,
+     0.012355991527186496
+    ],
+    "detector flux": [
+     0.0006090358416542273,
+     4.30049932344284e-05
+    ]
+   },
+   "fom": {
+    "leakage": 334.85498010329525,
+    "total flux": 148923.21529815564,
+    "detector flux": 3.785044786490501
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 40547163,
+    "scatters": 35719317,
+    "crossings": 4827846,
+    "balls": 8725076,
+    "ball_skipped": 280899,
+    "roulette_killed": 3979889,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 126588433,
+    "backend_calls": 1328,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 51.021419715052616,
+    "backend_s": 1.9665053019380139
+   },
+   "groups": 1280,
+   "leakage_se_batches": 1.5124097238847728e-05,
+   "compile_s": 0.020247794996976154,
+   "backend_s": 1.9665053019380139,
+   "balls_per_history": 2.181269,
+   "flights_per_history": 10.13679075
+  },
+  {
+   "label": "ours + table (R* = 2)",
+   "seconds": 51.01763421000214,
+   "quantities": {
+    "leakage": [
+     0.002375948120545896,
+     1.8628189686656897e-05
+    ],
+    "total flux": [
+     34.71776717214201,
+     0.011829119651923653
+    ],
+    "detector flux": [
+     0.0005173947736027213,
+     3.968794075643274e-05
+    ]
+   },
+   "fom": {
+    "leakage": 318.86899142335744,
+    "total flux": 168841.19122491675,
+    "detector flux": 3.3312454082587806
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 40585413,
+    "scatters": 35751812,
+    "crossings": 4833601,
+    "balls": 8724177,
+    "ball_skipped": 280341,
+    "roulette_killed": 3980055,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 126585923,
+    "backend_calls": 1267,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 50.49720703894127,
+    "backend_s": 0.5204271710608737
+   },
+   "groups": 1280,
+   "leakage_se_batches": 1.6902131141300004e-05,
+   "compile_s": 0.020247794996976154,
+   "backend_s": 0.5204271710608737,
+   "balls_per_history": 2.18104425,
+   "flights_per_history": 10.14635325
+  },
+  {
+   "label": "ours + nflow (R* = 3)",
+   "seconds": 81.05134905799423,
+   "quantities": {
+    "leakage": [
+     0.0023782644770872162,
+     1.7981883115696025e-05
+    ],
+    "total flux": [
+     34.728493785693594,
+     0.011882859174260144
+    ],
+    "detector flux": [
+     0.0005493934002042303,
+     4.083644499301028e-05
+    ]
+   },
+   "fom": {
+    "leakage": 215.81901673245494,
+    "total flux": 105382.80336533426,
+    "detector flux": 2.233113375414237
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 47670922,
+    "scatters": 42823606,
+    "crossings": 4847316,
+    "balls": 7189784,
+    "ball_skipped": 95311,
+    "roulette_killed": 3979828,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 113764153,
+    "backend_calls": 987,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 52.565658511957736,
+    "backend_s": 28.485690546036494
+   },
+   "groups": 1280,
+   "leakage_se_batches": 2.0803078960731536e-05,
+   "compile_s": 0.020247794996976154,
+   "backend_s": 28.485690546036494,
+   "balls_per_history": 1.797446,
+   "flights_per_history": 11.9177305
+  },
+  {
+   "label": "ours + nflow (R* = 10)",
+   "seconds": 64.33290793698689,
+   "quantities": {
+    "leakage": [
+     0.002375494287661146,
+     1.8615797133637466e-05
+    ],
+    "total flux": [
+     34.71292760504304,
+     0.013052940978950848
+    ],
+    "detector flux": [
+     0.0005519526054219916,
+     4.031683320038646e-05
+    ]
+   },
+   "fom": {
+    "leakage": 253.11129343231667,
+    "total flux": 109934.13257915794,
+    "detector flux": 2.9133829152437998
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 140911100,
+    "scatters": 135988070,
+    "crossings": 4923030,
+    "balls": 771778,
+    "ball_skipped": 27,
+    "roulette_killed": 3979783,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 12348448,
+    "backend_calls": 100,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 62.02400293301616,
+    "backend_s": 2.3089050039707217
+   },
+   "groups": 1280,
+   "leakage_se_batches": 1.4201764491479372e-05,
+   "compile_s": 0.020247794996976154,
+   "backend_s": 2.3089050039707217,
+   "balls_per_history": 0.1929445,
+   "flights_per_history": 35.227775
+  },
+  {
+   "label": "ours + cvae (R* = 3)",
+   "seconds": 64.14034235800864,
+   "quantities": {
+    "leakage": [
+     0.0023724448064438757,
+     1.7562197357427783e-05
+    ],
+    "total flux": [
+     34.717742822738856,
+     0.012119095176820761
+    ],
+    "detector flux": [
+     0.0006035653844996657,
+     4.529179041030487e-05
+    ]
+   },
+   "fom": {
+    "leakage": 284.5137467817548,
+    "total flux": 127947.35058353255,
+    "detector flux": 2.7687159144299835
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 47689778,
+    "scatters": 42840795,
+    "crossings": 4848983,
+    "balls": 7192553,
+    "ball_skipped": 95331,
+    "roulette_killed": 3979975,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 113806295,
+    "backend_calls": 923,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 53.17058001001351,
+    "backend_s": 10.969762347995129
+   },
+   "groups": 1280,
+   "leakage_se_batches": 1.4151618081594087e-05,
+   "compile_s": 0.020247794996976154,
+   "backend_s": 10.969762347995129,
+   "balls_per_history": 1.79813825,
+   "flights_per_history": 11.9224445
+  },
+  {
+   "label": "ours + cvae (R* = 10)",
+   "seconds": 63.034026868015644,
+   "quantities": {
+    "leakage": [
+     0.002380492383740186,
+     1.868731968403278e-05
+    ],
+    "total flux": [
+     34.71186444987132,
+     0.013071423041711083
+    ],
+    "detector flux": [
+     0.0005463520437601131,
+     4.0167238916841006e-05
+    ]
+   },
+   "fom": {
+    "leakage": 257.433173132034,
+    "total flux": 111875.52574670709,
+    "detector flux": 2.9351218300824575
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 140909644,
+    "scatters": 135987285,
+    "crossings": 4922359,
+    "balls": 771837,
+    "ball_skipped": 26,
+    "roulette_killed": 3979755,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 12349392,
+    "backend_calls": 105,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 62.06213631700666,
+    "backend_s": 0.9718905510089826
+   },
+   "groups": 1280,
+   "leakage_se_batches": 1.451343971057311e-05,
+   "compile_s": 0.020247794996976154,
+   "backend_s": 0.9718905510089826,
+   "balls_per_history": 0.19295925,
+   "flights_per_history": 35.227411
+  },
+  {
+   "label": "ours + cvae seed 1 (R* = 3)",
+   "seconds": 63.61008258899892,
+   "quantities": {
+    "leakage": [
+     0.0023709131572470753,
+     1.8695906728958497e-05
+    ],
+    "total flux": [
+     34.71559602058585,
+     0.011637494094678472
+    ],
+    "detector flux": [
+     0.0006085006983392417,
+     4.5700761043740146e-05
+    ]
+   },
+   "fom": {
+    "leakage": 252.8204899026244,
+    "total flux": 139895.6933806957,
+    "detector flux": 2.7870793776365717
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 47664161,
+    "scatters": 42817892,
+    "crossings": 4846269,
+    "balls": 7187863,
+    "ball_skipped": 95512,
+    "roulette_killed": 3980053,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 113735043,
+    "backend_calls": 961,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 52.74155073093789,
+    "backend_s": 10.868531858061033
+   },
+   "groups": 1280,
+   "leakage_se_batches": 1.675966153140845e-05,
+   "compile_s": 0.020247794996976154,
+   "backend_s": 10.868531858061033,
+   "balls_per_history": 1.79696575,
+   "flights_per_history": 11.91604025
+  },
+  {
+   "label": "ours + cfm (R* = 3)",
+   "seconds": 208.58807283900387,
+   "quantities": {
+    "leakage": [
+     0.0023642693368112052,
+     1.7719866079748335e-05
+    ],
+    "total flux": [
+     34.72159324774304,
+     0.011553721892204615
+    ],
+    "detector flux": [
+     0.000623710215173314,
+     4.319559161623944e-05
+    ]
+   },
+   "fom": {
+    "leakage": 85.346075805112,
+    "total flux": 43297.81691377334,
+    "detector flux": 0.9995335803006312
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 47675934,
+    "scatters": 42830750,
+    "crossings": 4845184,
+    "balls": 7192985,
+    "ball_skipped": 95387,
+    "roulette_killed": 3980029,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 113815111,
+    "backend_calls": 936,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 53.33838832598485,
+    "backend_s": 155.24968451301902
+   },
+   "groups": 1280,
+   "leakage_se_batches": 1.997300648408458e-05,
+   "compile_s": 0.020247794996976154,
+   "backend_s": 155.24968451301902,
+   "balls_per_history": 1.79824625,
+   "flights_per_history": 11.9189835
+  }
+ ],
+ "tilted": [
+  {
+   "label": "OpenMC analog",
+   "seconds": 33.824682636,
+   "quantities": {
+    "leakage": [
+     0.35264424999999966,
+     0.00024136126387062784
+    ],
+    "total flux": [
+     38.092044078212666,
+     0.01992318977125995
+    ]
+   },
+   "fom": {
+    "leakage": 63110.95335466525,
+    "total flux": 108072.96897377072
+   },
+   "counters": {},
+   "timing": {
+    "openmc_transport_s": 33.824682636,
+    "openmc_total_s": 33.873449243,
+    "wall_s": 33.89014003400007
+   },
+   "groups": 0,
+   "leakage_se_batches": 0.0,
+   "startup_s": 0.06545739800007055
+  },
+  {
+   "label": "OpenMC implicit",
+   "seconds": 50.53261743399996,
+   "quantities": {
+    "leakage": [
+     0.353208240007482,
+     0.00018490584975526338
+    ],
+    "total flux": [
+     38.065264746753165,
+     0.01281859127493439
+    ]
+   },
+   "fom": {
+    "leakage": 72208.53894953353,
+    "total flux": 174503.97139969718
+   },
+   "counters": {},
+   "timing": {
+    "openmc_transport_s": 50.53261743399996,
+    "openmc_total_s": 50.590123559,
+    "wall_s": 50.60628674399777
+   },
+   "groups": 0,
+   "leakage_se_batches": 0.0,
+   "startup_s": 0.07366930999781118
+  },
+  {
+   "label": "ours, plain MC",
+   "seconds": 90.13516959599292,
+   "quantities": {
+    "leakage": [
+     0.35298664078106584,
+     0.00018769529320353118
+    ],
+    "total flux": [
+     38.09273924658834,
+     0.013093223898920993
+    ]
+   },
+   "fom": {
+    "leakage": 39238.779844927645,
+    "total flux": 93906.77768879005
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 199731291,
+    "scatters": 179782845,
+    "crossings": 19948446,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 1975578,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 90.13516959599292,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.0002025021416364839,
+   "compile_s": 0.029393128999799956,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 49.93282275
+  },
+  {
+   "label": "ours + exact walk (R* = 2)",
+   "seconds": 85.77032985200276,
+   "quantities": {
+    "leakage": [
+     0.35340196031551285,
+     0.00019081612089699335
+    ],
+    "total flux": [
+     38.07119286168784,
+     0.013052675293543219
+    ]
+   },
+   "fom": {
+    "leakage": 39991.77703867337,
+    "total flux": 99187.47166206394
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 128721705,
+    "scatters": 108803979,
+    "crossings": 19917726,
+    "balls": 11411771,
+    "ball_skipped": 987191,
+    "roulette_killed": 1974556,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 70721139,
+    "backend_calls": 1123,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 84.3645569590226,
+    "backend_s": 1.405772892980167
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00015470736143168403,
+   "compile_s": 0.029393128999799956,
+   "backend_s": 1.405772892980167,
+   "balls_per_history": 2.85294275,
+   "flights_per_history": 32.18042625
+  },
+  {
+   "label": "ours + table (R* = 2)",
+   "seconds": 84.5573731080076,
+   "quantities": {
+    "leakage": [
+     0.35360968500293066,
+     0.00018446708295388216
+    ],
+    "total flux": [
+     38.05727166122264,
+     0.012924256219418851
+    ]
+   },
+   "fom": {
+    "leakage": 43456.93174201047,
+    "total flux": 102544.57743208647
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 128658974,
+    "scatters": 108745465,
+    "crossings": 19913509,
+    "balls": 11408274,
+    "ball_skipped": 987377,
+    "roulette_killed": 1973779,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 70712975,
+    "backend_calls": 1073,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 83.9506986430606,
+    "backend_s": 0.6066744649469911
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.0001576117519411025,
+   "compile_s": 0.029393128999799956,
+   "backend_s": 0.6066744649469911,
+   "balls_per_history": 2.8520685,
+   "flights_per_history": 32.1647435
+  },
+  {
+   "label": "ours + nflow (R* = 3)",
+   "seconds": 106.29553039302482,
+   "quantities": {
+    "leakage": [
+     0.353170406631497,
+     0.00017976634024999283
+    ],
+    "total flux": [
+     38.075804849837056,
+     0.012937325021233848
+    ]
+   },
+   "fom": {
+    "leakage": 36310.886627603584,
+    "total flux": 81488.10215825938
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 162632534,
+    "scatters": 142701107,
+    "crossings": 19931427,
+    "balls": 4389430,
+    "ball_skipped": 169827,
+    "roulette_killed": 1975644,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 40161263,
+    "backend_calls": 486,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 90.89515254993967,
+    "backend_s": 15.400377843085153
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00019119793983415724,
+   "compile_s": 0.029393128999799956,
+   "backend_s": 15.400377843085153,
+   "balls_per_history": 1.0973575,
+   "flights_per_history": 40.6581335
+  },
+  {
+   "label": "ours + nflow (R* = 10)",
+   "seconds": 95.35844638299022,
+   "quantities": {
+    "leakage": [
+     0.35298664078106584,
+     0.00018769529320353118
+    ],
+    "total flux": [
+     38.09273924658834,
+     0.013093223898920993
+    ]
+   },
+   "fom": {
+    "leakage": 37089.46831890988,
+    "total flux": 88763.01632680684
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 199731291,
+    "scatters": 179782845,
+    "crossings": 19948446,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 1975578,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 95.35844638299022,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.0002025021416364839,
+   "compile_s": 0.029393128999799956,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 49.93282275
+  },
+  {
+   "label": "ours + cvae (R* = 3)",
+   "seconds": 97.84775799500494,
+   "quantities": {
+    "leakage": [
+     0.3532625897371392,
+     0.00017605599642059867
+    ],
+    "total flux": [
+     38.07045986117876,
+     0.012837210026350498
+    ]
+   },
+   "fom": {
+    "leakage": 41147.435630540844,
+    "total flux": 89884.34815350956
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 162617735,
+    "scatters": 142692663,
+    "crossings": 19925072,
+    "balls": 4387796,
+    "ball_skipped": 169805,
+    "roulette_killed": 1975237,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 40147735,
+    "backend_calls": 489,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 91.11025262901967,
+    "backend_s": 6.737505365985271
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.0001657281722052316,
+   "compile_s": 0.029393128999799956,
+   "backend_s": 6.737505365985271,
+   "balls_per_history": 1.096949,
+   "flights_per_history": 40.65443375
+  },
+  {
+   "label": "ours + cvae (R* = 10)",
+   "seconds": 94.42815674901067,
+   "quantities": {
+    "leakage": [
+     0.35298664078106584,
+     0.00018769529320353118
+    ],
+    "total flux": [
+     38.09273924658834,
+     0.013093223898920993
+    ]
+   },
+   "fom": {
+    "leakage": 37454.86725387592,
+    "total flux": 89637.49399122923
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 199731291,
+    "scatters": 179782845,
+    "crossings": 19948446,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 1975578,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 94.42815674901067,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.0002025021416364839,
+   "compile_s": 0.029393128999799956,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 49.93282275
+  },
+  {
+   "label": "ours + cvae seed 1 (R* = 3)",
+   "seconds": 96.80157589399823,
+   "quantities": {
+    "leakage": [
+     0.3532863978641955,
+     0.00018001862524338606
+    ],
+    "total flux": [
+     38.07076811741187,
+     0.012819112224221434
+    ]
+   },
+   "fom": {
+    "leakage": 39786.572200785,
+    "total flux": 91113.96618310362
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 162570253,
+    "scatters": 142648625,
+    "crossings": 19921628,
+    "balls": 4388188,
+    "ball_skipped": 170048,
+    "roulette_killed": 1975276,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 40152429,
+    "backend_calls": 502,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 89.79594906299826,
+    "backend_s": 7.005626830999972
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.0001815602155200101,
+   "compile_s": 0.029393128999799956,
+   "backend_s": 7.005626830999972,
+   "balls_per_history": 1.097047,
+   "flights_per_history": 40.64256325
+  },
+  {
+   "label": "ours + cfm (R* = 3)",
+   "seconds": 181.79333101900556,
+   "quantities": {
+    "leakage": [
+     0.3532687898001054,
+     0.0001847420393422732
+    ],
+    "total flux": [
+     38.06794901751428,
+     0.013039601371942738
+    ]
+   },
+   "fom": {
+    "leakage": 20114.124174632478,
+    "total flux": 46882.67471341442
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 162649750,
+    "scatters": 142723881,
+    "crossings": 19925869,
+    "balls": 4389496,
+    "ball_skipped": 170249,
+    "roulette_killed": 1975289,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 40164672,
+    "backend_calls": 494,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 91.10506711298876,
+    "backend_s": 90.6882639060168
+   },
+   "groups": 1280,
+   "leakage_se_batches": 0.00017744516079381037,
+   "compile_s": 0.029393128999799956,
+   "backend_s": 90.6882639060168,
+   "balls_per_history": 1.097374,
+   "flights_per_history": 40.6624375
+  }
+ ],
+ "hexcore": [
+  {
+   "label": "OpenMC analog",
+   "seconds": 32.444963463999976,
+   "quantities": {
+    "leakage": [
+     0.07963974999999995,
+     0.00013372093600576136
+    ],
+    "total flux": [
+     16.343739826993183,
+     0.010364439474629696
+    ]
+   },
+   "fom": {
+    "leakage": 10932.353617891302,
+    "total flux": 76641.49215451913
+   },
+   "counters": {},
+   "timing": {
+    "openmc_transport_s": 32.444963463999976,
+    "openmc_total_s": 32.508122739,
+    "wall_s": 32.536484258998826
+   },
+   "groups": 0,
+   "leakage_se_batches": 0.0,
+   "startup_s": 0.09152079499884991
+  },
+  {
+   "label": "OpenMC implicit",
+   "seconds": 51.33355577399994,
+   "quantities": {
+    "leakage": [
+     0.07949465159946796,
+     9.821738864986186e-05
+    ],
+    "total flux": [
+     16.343478243055422,
+     0.007158821210982567
+    ]
+   },
+   "fom": {
+    "leakage": 12761.38191753039,
+    "total flux": 101532.38736520095
+   },
+   "counters": {},
+   "timing": {
+    "openmc_transport_s": 51.33355577399994,
+    "openmc_total_s": 51.401066526,
+    "wall_s": 51.423734233001596
+   },
+   "groups": 0,
+   "leakage_se_batches": 0.0,
+   "startup_s": 0.09017845900165611
+  },
+  {
+   "label": "ours, plain MC",
+   "seconds": 91.63022351900145,
+   "quantities": {
+    "leakage": [
+     0.07952314817957928,
+     9.788621999304675e-05
+    ],
+    "total flux": [
+     16.34815681561856,
+     0.006857577236322152
+    ]
+   },
+   "fom": {
+    "leakage": 7202.864873434195,
+    "total flux": 62023.66544990669
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 205114031,
+    "scatters": 119241910,
+    "crossings": 85872121,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3325417,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 91.63022351900145,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 8.888673970230284e-05,
+   "compile_s": 0.03543193999939831,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 51.27850775
+  },
+  {
+   "label": "ours + exact walk (R* = 2)",
+   "seconds": 93.83240456497879,
+   "quantities": {
+    "leakage": [
+     0.07958007233783505,
+     9.382289779108599e-05
+    ],
+    "total flux": [
+     16.34278513019823,
+     0.00700182798440856
+    ]
+   },
+   "fom": {
+    "leakage": 7667.223598498455,
+    "total flux": 58059.918450310266
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 198584547,
+    "scatters": 112726208,
+    "crossings": 85858339,
+    "balls": 1341093,
+    "ball_skipped": 164288,
+    "roulette_killed": 3325566,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 14117104,
+    "backend_calls": 601,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 93.54951663401516,
+    "backend_s": 0.28288793096362497
+   },
+   "groups": 1280,
+   "leakage_se_batches": 9.662380757329947e-05,
+   "compile_s": 0.03543193999939831,
+   "backend_s": 0.28288793096362497,
+   "balls_per_history": 0.33527325,
+   "flights_per_history": 49.64613675
+  },
+  {
+   "label": "ours + table (R* = 2)",
+   "seconds": 94.92398051498094,
+   "quantities": {
+    "leakage": [
+     0.07957440776389205,
+     9.669707441543482e-05
+    ],
+    "total flux": [
+     16.348094758132834,
+     0.00684795893968873
+    ]
+   },
+   "fom": {
+    "leakage": 7134.182573201644,
+    "total flux": 60039.36023666025
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 198610967,
+    "scatters": 112750617,
+    "crossings": 85860350,
+    "balls": 1342848,
+    "ball_skipped": 164517,
+    "roulette_killed": 3326101,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 14133592,
+    "backend_calls": 606,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 94.73285130799195,
+    "backend_s": 0.1911292069889896
+   },
+   "groups": 1280,
+   "leakage_se_batches": 9.287458171827594e-05,
+   "compile_s": 0.03543193999939831,
+   "backend_s": 0.1911292069889896,
+   "balls_per_history": 0.335712,
+   "flights_per_history": 49.65274175
+  },
+  {
+   "label": "ours + nflow (R* = 3)",
+   "seconds": 94.49984377100918,
+   "quantities": {
+    "leakage": [
+     0.07952314817957928,
+     9.788621999304675e-05
+    ],
+    "total flux": [
+     16.34815681561856,
+     0.006857577236322152
+    ]
+   },
+   "fom": {
+    "leakage": 6984.139782593114,
+    "total flux": 60140.22988666815
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 205114031,
+    "scatters": 119241910,
+    "crossings": 85872121,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3325417,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 94.49984377100918,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 8.888673970230284e-05,
+   "compile_s": 0.03543193999939831,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 51.27850775
+  },
+  {
+   "label": "ours + nflow (R* = 10)",
+   "seconds": 94.40852273000564,
+   "quantities": {
+    "leakage": [
+     0.07952314817957928,
+     9.788621999304675e-05
+    ],
+    "total flux": [
+     16.34815681561856,
+     0.006857577236322152
+    ]
+   },
+   "fom": {
+    "leakage": 6990.895517107515,
+    "total flux": 60198.403325258536
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 205114031,
+    "scatters": 119241910,
+    "crossings": 85872121,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3325417,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 94.40852273000564,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 8.888673970230284e-05,
+   "compile_s": 0.03543193999939831,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 51.27850775
+  },
+  {
+   "label": "ours + cvae (R* = 3)",
+   "seconds": 93.99160238498371,
+   "quantities": {
+    "leakage": [
+     0.07952314817957928,
+     9.788621999304675e-05
+    ],
+    "total flux": [
+     16.34815681561856,
+     0.006857577236322152
+    ]
+   },
+   "fom": {
+    "leakage": 7021.905165810667,
+    "total flux": 60465.42653209074
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 205114031,
+    "scatters": 119241910,
+    "crossings": 85872121,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3325417,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 93.99160238498371,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 8.888673970230284e-05,
+   "compile_s": 0.03543193999939831,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 51.27850775
+  },
+  {
+   "label": "ours + cvae (R* = 10)",
+   "seconds": 93.66260063400114,
+   "quantities": {
+    "leakage": [
+     0.07952314817957928,
+     9.788621999304675e-05
+    ],
+    "total flux": [
+     16.34815681561856,
+     0.006857577236322152
+    ]
+   },
+   "fom": {
+    "leakage": 7046.570497321297,
+    "total flux": 60677.81900324048
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 205114031,
+    "scatters": 119241910,
+    "crossings": 85872121,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3325417,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 93.66260063400114,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 8.888673970230284e-05,
+   "compile_s": 0.03543193999939831,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 51.27850775
+  },
+  {
+   "label": "ours + cvae seed 1 (R* = 3)",
+   "seconds": 93.73202441600733,
+   "quantities": {
+    "leakage": [
+     0.07952314817957928,
+     9.788621999304675e-05
+    ],
+    "total flux": [
+     16.34815681561856,
+     0.006857577236322152
+    ]
+   },
+   "fom": {
+    "leakage": 7041.351367817317,
+    "total flux": 60632.877226880286
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 205114031,
+    "scatters": 119241910,
+    "crossings": 85872121,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3325417,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 93.73202441600733,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 8.888673970230284e-05,
+   "compile_s": 0.03543193999939831,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 51.27850775
+  },
+  {
+   "label": "ours + cfm (R* = 3)",
+   "seconds": 94.72700001001067,
+   "quantities": {
+    "leakage": [
+     0.07952314817957928,
+     9.788621999304675e-05
+    ],
+    "total flux": [
+     16.34815681561856,
+     0.006857577236322152
+    ]
+   },
+   "fom": {
+    "leakage": 6967.391749555999,
+    "total flux": 59996.013048466826
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 205114031,
+    "scatters": 119241910,
+    "crossings": 85872121,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3325417,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 94.72700001001067,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 8.888673970230284e-05,
+   "compile_s": 0.03543193999939831,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 51.27850775
+  }
+ ],
+ "sector": [
+  {
+   "label": "OpenMC analog",
+   "seconds": 76.790608628,
+   "quantities": {
+    "leakage": [
+     0.10699949999999989,
+     0.0001590752327665696
+    ],
+    "total flux": [
+     31.16941440958819,
+     0.015021851614068648
+    ]
+   },
+   "fom": {
+    "leakage": 5891.830604877993,
+    "total flux": 56066.34448273381
+   },
+   "counters": {},
+   "timing": {
+    "openmc_transport_s": 76.790608628,
+    "openmc_total_s": 76.862759721,
+    "wall_s": 76.88306268499946
+   },
+   "groups": 0,
+   "leakage_se_batches": 0.0,
+   "startup_s": 0.09245405699945763
+  },
+  {
+   "label": "OpenMC implicit",
+   "seconds": 133.84051663900013,
+   "quantities": {
+    "leakage": [
+     0.1071007549196895,
+     0.00010829997969288467
+    ],
+    "total flux": [
+     31.1595580092329,
+     0.00822500787951092
+    ]
+   },
+   "fom": {
+    "leakage": 7307.026953460618,
+    "total flux": 107231.48679224239
+   },
+   "counters": {},
+   "timing": {
+    "openmc_transport_s": 133.84051663900013,
+    "openmc_total_s": 133.92901484499998,
+    "wall_s": 133.94924518600237
+   },
+   "groups": 0,
+   "leakage_se_batches": 0.0,
+   "startup_s": 0.10872854700224366
+  },
+  {
+   "label": "ours, plain MC",
+   "seconds": 218.14908842701698,
+   "quantities": {
+    "leakage": [
+     0.10711960337909236,
+     0.00010728364519371105
+    ],
+    "total flux": [
+     31.14436117528354,
+     0.0074403275049116325
+    ]
+   },
+   "fom": {
+    "leakage": 4570.0133321976355,
+    "total flux": 80319.56481108358
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 365953114,
+    "scatters": 241629298,
+    "crossings": 124323816,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3069407,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 218.14908842701698,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 7.332714211883498e-05,
+   "compile_s": 0.06004995100011001,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 91.4882785
+  },
+  {
+   "label": "ours + exact walk (R* = 2)",
+   "seconds": 233.31704732900835,
+   "quantities": {
+    "leakage": [
+     0.1072468064377623,
+     0.00010697756294548144
+    ],
+    "total flux": [
+     31.147654978241874,
+     0.007434580640594252
+    ]
+   },
+   "fom": {
+    "leakage": 4307.614853072868,
+    "total flux": 75230.03885088403
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 357507949,
+    "scatters": 233182653,
+    "crossings": 124325296,
+    "balls": 1696090,
+    "ball_skipped": 198544,
+    "roulette_killed": 3069327,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 13478139,
+    "backend_calls": 528,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 232.9982982430156,
+    "backend_s": 0.3187490859927493
+   },
+   "groups": 1280,
+   "leakage_se_batches": 7.819329219571816e-05,
+   "compile_s": 0.06004995100011001,
+   "backend_s": 0.3187490859927493,
+   "balls_per_history": 0.4240225,
+   "flights_per_history": 89.37698725
+  },
+  {
+   "label": "ours + table (R* = 2)",
+   "seconds": 234.23135437298333,
+   "quantities": {
+    "leakage": [
+     0.10725843766163028,
+     0.00011050182573901665
+    ],
+    "total flux": [
+     31.139221067042058,
+     0.007504227994788279
+    ]
+   },
+   "fom": {
+    "leakage": 4022.3420261731467,
+    "total flux": 73512.03055546194
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 357384653,
+    "scatters": 233110355,
+    "crossings": 124274298,
+    "balls": 1697942,
+    "ball_skipped": 198654,
+    "roulette_killed": 3069441,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 13491711,
+    "backend_calls": 533,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 234.02686327300762,
+    "backend_s": 0.20449109997571213
+   },
+   "groups": 1280,
+   "leakage_se_batches": 9.524706648787664e-05,
+   "compile_s": 0.06004995100011001,
+   "backend_s": 0.20449109997571213,
+   "balls_per_history": 0.4244855,
+   "flights_per_history": 89.34616325
+  },
+  {
+   "label": "ours + nflow (R* = 3)",
+   "seconds": 237.72443565200592,
+   "quantities": {
+    "leakage": [
+     0.10716912381770928,
+     0.00010841621567538527
+    ],
+    "total flux": [
+     31.144068408532892,
+     0.007484957896463322
+    ]
+   },
+   "fom": {
+    "leakage": 4110.33337269495,
+    "total flux": 72827.95928392054
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 364604561,
+    "scatters": 240284620,
+    "crossings": 124319941,
+    "balls": 174623,
+    "ball_skipped": 7511,
+    "roulette_killed": 3069408,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 2538425,
+    "backend_calls": 198,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 236.41020900897638,
+    "backend_s": 1.3142266430295422
+   },
+   "groups": 1280,
+   "leakage_se_batches": 7.924027199277987e-05,
+   "compile_s": 0.06004995100011001,
+   "backend_s": 1.3142266430295422,
+   "balls_per_history": 0.04365575,
+   "flights_per_history": 91.15114025
+  },
+  {
+   "label": "ours + nflow (R* = 10)",
+   "seconds": 235.93424533498182,
+   "quantities": {
+    "leakage": [
+     0.10711960337909236,
+     0.00010728364519371105
+    ],
+    "total flux": [
+     31.14436117528354,
+     0.0074403275049116325
+    ]
+   },
+   "fom": {
+    "leakage": 4225.517330486538,
+    "total flux": 74264.92844018972
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 365953114,
+    "scatters": 241629298,
+    "crossings": 124323816,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3069407,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 235.93424533498182,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 7.332714211883498e-05,
+   "compile_s": 0.06004995100011001,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 91.4882785
+  },
+  {
+   "label": "ours + cvae (R* = 3)",
+   "seconds": 236.84123099800854,
+   "quantities": {
+    "leakage": [
+     0.1071321682911424,
+     0.00010823931555674274
+    ],
+    "total flux": [
+     31.14398180171732,
+     0.007467424501087383
+    ]
+   },
+   "fom": {
+    "leakage": 4136.303574446696,
+    "total flux": 73442.80971689719
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 364606978,
+    "scatters": 240285691,
+    "crossings": 124321287,
+    "balls": 174749,
+    "ball_skipped": 7488,
+    "roulette_killed": 3069471,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 2540050,
+    "backend_calls": 200,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 236.34784136701637,
+    "backend_s": 0.49338963099216926
+   },
+   "groups": 1280,
+   "leakage_se_batches": 7.90258388314846e-05,
+   "compile_s": 0.06004995100011001,
+   "backend_s": 0.49338963099216926,
+   "balls_per_history": 0.04368725,
+   "flights_per_history": 91.1517445
+  },
+  {
+   "label": "ours + cvae (R* = 10)",
+   "seconds": 235.59220356998776,
+   "quantities": {
+    "leakage": [
+     0.10711960337909236,
+     0.00010728364519371105
+    ],
+    "total flux": [
+     31.14436117528354,
+     0.0074403275049116325
+    ]
+   },
+   "fom": {
+    "leakage": 4231.652098037551,
+    "total flux": 74372.74910155254
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 365953114,
+    "scatters": 241629298,
+    "crossings": 124323816,
+    "balls": 0,
+    "ball_skipped": 0,
+    "roulette_killed": 3069407,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 0,
+    "backend_calls": 0,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 235.59220356998776,
+    "backend_s": 0.0
+   },
+   "groups": 1280,
+   "leakage_se_batches": 7.332714211883498e-05,
+   "compile_s": 0.06004995100011001,
+   "backend_s": 0.0,
+   "balls_per_history": 0.0,
+   "flights_per_history": 91.4882785
+  },
+  {
+   "label": "ours + cvae seed 1 (R* = 3)",
+   "seconds": 237.90715658199042,
+   "quantities": {
+    "leakage": [
+     0.10716457086069212,
+     0.00010868729825407839
+    ],
+    "total flux": [
+     31.142918488649812,
+     0.0074494782853094755
+    ]
+   },
+   "fom": {
+    "leakage": 4086.366972837298,
+    "total flux": 73461.43279841192
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 364591486,
+    "scatters": 240275351,
+    "crossings": 124316135,
+    "balls": 174763,
+    "ball_skipped": 7443,
+    "roulette_killed": 3069431,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 2540550,
+    "backend_calls": 203,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 237.43985418499142,
+    "backend_s": 0.46730239699900267
+   },
+   "groups": 1280,
+   "leakage_se_batches": 7.579259898168518e-05,
+   "compile_s": 0.06004995100011001,
+   "backend_s": 0.46730239699900267,
+   "balls_per_history": 0.04369075,
+   "flights_per_history": 91.1478715
+  },
+  {
+   "label": "ours + cfm (R* = 3)",
+   "seconds": 245.50735810400147,
+   "quantities": {
+    "leakage": [
+     0.10717485607312677,
+     0.00010833455776870337
+    ],
+    "total flux": [
+     31.14536272461012,
+     0.007441191751838722
+    ]
+   },
+   "fom": {
+    "leakage": 3986.4587571073075,
+    "total flux": 71357.11472358493
+   },
+   "counters": {
+    "histories": 4000000,
+    "flights": 364618252,
+    "scatters": 240296458,
+    "crossings": 124321794,
+    "balls": 174784,
+    "ball_skipped": 7549,
+    "roulette_killed": 3069273,
+    "lost": 0,
+    "rescued": 0,
+    "mesh_points": 2540634,
+    "backend_calls": 201,
+    "source_redrawn": 0
+   },
+   "timing": {
+    "transport_s": 241.20192469098765,
+    "backend_s": 4.305433413013816
+   },
+   "groups": 1280,
+   "leakage_se_batches": 7.704076986885306e-05,
+   "compile_s": 0.06004995100011001,
+   "backend_s": 4.305433413013816,
+   "balls_per_history": 0.043696,
+   "flights_per_history": 91.154563
+  }
+ ]
+}

@@ -1,0 +1,288 @@
+backend cvae: {"name": "cvae", "family": "cvae", "nfe": 1, "steps": 8000, "steps_done": 8000, "seed": 0}
+backend cvae_seed1: {"name": "cvae_seed1", "family": "cvae", "nfe": 1, "steps": 8000, "steps_done": 8000, "seed": 1}
+backend cfm: {"name": "cfm", "family": "cfm", "nfe": 10, "steps": 8000, "steps_done": 8000, "seed": 0}
+backend oracle: {}
+backend nflow: {"name": "nflow", "family": "nflow", "nfe": 1, "steps": 8000, "steps_done": 8000, "seed": 0}
+backend table: {}
+
+== sphere: 4,000,000 histories per contender, 100,000 per batch
+  contender                         seconds vs OpenMC        FOM x (leakage)     FOM x (total flux)
+  OpenMC analog                       13.46     1.00x                  1.00x                  1.00x
+  OpenMC implicit                     21.48     0.63x                  1.07x                  2.38x
+  ours, plain MC                      37.93     0.35x                  0.71x                  1.69x
+  ours + exact walk (R* = 2)          20.32     0.66x                  0.69x                201.91x
+  ours + table (R* = 2)               17.74     0.76x                  0.75x                246.86x
+  ours + nflow (R* = 3)               36.92     0.36x                  0.39x                115.40x
+  ours + nflow (R* = 10)              37.11     0.36x                  0.73x                  1.72x
+  ours + cvae (R* = 3)                25.63     0.53x                  0.51x                171.71x
+  ours + cvae (R* = 10)               37.99     0.35x                  0.71x                  1.68x
+  ours + cvae seed 1 (R* = 3)         24.32     0.55x                  0.54x                171.85x
+  ours + cfm (R* = 3)                121.22     0.11x                  0.12x                 35.97x
+  answers (z against OpenMC analog):
+    OpenMC analog                    leakage 0.031551 +- 8.6e-05 (z +0.0); total flux 9.68114 +- 0.0045 (z +0.0)
+    OpenMC implicit                  leakage 0.0316925 +- 6.6e-05 (z +1.3); total flux 9.68185 +- 0.0023 (z +0.1)
+    ours, plain MC                   leakage 0.0317405 +- 6.1e-05 (z +1.8); total flux 9.68098 +- 0.0021 (z -0.0)
+    ours + exact walk (R* = 2)       leakage 0.0316624 +- 8.4e-05 (z +0.9); total flux 9.68256 +- 0.00026 (z +0.3)
+    ours + table (R* = 2)            leakage 0.031679 +- 8.7e-05 (z +1.0); total flux 9.68376 +- 0.00025 (z +0.6)
+    ours + nflow (R* = 3)            leakage 0.0317759 +- 8.3e-05 (z +1.9); total flux 9.683 +- 0.00025 (z +0.4)
+    ours + nflow (R* = 10)           leakage 0.0317405 +- 6.1e-05 (z +1.8); total flux 9.68098 +- 0.0021 (z -0.0)
+    ours + cvae (R* = 3)             leakage 0.0316436 +- 8.7e-05 (z +0.8); total flux 9.6837 +- 0.00025 (z +0.6)
+    ours + cvae (R* = 10)            leakage 0.0317405 +- 6.1e-05 (z +1.8); total flux 9.68098 +- 0.0021 (z -0.0)
+    ours + cvae seed 1 (R* = 3)      leakage 0.0317068 +- 8.7e-05 (z +1.3); total flux 9.68313 +- 0.00026 (z +0.4)
+    ours + cfm (R* = 3)              leakage 0.0314212 +- 8.3e-05 (z -1.1); total flux 9.68645 +- 0.00025 (z +1.2)
+  ours: flights / balls per history, backend seconds: plain MC 18.6 / 0.00, 0.00 s; exact walk (R* = 2) 0.0 / 1.00, 2.08 s; table (R* = 2) 0.0 / 1.00, 0.07 s; nflow (R* = 3) 0.0 / 1.00, 18.86 s; nflow (R* = 10) 18.6 / 0.00, 0.00 s; cvae (R* = 3) 0.0 / 1.00, 7.35 s; cvae (R* = 10) 18.6 / 0.00, 0.00 s; cvae seed 1 (R* = 3) 0.0 / 1.00, 6.64 s; cfm (R* = 3) 0.0 / 1.00, 103.14 s
+  error bars: ours from 1,280 chunk groups, OpenMC's from 1,000 batches
+  one-off costs: OpenMC start-up 0.1 s, our compile 0.3 s
+
+== slab: 4,000,000 histories per contender, 100,000 per batch
+/opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=12.
+  warn(msg, IDWarning)
+/opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=20.
+  warn(msg, IDWarning)
+  contender                         seconds vs OpenMC        FOM x (leakage)     FOM x (total flux)
+  OpenMC analog                       15.39     1.00x                  1.00x                  1.00x
+  OpenMC implicit                     22.25     0.69x                  1.24x                  1.07x
+  ours, plain MC                      41.73     0.37x                  0.62x                  0.58x
+  ours + exact walk (R* = 2)          53.05     0.29x                  0.51x                  0.48x
+  ours + table (R* = 2)               52.76     0.29x                  0.49x                  0.47x
+  ours + nflow (R* = 3)               47.71     0.32x                  0.54x                  0.51x
+  ours + nflow (R* = 10)              47.28     0.33x                  0.55x                  0.51x
+  ours + cvae (R* = 3)                47.13     0.33x                  0.55x                  0.52x
+  ours + cvae (R* = 10)               46.62     0.33x                  0.55x                  0.52x
+  ours + cvae seed 1 (R* = 3)         47.01     0.33x                  0.55x                  0.52x
+  ours + cfm (R* = 3)                 47.10     0.33x                  0.55x                  0.52x
+  answers (z against OpenMC analog):
+    OpenMC analog                    leakage 0.860334 +- 0.00017 (z +0.0); total flux 27.8702 +- 0.035 (z +0.0)
+    OpenMC implicit                  leakage 0.860483 +- 0.00013 (z +0.7); total flux 27.9036 +- 0.028 (z +0.7)
+    ours, plain MC                   leakage 0.860103 +- 0.00013 (z -1.1); total flux 27.98 +- 0.028 (z +2.4)
+    ours + exact walk (R* = 2)       leakage 0.860125 +- 0.00013 (z -1.0); total flux 27.9856 +- 0.027 (z +2.6)
+    ours + table (R* = 2)            leakage 0.860096 +- 0.00013 (z -1.1); total flux 27.9647 +- 0.028 (z +2.1)
+    ours + nflow (R* = 3)            leakage 0.860103 +- 0.00013 (z -1.1); total flux 27.98 +- 0.028 (z +2.4)
+    ours + nflow (R* = 10)           leakage 0.860103 +- 0.00013 (z -1.1); total flux 27.98 +- 0.028 (z +2.4)
+    ours + cvae (R* = 3)             leakage 0.860103 +- 0.00013 (z -1.1); total flux 27.98 +- 0.028 (z +2.4)
+    ours + cvae (R* = 10)            leakage 0.860103 +- 0.00013 (z -1.1); total flux 27.98 +- 0.028 (z +2.4)
+    ours + cvae seed 1 (R* = 3)      leakage 0.860103 +- 0.00013 (z -1.1); total flux 27.98 +- 0.028 (z +2.4)
+    ours + cfm (R* = 3)              leakage 0.860103 +- 0.00013 (z -1.1); total flux 27.98 +- 0.028 (z +2.4)
+  ours: flights / balls per history, backend seconds: plain MC 22.8 / 0.00, 0.00 s; exact walk (R* = 2) 17.3 / 1.14, 0.87 s; table (R* = 2) 17.3 / 1.14, 0.58 s; nflow (R* = 3) 22.8 / 0.00, 0.00 s; nflow (R* = 10) 22.8 / 0.00, 0.00 s; cvae (R* = 3) 22.8 / 0.00, 0.00 s; cvae (R* = 10) 22.8 / 0.00, 0.00 s; cvae seed 1 (R* = 3) 22.8 / 0.00, 0.00 s; cfm (R* = 3) 22.8 / 0.00, 0.00 s
+  error bars: ours from 1,280 chunk groups, OpenMC's from 1,000 batches
+  one-off costs: OpenMC start-up 0.1 s, our compile 0.0 s
+
+== curved: 4,000,000 histories per contender, 100,000 per batch
+/opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=36.
+  warn(msg, IDWarning)
+/opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=42.
+  warn(msg, IDWarning)
+  contender                         seconds vs OpenMC        FOM x (leakage)     FOM x (total flux)
+  OpenMC analog                       60.18     1.00x                  1.00x                  1.00x
+  OpenMC implicit                     88.95     0.68x                  2.14x                  1.81x
+  ours, plain MC                     202.04     0.30x                  0.99x                  0.76x
+  ours + exact walk (R* = 2)         167.65     0.36x                  1.34x                  1.04x
+  ours + table (R* = 2)              167.16     0.36x                  1.25x                  0.94x
+  ours + nflow (R* = 3)              216.67     0.28x                  1.00x                  0.75x
+  ours + nflow (R* = 10)             206.43     0.29x                  0.97x                  0.75x
+  ours + cvae (R* = 3)               192.25     0.31x                  1.04x                  0.84x
+  ours + cvae (R* = 10)              208.63     0.29x                  0.96x                  0.74x
+  ours + cvae seed 1 (R* = 3)        191.82     0.31x                  1.09x                  0.84x
+  ours + cfm (R* = 3)                362.99     0.17x                  0.53x                  0.45x
+  answers (z against OpenMC analog):
+    OpenMC analog                    leakage 0.580752 +- 0.00025 (z +0.0); total flux 104.477 +- 0.043 (z +0.0)
+    OpenMC implicit                  leakage 0.580644 +- 0.00014 (z -0.4); total flux 104.448 +- 0.026 (z -0.6)
+    ours, plain MC                   leakage 0.580651 +- 0.00014 (z -0.4); total flux 104.488 +- 0.027 (z +0.2)
+    ours + exact walk (R* = 2)       leakage 0.580805 +- 0.00013 (z +0.2); total flux 104.428 +- 0.025 (z -1.0)
+    ours + table (R* = 2)            leakage 0.580329 +- 0.00013 (z -1.5); total flux 104.53 +- 0.026 (z +1.1)
+    ours + nflow (R* = 3)            leakage 0.580846 +- 0.00013 (z +0.3); total flux 104.423 +- 0.026 (z -1.1)
+    ours + nflow (R* = 10)           leakage 0.580651 +- 0.00014 (z -0.4); total flux 104.488 +- 0.027 (z +0.2)
+    ours + cvae (R* = 3)             leakage 0.580739 +- 0.00014 (z -0.0); total flux 104.472 +- 0.026 (z -0.1)
+    ours + cvae (R* = 10)            leakage 0.580651 +- 0.00014 (z -0.4); total flux 104.488 +- 0.027 (z +0.2)
+    ours + cvae seed 1 (R* = 3)      leakage 0.580685 +- 0.00013 (z -0.2); total flux 104.494 +- 0.026 (z +0.4)
+    ours + cfm (R* = 3)              leakage 0.581324 +- 0.00014 (z +2.0); total flux 104.378 +- 0.026 (z -2.0)
+  ours: flights / balls per history, backend seconds: plain MC 60.9 / 0.00, 0.00 s; exact walk (R* = 2) 31.6 / 3.92, 2.09 s; table (R* = 2) 31.6 / 3.92, 0.80 s; nflow (R* = 3) 40.0 / 2.16, 34.82 s; nflow (R* = 10) 60.9 / 0.00, 0.00 s; cvae (R* = 3) 40.0 / 2.16, 13.19 s; cvae (R* = 10) 60.9 / 0.00, 0.00 s; cvae seed 1 (R* = 3) 40.0 / 2.16, 13.30 s; cfm (R* = 3) 40.0 / 2.16, 182.53 s
+  error bars: ours from 1,280 chunk groups, OpenMC's from 1,000 batches
+  one-off costs: OpenMC start-up 0.1 s, our compile 0.1 s
+
+== nested: 4,000,000 histories per contender, 100,000 per batch
+/opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=52.
+  warn(msg, IDWarning)
+/opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=62.
+  warn(msg, IDWarning)
+  contender                         seconds vs OpenMC        FOM x (leakage)     FOM x (total flux)
+  OpenMC analog                       37.95     1.00x                  1.00x                  1.00x
+  OpenMC implicit                     53.81     0.71x                  0.91x                  0.99x
+  ours, plain MC                     107.78     0.35x                  0.64x                  0.68x
+  ours + exact walk (R* = 2)         117.56     0.32x                  0.59x                  0.60x
+  ours + table (R* = 2)              116.71     0.33x                  0.58x                  0.62x
+  ours + nflow (R* = 3)              116.79     0.32x                  0.59x                  0.62x
+  ours + nflow (R* = 10)             116.48     0.33x                  0.59x                  0.62x
+  ours + cvae (R* = 3)               118.73     0.32x                  0.58x                  0.61x
+  ours + cvae (R* = 10)              121.38     0.31x                  0.57x                  0.60x
+  ours + cvae seed 1 (R* = 3)        117.15     0.32x                  0.59x                  0.62x
+  ours + cfm (R* = 3)                118.30     0.32x                  0.58x                  0.61x
+  answers (z against OpenMC analog):
+    OpenMC analog                    leakage 0.203654 +- 0.00019 (z +0.0); total flux 17.4587 +- 0.013 (z +0.0)
+    OpenMC implicit                  leakage 0.203561 +- 0.00017 (z -0.4); total flux 17.4758 +- 0.011 (z +1.0)
+    ours, plain MC                   leakage 0.20333 +- 0.00014 (z -1.3); total flux 17.4389 +- 0.0096 (z -1.2)
+    ours + exact walk (R* = 2)       leakage 0.203332 +- 0.00014 (z -1.3); total flux 17.4437 +- 0.0098 (z -0.9)
+    ours + table (R* = 2)            leakage 0.203332 +- 0.00014 (z -1.3); total flux 17.4475 +- 0.0097 (z -0.7)
+    ours + nflow (R* = 3)            leakage 0.203305 +- 0.00014 (z -1.4); total flux 17.4384 +- 0.0096 (z -1.2)
+    ours + nflow (R* = 10)           leakage 0.20333 +- 0.00014 (z -1.3); total flux 17.4389 +- 0.0096 (z -1.2)
+    ours + cvae (R* = 3)             leakage 0.203313 +- 0.00014 (z -1.4); total flux 17.4389 +- 0.0096 (z -1.2)
+    ours + cvae (R* = 10)            leakage 0.20333 +- 0.00014 (z -1.3); total flux 17.4389 +- 0.0096 (z -1.2)
+    ours + cvae seed 1 (R* = 3)      leakage 0.203316 +- 0.00014 (z -1.4); total flux 17.4383 +- 0.0096 (z -1.2)
+    ours + cfm (R* = 3)              leakage 0.20331 +- 0.00014 (z -1.4); total flux 17.4389 +- 0.0096 (z -1.2)
+  ours: flights / balls per history, backend seconds: plain MC 46.1 / 0.00, 0.00 s; exact walk (R* = 2) 44.8 / 0.27, 0.22 s; table (R* = 2) 44.8 / 0.27, 0.14 s; nflow (R* = 3) 46.1 / 0.00, 0.39 s; nflow (R* = 10) 46.1 / 0.00, 0.00 s; cvae (R* = 3) 46.1 / 0.00, 0.15 s; cvae (R* = 10) 46.1 / 0.00, 0.00 s; cvae seed 1 (R* = 3) 46.1 / 0.00, 0.14 s; cfm (R* = 3) 46.1 / 0.00, 1.05 s
+  error bars: ours from 1,280 chunk groups, OpenMC's from 1,000 batches
+  one-off costs: OpenMC start-up 0.1 s, our compile 0.0 s
+
+== lattice3d: 4,000,000 histories per contender, 100,000 per batch
+  contender                         seconds vs OpenMC        FOM x (leakage)     FOM x (total flux)
+  OpenMC analog                        7.75     1.00x                  1.00x                  1.00x
+  OpenMC implicit                      6.87     1.13x                  1.15x                  1.09x
+  ours, plain MC                      20.08     0.39x                  0.40x                  0.46x
+  ours + exact walk (R* = 2)          20.77     0.37x                  0.39x                  0.44x
+  ours + table (R* = 2)               20.52     0.38x                  0.39x                  0.45x
+  ours + nflow (R* = 3)               20.50     0.38x                  0.39x                  0.45x
+  ours + nflow (R* = 10)              20.39     0.38x                  0.40x                  0.45x
+  ours + cvae (R* = 3)                20.58     0.38x                  0.39x                  0.45x
+  ours + cvae (R* = 10)               20.59     0.38x                  0.39x                  0.45x
+  ours + cvae seed 1 (R* = 3)         20.09     0.39x                  0.40x                  0.46x
+  ours + cfm (R* = 3)                 20.48     0.38x                  0.39x                  0.45x
+  answers (z against OpenMC analog):
+    OpenMC analog                    leakage 0.0335113 +- 8.9e-05 (z +0.0); total flux 2.68051 +- 0.0011 (z +0.0)
+    OpenMC implicit                  leakage 0.0334062 +- 8.8e-05 (z -0.8); total flux 2.68032 +- 0.0011 (z -0.1)
+    ours, plain MC                   leakage 0.0334448 +- 8.7e-05 (z -0.5); total flux 2.68131 +- 0.00098 (z +0.6)
+    ours + exact walk (R* = 2)       leakage 0.0334448 +- 8.7e-05 (z -0.5); total flux 2.68131 +- 0.00098 (z +0.6)
+    ours + table (R* = 2)            leakage 0.0334448 +- 8.7e-05 (z -0.5); total flux 2.68131 +- 0.00098 (z +0.6)
+    ours + nflow (R* = 3)            leakage 0.0334448 +- 8.7e-05 (z -0.5); total flux 2.68131 +- 0.00098 (z +0.6)
+    ours + nflow (R* = 10)           leakage 0.0334448 +- 8.7e-05 (z -0.5); total flux 2.68131 +- 0.00098 (z +0.6)
+    ours + cvae (R* = 3)             leakage 0.0334448 +- 8.7e-05 (z -0.5); total flux 2.68131 +- 0.00098 (z +0.6)
+    ours + cvae (R* = 10)            leakage 0.0334448 +- 8.7e-05 (z -0.5); total flux 2.68131 +- 0.00098 (z +0.6)
+    ours + cvae seed 1 (R* = 3)      leakage 0.0334448 +- 8.7e-05 (z -0.5); total flux 2.68131 +- 0.00098 (z +0.6)
+    ours + cfm (R* = 3)              leakage 0.0334448 +- 8.7e-05 (z -0.5); total flux 2.68131 +- 0.00098 (z +0.6)
+  ours: flights / balls per history, backend seconds: plain MC 8.2 / 0.00, 0.00 s; exact walk (R* = 2) 8.2 / 0.00, 0.00 s; table (R* = 2) 8.2 / 0.00, 0.00 s; nflow (R* = 3) 8.2 / 0.00, 0.00 s; nflow (R* = 10) 8.2 / 0.00, 0.00 s; cvae (R* = 3) 8.2 / 0.00, 0.00 s; cvae (R* = 10) 8.2 / 0.00, 0.00 s; cvae seed 1 (R* = 3) 8.2 / 0.00, 0.00 s; cfm (R* = 3) 8.2 / 0.00, 0.00 s
+  error bars: ours from 1,280 chunk groups, OpenMC's from 1,000 batches
+  one-off costs: OpenMC start-up 0.0 s, our compile 0.0 s
+
+== cask: 4,000,000 histories per contender, 100,000 per batch
+  contender                         seconds vs OpenMC        FOM x (leakage)     FOM x (total flux)  FOM x (detector flux)
+  OpenMC analog                       31.19     1.00x                  1.00x                  1.00x                  1.00x
+  OpenMC implicit                     50.95     0.61x                  1.04x                  1.77x                  1.29x
+  ours, plain MC                      65.29     0.48x                  0.80x                  1.46x                  1.00x
+  ours + exact walk (R* = 2)          52.87     0.59x                  1.01x                  2.03x                  1.22x
+  ours + table (R* = 2)               51.99     0.60x                  1.00x                  1.96x                  1.24x
+  ours + nflow (R* = 3)               82.62     0.38x                  0.64x                  1.36x                  0.74x
+  ours + nflow (R* = 10)              64.55     0.48x                  0.80x                  1.54x                  1.02x
+  ours + cvae (R* = 3)                64.54     0.48x                  0.81x                  1.72x                  0.92x
+  ours + cvae (R* = 10)               63.89     0.49x                  0.82x                  1.55x                  1.02x
+  ours + cvae seed 1 (R* = 3)         63.79     0.49x                  0.85x                  1.66x                  1.05x
+  ours + cfm (R* = 3)                210.38     0.15x                  0.26x                  0.51x                  0.32x
+  answers (z against OpenMC analog):
+    OpenMC analog                    leakage 0.00238175 +- 2.4e-05 (z +0.0); total flux 34.7478 +- 0.022 (z +0.0); detector flux 0.00050824 +- 5.3e-05 (z +0.0)
+    OpenMC implicit                  leakage 0.00237001 +- 1.8e-05 (z -0.4); total flux 34.7358 +- 0.013 (z -0.5); detector flux 0.000592517 +- 4.3e-05 (z +1.2)
+    ours, plain MC                   leakage 0.00234306 +- 1.8e-05 (z -1.3); total flux 34.7021 +- 0.013 (z -1.8); detector flux 0.000534019 +- 3.9e-05 (z +0.4)
+    ours + exact walk (R* = 2)       leakage 0.00238089 +- 1.8e-05 (z -0.0); total flux 34.7157 +- 0.012 (z -1.3); detector flux 0.000596238 +- 4.3e-05 (z +1.3)
+    ours + table (R* = 2)            leakage 0.00237567 +- 1.8e-05 (z -0.2); total flux 34.7276 +- 0.012 (z -0.8); detector flux 0.000606596 +- 4.4e-05 (z +1.4)
+    ours + nflow (R* = 3)            leakage 0.00239257 +- 1.8e-05 (z +0.4); total flux 34.7083 +- 0.012 (z -1.6); detector flux 0.000492645 +- 3.7e-05 (z -0.2)
+    ours + nflow (R* = 10)           leakage 0.00234008 +- 1.8e-05 (z -1.4); total flux 34.7005 +- 0.012 (z -1.9); detector flux 0.000539992 +- 3.9e-05 (z +0.5)
+    ours + cvae (R* = 3)             leakage 0.00236107 +- 1.8e-05 (z -0.7); total flux 34.7243 +- 0.012 (z -0.9); detector flux 0.000562252 +- 4.3e-05 (z +0.8)
+    ours + cvae (R* = 10)            leakage 0.00233963 +- 1.8e-05 (z -1.4); total flux 34.6967 +- 0.012 (z -2.0); detector flux 0.000538798 +- 3.9e-05 (z +0.5)
+    ours + cvae seed 1 (R* = 3)      leakage 0.00238556 +- 1.8e-05 (z +0.1); total flux 34.7091 +- 0.012 (z -1.5); detector flux 0.00057545 +- 4.1e-05 (z +1.0)
+    ours + cfm (R* = 3)              leakage 0.00238369 +- 1.8e-05 (z +0.1); total flux 34.7087 +- 0.012 (z -1.5); detector flux 0.000622031 +- 4.4e-05 (z +1.6)
+  ours: flights / balls per history, backend seconds: plain MC 40.0 / 0.00, 0.00 s; exact walk (R* = 2) 10.2 / 2.18, 1.99 s; table (R* = 2) 10.2 / 2.18, 0.52 s; nflow (R* = 3) 11.9 / 1.80, 29.26 s; nflow (R* = 10) 35.2 / 0.19, 2.31 s; cvae (R* = 3) 11.9 / 1.80, 11.21 s; cvae (R* = 10) 35.2 / 0.19, 0.96 s; cvae seed 1 (R* = 3) 11.9 / 1.80, 11.24 s; cfm (R* = 3) 11.9 / 1.80, 156.15 s
+  error bars: ours from 1,280 chunk groups, OpenMC's from 1,000 batches
+  one-off costs: OpenMC start-up 0.1 s, our compile 0.0 s
+
+== tilted: 4,000,000 histories per contender, 100,000 per batch
+/opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=112.
+  warn(msg, IDWarning)
+/opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=106.
+  warn(msg, IDWarning)
+/opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=120.
+  warn(msg, IDWarning)
+/opt/mm/root/envs/gmc/lib/python3.12/site-packages/openmc/mixin.py:72: IDWarning: Another Filter instance already exists with id=114.
+  warn(msg, IDWarning)
+  contender                         seconds vs OpenMC        FOM x (leakage)     FOM x (total flux)
+  OpenMC analog                       34.88     1.00x                  1.00x                  1.00x
+  OpenMC implicit                     49.39     0.71x                  1.25x                  1.50x
+  ours, plain MC                      90.76     0.38x                  0.64x                  0.87x
+  ours + exact walk (R* = 2)          85.40     0.41x                  0.69x                  0.89x
+  ours + table (R* = 2)               84.52     0.41x                  0.66x                  0.91x
+  ours + nflow (R* = 3)              108.76     0.32x                  0.55x                  0.76x
+  ours + nflow (R* = 10)              96.42     0.36x                  0.60x                  0.82x
+  ours + cvae (R* = 3)                98.42     0.35x                  0.58x                  0.78x
+  ours + cvae (R* = 10)               96.84     0.36x                  0.60x                  0.81x
+  ours + cvae seed 1 (R* = 3)         98.90     0.35x                  0.61x                  0.82x
+  ours + cfm (R* = 3)                188.17     0.19x                  0.31x                  0.42x
+  answers (z against OpenMC analog):
+    OpenMC analog                    leakage 0.353519 +- 0.00024 (z +0.0); total flux 38.0276 +- 0.02 (z +0.0)
+    OpenMC implicit                  leakage 0.35378 +- 0.00018 (z +0.9); total flux 38.0737 +- 0.014 (z +1.9)
+    ours, plain MC                   leakage 0.35334 +- 0.00019 (z -0.6); total flux 38.0643 +- 0.013 (z +1.5)
+    ours + exact walk (R* = 2)       leakage 0.353316 +- 0.00019 (z -0.7); total flux 38.0941 +- 0.013 (z +2.8)
+    ours + table (R* = 2)            leakage 0.353078 +- 0.00019 (z -1.4); total flux 38.097 +- 0.013 (z +2.9)
+    ours + nflow (R* = 3)            leakage 0.353329 +- 0.00019 (z -0.6); total flux 38.053 +- 0.013 (z +1.1)
+    ours + nflow (R* = 10)           leakage 0.35334 +- 0.00019 (z -0.6); total flux 38.0643 +- 0.013 (z +1.5)
+    ours + cvae (R* = 3)             leakage 0.353285 +- 0.00019 (z -0.8); total flux 38.0345 +- 0.013 (z +0.3)
+    ours + cvae (R* = 10)            leakage 0.35334 +- 0.00019 (z -0.6); total flux 38.0643 +- 0.013 (z +1.5)
+    ours + cvae seed 1 (R* = 3)      leakage 0.353045 +- 0.00019 (z -1.5); total flux 38.0751 +- 0.013 (z +2.0)
+    ours + cfm (R* = 3)              leakage 0.353433 +- 0.00019 (z -0.3); total flux 38.055 +- 0.013 (z +1.2)
+  ours: flights / balls per history, backend seconds: plain MC 49.9 / 0.00, 0.00 s; exact walk (R* = 2) 32.2 / 2.85, 1.36 s; table (R* = 2) 32.2 / 2.85, 0.58 s; nflow (R* = 3) 40.6 / 1.10, 16.79 s; nflow (R* = 10) 49.9 / 0.00, 0.00 s; cvae (R* = 3) 40.6 / 1.10, 6.84 s; cvae (R* = 10) 49.9 / 0.00, 0.00 s; cvae seed 1 (R* = 3) 40.7 / 1.10, 6.90 s; cfm (R* = 3) 40.7 / 1.10, 94.87 s
+  error bars: ours from 1,280 chunk groups, OpenMC's from 1,000 batches
+  one-off costs: OpenMC start-up 0.1 s, our compile 0.0 s
+
+== hexcore: 4,000,000 histories per contender, 100,000 per batch
+  contender                         seconds vs OpenMC        FOM x (leakage)     FOM x (total flux)
+  OpenMC analog                       36.31     1.00x                  1.00x                  1.00x
+  OpenMC implicit                     52.06     0.70x                  1.26x                  1.31x
+  ours, plain MC                      92.25     0.39x                  0.78x                  0.95x
+  ours + exact walk (R* = 2)          96.78     0.38x                  0.69x                  0.91x
+  ours + table (R* = 2)               97.01     0.37x                  0.73x                  0.89x
+  ours + nflow (R* = 3)               95.63     0.38x                  0.76x                  0.91x
+  ours + nflow (R* = 10)              96.02     0.38x                  0.75x                  0.91x
+  ours + cvae (R* = 3)                94.72     0.38x                  0.76x                  0.92x
+  ours + cvae (R* = 10)               94.73     0.38x                  0.76x                  0.92x
+  ours + cvae seed 1 (R* = 3)         94.42     0.38x                  0.77x                  0.92x
+  ours + cfm (R* = 3)                 94.75     0.38x                  0.76x                  0.92x
+  answers (z against OpenMC analog):
+    OpenMC analog                    leakage 0.0796522 +- 0.00013 (z +0.0); total flux 16.3455 +- 0.0099 (z +0.0)
+    OpenMC implicit                  leakage 0.0793633 +- 9.8e-05 (z -1.8); total flux 16.3376 +- 0.0073 (z -0.6)
+    ours, plain MC                   leakage 0.0794746 +- 9.4e-05 (z -1.1); total flux 16.3453 +- 0.0064 (z -0.0)
+    ours + exact walk (R* = 2)       leakage 0.0794199 +- 9.8e-05 (z -1.4); total flux 16.3459 +- 0.0064 (z +0.0)
+    ours + table (R* = 2)            leakage 0.0795361 +- 9.5e-05 (z -0.7); total flux 16.3453 +- 0.0065 (z -0.0)
+    ours + nflow (R* = 3)            leakage 0.0794746 +- 9.4e-05 (z -1.1); total flux 16.3453 +- 0.0064 (z -0.0)
+    ours + nflow (R* = 10)           leakage 0.0794746 +- 9.4e-05 (z -1.1); total flux 16.3453 +- 0.0064 (z -0.0)
+    ours + cvae (R* = 3)             leakage 0.0794746 +- 9.4e-05 (z -1.1); total flux 16.3453 +- 0.0064 (z -0.0)
+    ours + cvae (R* = 10)            leakage 0.0794746 +- 9.4e-05 (z -1.1); total flux 16.3453 +- 0.0064 (z -0.0)
+    ours + cvae seed 1 (R* = 3)      leakage 0.0794746 +- 9.4e-05 (z -1.1); total flux 16.3453 +- 0.0064 (z -0.0)
+    ours + cfm (R* = 3)              leakage 0.0794746 +- 9.4e-05 (z -1.1); total flux 16.3453 +- 0.0064 (z -0.0)
+  ours: flights / balls per history, backend seconds: plain MC 51.3 / 0.00, 0.00 s; exact walk (R* = 2) 49.6 / 0.34, 0.29 s; table (R* = 2) 49.6 / 0.34, 0.20 s; nflow (R* = 3) 51.3 / 0.00, 0.00 s; nflow (R* = 10) 51.3 / 0.00, 0.00 s; cvae (R* = 3) 51.3 / 0.00, 0.00 s; cvae (R* = 10) 51.3 / 0.00, 0.00 s; cvae seed 1 (R* = 3) 51.3 / 0.00, 0.00 s; cfm (R* = 3) 51.3 / 0.00, 0.00 s
+  error bars: ours from 1,280 chunk groups, OpenMC's from 1,000 batches
+  one-off costs: OpenMC start-up 0.1 s, our compile 0.0 s
+
+== sector: 4,000,000 histories per contender, 100,000 per batch
+  contender                         seconds vs OpenMC        FOM x (leakage)     FOM x (total flux)
+  OpenMC analog                       76.37     1.00x                  1.00x                  1.00x
+  OpenMC implicit                    133.13     0.57x                  1.27x                  1.82x
+  ours, plain MC                     218.02     0.35x                  0.84x                  1.24x
+  ours + exact walk (R* = 2)         233.67     0.33x                  0.74x                  1.14x
+  ours + table (R* = 2)              234.05     0.33x                  0.76x                  1.10x
+  ours + nflow (R* = 3)              238.43     0.32x                  0.75x                  1.13x
+  ours + nflow (R* = 10)             242.42     0.32x                  0.76x                  1.12x
+  ours + cvae (R* = 3)               243.27     0.31x                  0.74x                  1.11x
+  ours + cvae (R* = 10)              239.33     0.32x                  0.77x                  1.13x
+  ours + cvae seed 1 (R* = 3)        241.01     0.32x                  0.75x                  1.13x
+  ours + cfm (R* = 3)                244.14     0.31x                  0.73x                  1.10x
+  answers (z against OpenMC analog):
+    OpenMC analog                    leakage 0.107089 +- 0.00016 (z +0.0); total flux 31.1458 +- 0.014 (z +0.0)
+    OpenMC implicit                  leakage 0.107175 +- 0.00011 (z +0.5); total flux 31.1474 +- 0.008 (z +0.1)
+    ours, plain MC                   leakage 0.107225 +- 0.0001 (z +0.7); total flux 31.1638 +- 0.0076 (z +1.1)
+    ours + exact walk (R* = 2)       leakage 0.107263 +- 0.00011 (z +0.9); total flux 31.1555 +- 0.0076 (z +0.6)
+    ours + table (R* = 2)            leakage 0.107239 +- 0.0001 (z +0.8); total flux 31.1594 +- 0.0078 (z +0.8)
+    ours + nflow (R* = 3)            leakage 0.107232 +- 0.0001 (z +0.8); total flux 31.1628 +- 0.0076 (z +1.1)
+    ours + nflow (R* = 10)           leakage 0.107225 +- 0.0001 (z +0.7); total flux 31.1638 +- 0.0076 (z +1.1)
+    ours + cvae (R* = 3)             leakage 0.107246 +- 0.0001 (z +0.8); total flux 31.1605 +- 0.0076 (z +0.9)
+    ours + cvae (R* = 10)            leakage 0.107225 +- 0.0001 (z +0.7); total flux 31.1638 +- 0.0076 (z +1.1)
+    ours + cvae seed 1 (R* = 3)      leakage 0.107254 +- 0.0001 (z +0.9); total flux 31.1617 +- 0.0075 (z +1.0)
+    ours + cfm (R* = 3)              leakage 0.107236 +- 0.0001 (z +0.8); total flux 31.1625 +- 0.0076 (z +1.0)
+  ours: flights / balls per history, backend seconds: plain MC 91.5 / 0.00, 0.00 s; exact walk (R* = 2) 89.4 / 0.43, 0.32 s; table (R* = 2) 89.4 / 0.42, 0.20 s; nflow (R* = 3) 91.2 / 0.04, 1.39 s; nflow (R* = 10) 91.5 / 0.00, 0.00 s; cvae (R* = 3) 91.2 / 0.04, 0.50 s; cvae (R* = 10) 91.5 / 0.00, 0.00 s; cvae seed 1 (R* = 3) 91.2 / 0.04, 0.49 s; cfm (R* = 3) 91.2 / 0.04, 4.17 s
+  error bars: ours from 1,280 chunk groups, OpenMC's from 1,000 batches
+  one-off costs: OpenMC start-up 0.1 s, our compile 0.1 s
+done
