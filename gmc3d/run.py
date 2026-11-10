@@ -23,6 +23,8 @@
                                                    (v2.0): every OpenMC law
                                                    vs OpenMC, exact beam
                                                    displacement, detectors
+    python run.py gate2 cvae_v2                    the acceptance gate for an
+                                                   interface v2 model (v2.1.2)
     python run.py score                            one number out of 10 from
                                                    the latest test, validate,
                                                    robust and detector runs
@@ -80,6 +82,15 @@ def backend(name, device="cpu"):
             table.Table.build().save(TABLE_FILE)
         return table.Table.load(TABLE_FILE)
     family, seed = DEFAULT_MODEL if name == "network" else _family(name)
+    if family is not None and "_v2" in name:
+        # interface v2 (anisotropic balls): the v2 model, with isotropic
+        # balls going to the accepted v1 model (DEFAULT_MODEL)
+        try:
+            return models.load(family, seed, device=device, name=name,
+                               interface=2,
+                               iso=backend("network", device))
+        except (FileNotFoundError, model_store.NotSupported) as e:
+            sys.exit(str(e))
     if family is None:
         sys.exit(f"unknown backend {name!r}: mc, oracle, table, network or "
                  f"a model family ({', '.join(models.names())})")
@@ -92,6 +103,8 @@ def backend(name, device="cpu"):
 def _family(name):
     """'cfm' -> ('cfm', 0); 'cfm_seed1' -> ('cfm', 1); else (None, 0)."""
     base, _, seed = name.partition("_seed")
+    if base.endswith("_v2"):
+        base = base[:-3]
     if base in models.REGISTRY and (not seed or seed.isdigit()):
         return base, int(seed or 0)
     return None, 0
@@ -291,6 +304,14 @@ def cmd_anisocheck(args, log):
     return "anisocheck"
 
 
+def cmd_gate2(args, log):
+    from checks import gate_v2
+    be = backend(args.model)
+    res = gate_v2.run(be, n=args.particles, log=log)
+    gate_v2.save(res, out_dir(args))
+    return f"gate2_{args.model}"
+
+
 def cmd_score(args, log):
     from checks import score
     parts, total = score.score(out_dir(args))
@@ -391,6 +412,10 @@ def main():
     s = sub.add_parser("anisocheck")
     s.add_argument("cases", nargs="*")
     common(s, particles=50_000)
+
+    s = sub.add_parser("gate2")
+    s.add_argument("model", help="a v2 model, e.g. cvae_v2 or nflow_v2_seed1")
+    common(s, particles=100_000)
 
     s = sub.add_parser("score")
     common(s)

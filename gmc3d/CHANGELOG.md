@@ -7,6 +7,29 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v2.1.2 (10 Nov 2026): the acceptance gate for interface v2 models
+
+The 5 Nov protocol gives Innovation the gate, and Development's m2.0
+(cefcd57) has the v2 models training.
+
+- **`checks/gate_v2.py`, `run.py gate2 <family>_v2[_seed<k>]`** (new):
+  - It refuses a manifest that is not interface 2.
+  - For each of the 7 held-out test-problem laws and R = 1, 1.5, 3, 5,
+    10, 20, 29, it compares 100,000 exact walks with 100,000 model draws.
+    For cos_n, mu, phi and s it reports the difference of means (z) and
+    the KS distance. It also reports the weight factor E[exp(-kappa s)]
+    as z, for kappa 0.001, 0.01, 0.1.
+  - It gives the cost per draw against the exact walk.
+  - Provisional rule (Phani decides the final one): every weight |z| <=
+    3.29, every KS <= 0.03, no draw out of range.
+  - Self-test: the exact walk passes as a "model" (0 of 343 checks
+    fail, `runs/2026-11-10/gate-v2/selftest.log`). A model that ignores
+    the law fails (`tests/test_gate_v2.py`).
+  - The exact walk costs 1.31 us per draw on average over these radii,
+    which is the bar for a model's speed.
+- **`run.py`**: a backend named `<family>_v2[_seed<k>]` loads the v2 model,
+  with isotropic balls going to the accepted v1 model (`network`).
+
 ## v2.1.1 (10 Nov 2026): interface v2, the anisotropic ball model spec
 
 Agreed with Development on 10 Nov (Phani: "discuss with development for
