@@ -862,6 +862,15 @@ NO_BALL_TRACK = {X_POLAR, X_AZI, X_SPH, X_MU, X_COLL}
 NO_BALL_ANY = {X_MU, X_COLL}
 
 
+def needs_ball_points(tl):
+    """Does this ext tally score a ball at points of its walk (a track
+    tally with a position or time filter; build()'s t_ball_pts)?"""
+    if tl.surface_type:
+        return False
+    kinds = {EXT_KINDS[f.kind] for f in tl.filters}
+    return X_MESHSURF not in kinds and bool(kinds & _POINT_KINDS)
+
+
 def no_balls(ext_tallies):
     """True if some ext tally cannot be scored with ball steps (see the
     docstring: filters on the walk's directions or collision count)."""

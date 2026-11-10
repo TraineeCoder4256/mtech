@@ -6,7 +6,11 @@ one), tallies.py (scoring), rng.py (random numbers), and a ball backend
 from ball/ (the exact walk, the lookup table or a trained network).
 
 One energy, fixed source (SRS Stage 1); isotropic or anisotropic scattering
-(v2.0: anisotropic materials are tracked flight by flight, no balls).
+(v2.0).  v2.1: a ball in an anisotropic material starts along the
+direction just sampled (u0), and a backend that walks such balls (the
+exact walk, ball/walk.py walk_aniso) returns where on the sphere the walk
+left relative to u0 (cos_n), its exit cosine mu and azimuth phi, and s;
+see _aniso_balls for when they are used.
 
 THE PHYSICS, as in gmc2d's mc.py.  A particle flies a distance drawn from
 the SCATTERING cross section, -ln(xi)/sigma_s.  Absorption never kills it;
@@ -98,6 +102,7 @@ from . import surfaces as S
 from . import tallies as T
 from ball import profile as ball_profile
 from ball.profile import draw_r
+from ball import walk as ball_walk
 
 DEAD, MOVING, WAITING, READY = 0, 1, 2, 3
 TINY = 1.0e-8            # cm: how far past a surface a crossing is pushed
@@ -122,6 +127,8 @@ Particles = namedtuple("Particles", [
                                       # relative to it)
     "path",                           # (n, MAX_LEVELS): a waiting
                                       # particle's cell at every level
+    "cos_n", "phi",                   # an anisotropic ball's exit point
+                                      # and azimuth (ball/walk.py, v2.1)
 ])
 
 Physics = namedtuple("Physics", [
@@ -136,6 +143,8 @@ Physics = namedtuple("Physics", [
                                       # ball/profile.py's table
     "ang",                            # scattering laws, one row per
                                       # material (scattering.py, v2.0)
+    "aniso_balls",                    # balls in anisotropic materials
+                                      # too (v2.1; the backend walks them)
 ])
 
 # point detectors (detectors.py), passed as their own argument like
@@ -346,8 +355,15 @@ def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
         s_cm = P.s[i] * d / P.ball_R[i]          # mfp -> cm
         flux = T._decayed(wgt, sa, 0.0, s_cm)
         path = P.path[i]
+        aniso = ph.ang[mat, 0] != SC.ISO
         T.score_ball(row, L, cell, path, mat, sa, ss, flux, scr)
-        if ph.mesh_profile:
+        if aniso:
+            # one voxel holds the whole ball (the gate capped it); no
+            # detectors and no point-needing ext tallies (run() checked)
+            if L.has_mesh:
+                T.score_ball_mesh(row, L, X, cell, path, mat, sa, ss, flux,
+                                  x, y, z, scr)
+        elif ph.mesh_profile:
             # K points of the walk share the flux (tallies.py, profile.py)
             k_pts = min(ph.k_max, max(1, int(np.ceil(
                 2.0 * (d / ph.mesh_h) ** 2))))
@@ -363,7 +379,7 @@ def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
         elif L.has_mesh:
             T.score_ball_mesh(row, L, X, cell, path, mat, sa, ss, flux,
                               x, y, z, scr)
-        if D.on:
+        if D.on and not aniso:
             # the ball's unseen scatters (detectors.py): sigma_s x its
             # flux at D.k profile points of the walk, plus the scatters a
             # walk conditioned on scattering has beyond that, carried by
@@ -391,10 +407,26 @@ def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
             XS.time[i] += s_cm * ivm
             XS.prev_mat[i] = -1
         wgt *= np.exp(-sa * s_cm)
-        nx, ny, nz = rng.isotropic(P.seed, i)    # exit point
-        x, y, z = x + d * nx, y + d * ny, z + d * nz
-        u, v, w = rotate(nx, ny, nz, P.mu[i],
-                         2.0 * np.pi * rng.rand(P.seed, i))
+        if aniso:
+            # exit point at cosine cos_n to the first direction u0, and
+            # the exit direction at (mu, +-phi) in walk.exit_frame's frame
+            u0, v0, w0 = u, v, w
+            nx, ny, nz = rotate(u0, v0, w0, P.cos_n[i],
+                                2.0 * np.pi * rng.rand(P.seed, i))
+            e10, e11, e12, e20, e21, e22 = ball_walk.exit_frame(
+                nx, ny, nz, u0, v0, w0)
+            ph_ = P.phi[i] if rng.rand(P.seed, i) < 0.5 else -P.phi[i]
+            a = np.sqrt(max(0.0, 1.0 - P.mu[i] * P.mu[i]))
+            cp, sp = np.cos(ph_), np.sin(ph_)
+            u = P.mu[i] * nx + a * (cp * e10 + sp * e20)
+            v = P.mu[i] * ny + a * (cp * e11 + sp * e21)
+            w = P.mu[i] * nz + a * (cp * e12 + sp * e22)
+            x, y, z = x + d * nx, y + d * ny, z + d * nz
+        else:
+            nx, ny, nz = rng.isotropic(P.seed, i)    # exit point
+            x, y, z = x + d * nx, y + d * ny, z + d * nz
+            u, v, w = rotate(nx, ny, nz, P.mu[i],
+                             2.0 * np.pi * rng.rand(P.seed, i))
         fresh = False
         cnt[C_BALL] += 1
         if wgt < ph.w_cut * P.w0[i]:
@@ -491,10 +523,15 @@ def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
         d_sc = -np.log(1.0 - rng.rand(P.seed, i)) / ss if ss > 0.0 else INF
 
         # ---- a ball step, if one fits and the particle would scatter in it
-        # (isotropic materials only: the walk inside a ball assumes it)
-        if want_near and ss > 0.0 and ph.ang[mat, 0] == SC.ISO:
+        # (in an anisotropic material only when the backend walks such
+        # balls and no tally needs a point inside one, v2.1: run())
+        if want_near and ss > 0.0 and (ph.aniso_balls or
+                                       ph.ang[mat, 0] == SC.ISO):
             room = near - GUARD
-            if ph.mesh_cap:
+            if ph.mesh_cap or (ph.aniso_balls and L.has_mesh and
+                               ph.ang[mat, 0] != SC.ISO):
+                # an anisotropic ball's flux is not spread by the radial
+                # profile (ball/profile.py is isotropic): one voxel only
                 room = min(room, T.mesh_room(L, X, x, y, z) - GUARD)
             elif L.has_meshsurf:      # a ball must not cross a mesh face
                 room = min(room,
@@ -516,6 +553,7 @@ def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
                         if pth[lv] < 0:
                             break
                     P.ball_R[i], P.ball_d[i] = R, room
+                    P.u[i], P.v[i], P.w[i] = u, v, w     # anisotropic: u0
                     P.status[i] = WAITING
                     return
                 cnt[C_SKIP] += 1          # flies straight out: no ball
@@ -783,13 +821,14 @@ def _advance(g, ph, L, X, D, P, acc, cnt, nchunk, E, XS):
 # ------------------------------------------------------------- the driver
 def physics(problem, backend=None, r_star=3.0, r_max=None,
             mesh_rule="profile", w_cut=0.25, w_surv=1.0, k_max=None,
-            need_profile=False):
+            need_profile=False, aniso_balls=False):
     """The Physics and tally Layout a run uses (also used by
     checks/loop_breakdown.py, which times run() phase by phase).
     Returns (ph, L, r_max actually used, X): X is the tallies.MeshExtra,
     passed to the kernels as its own argument (Numba's parallel loop
     cannot take it inside Physics).  need_profile loads ball/profile.py's
-    table even with no mesh (point detectors use it)."""
+    table even with no mesh (point detectors use it).  aniso_balls: balls
+    in anisotropic materials too (run() decides, see there)."""
     if mesh_rule not in ("profile", "cap"):
         raise ValueError("mesh_rule must be 'profile' or 'cap'")
     k_max = K_MAX if k_max is None else k_max
@@ -823,7 +862,8 @@ def physics(problem, backend=None, r_star=3.0, r_max=None,
                  float(w_cut), float(w_surv), backend is not None,
                  float(r_star), float(r_max or INF), mesh_rule == "cap",
                  use_profile, mesh_h, int(k_max), *tab,
-                 m.ang if m.ang is not None else np.zeros((1, SC.HEAD)))
+                 m.ang if m.ang is not None else np.zeros((1, SC.HEAD)),
+                 bool(aniso_balls))
     return ph, L, r_max, X
 
 
@@ -856,13 +896,31 @@ def _triggers_met(problem, accum):
     return True
 
 
+def _aniso_balls(problem, backend, dets, ext_t):
+    """Balls in anisotropic materials too (v2.1)?  Only if some material
+    is anisotropic, the backend walks such balls (the exact walk does;
+    trained models wait for interface v2), and no tally needs a point
+    inside a ball: point detectors and ext tallies scored at profile
+    points use ball/profile.py's radial table, which holds for an
+    isotropic walk only.  Mesh tallies are fine: an anisotropic ball is
+    then held inside one voxel (_track)."""
+    laws = getattr(problem.mats, "laws", None) or []
+    if backend is None or not getattr(backend, "aniso", False) or \
+            not any(k != SC.ISO for k, _ in laws):
+        return False
+    if dets:
+        return False
+    return not any(getattr(tl, "ext", False) and EX.needs_ball_points(tl)
+                   for tl in ext_t)
+
+
 def _particles(n):
     f = lambda: np.zeros(n)
     return Particles(f(), f(), f(), f(), f(), f(), f(),
                      np.zeros(n, np.uint64), np.zeros(n, np.int64),
                      np.zeros(n, np.bool_), np.zeros(n, np.int64),
                      np.zeros(n, np.int64), f(), f(), f(), f(), f(),
-                     np.full((n, G.MAX_LEVELS), -1, np.int64))
+                     np.full((n, G.MAX_LEVELS), -1, np.int64), f(), f())
 
 
 def run(problem, particles=100_000, batches=20, seed=1, backend=None,
@@ -889,9 +947,11 @@ def run(problem, particles=100_000, batches=20, seed=1, backend=None,
     ext_t = [tl for tl in problem.tallies if getattr(tl, "ext", False)]
     if ext_t and EX.no_balls(ext_t):
         backend = None          # plain Monte Carlo (openmc_import warned)
+    aniso_balls = _aniso_balls(problem, backend, dets, ext_t)
     ph, L, r_max, X = physics(problem, backend, r_star, r_max, mesh_rule,
                               w_cut, w_surv, k_max,
-                              need_profile=bool(dets) or bool(ext_t))
+                              need_profile=bool(dets) or bool(ext_t),
+                              aniso_balls=aniso_balls)
     m = problem.mats
     if ext_t:
         info = problem.ext_info
@@ -959,8 +1019,18 @@ def run(problem, particles=100_000, batches=20, seed=1, backend=None,
             idx = np.flatnonzero(P.status == WAITING)
             if idx.size == 0:
                 break
-            mu, s_mfp = backend.sample(P.ball_R[idx], P.seed, idx)
-            P.mu[idx], P.s[idx] = mu, s_mfp
+            if aniso_balls:
+                an = ph.ang[P.mat[idx], 0] != SC.ISO
+                ia, idx = idx[an], idx[~an]
+                if ia.size:
+                    cn, mu, phi, s_mfp = backend.sample_aniso(
+                        P.ball_R[ia], P.mat[ia], ph.ang, P.seed, ia)
+                    P.cos_n[ia], P.mu[ia], P.phi[ia], P.s[ia] = \
+                        cn, mu, phi, s_mfp
+                    P.status[ia] = READY
+            if idx.size:
+                mu, s_mfp = backend.sample(P.ball_R[idx], P.seed, idx)
+                P.mu[idx], P.s[idx] = mu, s_mfp
             P.status[idx] = READY
             calls += 1
             t0 = time.perf_counter()

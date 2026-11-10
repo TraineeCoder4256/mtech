@@ -41,7 +41,8 @@ def _law_text(law):
             SC.HIST: f"histogram, {v[0].size} bins",
             SC.LEG: f"Legendre P{v[0].size - 1} by rejection"}[kind]
     return (f"anisotropic ({name}, mean cosine "
-            f"{SC.mean_cosine(kind, v):+.4f}; balls off in it)")
+            f"{SC.mean_cosine(kind, v):+.4f}; balls only with the exact "
+            f"walk, v2.1)")
 
 
 def load_model(spec):

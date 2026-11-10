@@ -25,6 +25,7 @@ class Oracle:
     name = "oracle"
     r_min = 0.0
     r_max = np.inf
+    aniso = True        # walks anisotropic balls too (v2.1, sample_aniso)
 
     def __init__(self):
         self.walks = 0
@@ -36,6 +37,10 @@ class Oracle:
         """(mu, s) for each R, drawn from the waiting particles' streams."""
         R = np.ascontiguousarray(R)
         mu, s, k = walk.walk_many(R, seeds, idx)
+        self._count(R, k)
+        return mu, s
+
+    def _count(self, R, k):
         self.walks += R.size
         self.scatters += int(k.sum())
         b = np.clip(np.searchsorted(HIST_EDGES, R, side="right") - 1, 0,
@@ -44,4 +49,11 @@ class Oracle:
         self.hist_scatters += np.bincount(b, weights=k,
                                           minlength=self.hist_balls.size
                                           ).astype(np.int64)
-        return mu, s
+
+    def sample_aniso(self, R, mats, ang, seeds, idx):
+        """(cos_n, mu, phi, s) for each R in material mats (walk.py)."""
+        R = np.ascontiguousarray(R)
+        cn, mu, phi, s, k = walk.walk_many_aniso(
+            R, np.ascontiguousarray(mats, np.int64), ang, seeds, idx)
+        self._count(R, k)
+        return cn, mu, phi, s

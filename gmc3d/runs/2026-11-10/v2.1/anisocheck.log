@@ -1,0 +1,53 @@
+== displacement along a beam in an infinite medium (exact)
+  displacement iso       PASS  mu_bar +0.0000: E[x] 0.9111 +- 0.0040 cm, exact 0.9091 (z +0.51), leakage 0.0e+00
+  displacement p1        PASS  mu_bar +0.3000: E[x] 1.2471 +- 0.0051 cm, exact 1.2500 (z -0.56), leakage 0.0e+00
+  displacement p3        PASS  mu_bar +0.6003: E[x] 2.0070 +- 0.0062 cm, exact 2.0010 (z +0.97), leakage 0.0e+00
+  displacement clipped   PASS  mu_bar +0.4480: E[x] 1.5335 +- 0.0055 cm, exact 1.5336 (z -0.02), leakage 0.0e+00
+  displacement backward  PASS  mu_bar -0.3000: E[x] 0.7137 +- 0.0038 cm, exact 0.7143 (z -0.15), leakage 0.0e+00
+  displacement hist      PASS  mu_bar +0.5024: E[x] 1.6652 +- 0.0056 cm, exact 1.6732 (z -1.43), leakage 0.0e+00
+  displacement tab       PASS  mu_bar +0.3750: E[x] 1.3752 +- 0.0052 cm, exact 1.3793 (z -0.79), leakage 0.0e+00
+
+== problems with anisotropic laws, vs OpenMC
+  sphere_p3              mc    PASS  balls 0  
+  sphere_p3              balls PASS  balls 0  
+  nested_clipped         mc    PASS  balls 0  
+  nested_clipped         balls PASS  balls 0  
+  cask_p1                mc    PASS  balls 0  
+  cask_p1                balls PASS  balls 2,631,007  
+  hexcore_histogram      OpenMC's histogram scatter score divided by 4 (its bug, GAPS.md 2b): total scatter 63.6042 -> 15.9011
+  hexcore_histogram      mc    PASS  balls 0  
+  hexcore_histogram      balls PASS  balls 0  
+  tilted_tabular         mc    PASS  balls 0  
+  tilted_tabular         balls PASS  balls 5,271  
+  sphere_rejection       mc    PASS  balls 0  
+  sphere_rejection       balls PASS  balls 0  
+  sphere_points_9        mc    PASS  balls 0  
+  sphere_points_9        balls PASS  balls 0  
+  lattice3d_max_order    mc    PASS  balls 0  
+  lattice3d_max_order    balls PASS  balls 0  
+  curved_backward        mc    PASS  balls 0  
+  curved_backward        balls PASS  balls 143  
+  mixed_cask             mc    PASS  balls 0  
+  mixed_cask             balls PASS  balls 2,887,766  
+
+== the same without mesh tallies: full-size anisotropic balls (v2.1)
+  sphere_p3_balls        mc    PASS  balls 0  
+  sphere_p3_balls        balls PASS  balls 999,957  
+  nested_clipped_balls   mc    PASS  balls 0  
+  nested_clipped_balls   balls PASS  balls 1,581,064  
+  cask_p1_balls          mc    PASS  balls 0  
+  cask_p1_balls          balls PASS  balls 3,773,993  
+  hexcore_histogram_balls OpenMC's histogram scatter score divided by 4 (its bug, GAPS.md 2b): total scatter 63.6042 -> 15.9011
+  hexcore_histogram_balls mc    PASS  balls 0  
+  hexcore_histogram_balls balls PASS  balls 1,221,497  
+  tilted_tabular_balls   mc    PASS  balls 0  
+  tilted_tabular_balls   balls PASS  balls 5,227,606  
+  curved_backward_balls  mc    PASS  balls 0  
+  curved_backward_balls  balls PASS  balls 7,078,420  
+  mixed_cask_balls       mc    PASS  balls 0  
+  mixed_cask_balls       balls PASS  balls 3,194,075  
+  filters                mc    PASS  balls 0  
+  detector cavity        mc    PASS  0.0010268 +- 1.1e-05 vs OpenMC sphere 0.0010049 +- 1.2e-05 (z +1.34)
+  detector outside       mc    PASS  3.7047e-05 +- 4.5e-07 vs OpenMC sphere 3.7895e-05 +- 7.6e-07 (z -0.96)
+
+anisocheck: 20 of 20 cases pass

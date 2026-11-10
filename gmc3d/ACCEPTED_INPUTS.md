@@ -40,7 +40,7 @@ and whether closing each one needs the network to change, are in
 | `Material` holding one `Macroscopic` (with any density) from an `MGXSLibrary` with 1 group | used |
 | more than one group | refused (stage 3) |
 | nuclides in a material | refused (macroscopic data only) |
-| anisotropic scattering, `scatter_format` legendre, histogram or tabular (any order) | used (v2.0), sampled exactly as OpenMC 0.16 does: Legendre data through the tabular conversion (`settings.tabular_legendre`, 33 points by default, negative density set to 0) or, with it disabled, by rejection; `settings.max_order` truncates. Balls are off inside an anisotropic material (plain Monte Carlo there); isotropic materials keep them |
+| anisotropic scattering, `scatter_format` legendre, histogram or tabular (any order) | used (v2.0), sampled exactly as OpenMC 0.16 does: Legendre data through the tabular conversion (`settings.tabular_legendre`, 33 points by default, negative density set to 0) or, with it disabled, by rejection; `settings.max_order` truncates. Balls: v2.1 walks anisotropic balls exactly with the exact-walk backend (held to one voxel when a mesh tally exists; none with point detectors or point-scored ext tallies); trained models leave anisotropic materials to plain Monte Carlo until interface v2 |
 | a Legendre law with only P0 (or all higher moments zero), a flat histogram or table | treated as isotropic (balls allowed) |
 | `representation='angle'` (angle-dependent data) | refused |
 | histogram data with a negative bin | refused (OpenMC cannot sample it either) |

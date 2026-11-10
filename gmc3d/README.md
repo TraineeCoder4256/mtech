@@ -8,8 +8,8 @@ in `V1_PLAN.md`.
 Status: **Stage 1 built** (any CSG geometry, one energy group, isotropic
 scattering, fixed source); **Stage 2 started** (v2.0: anisotropic
 scattering in plain Monte Carlo, every law OpenMC multigroup accepts,
-checked by `python run.py anisocheck`; balls stay isotropic-only until
-v2.1). Results and the open research decisions are in
+checked by `python run.py anisocheck`; v2.1: anisotropic balls walked
+exactly by the exact-walk backend, trained models wait for interface v2). Results and the open research decisions are in
 `runs/2026-10-05/STAGE1.md`. Since v1.1, mesh tallies (flux maps) are right
 inside balls too, and surface current tallies exist; see
 `runs/2026-10-27/MESH.md`.

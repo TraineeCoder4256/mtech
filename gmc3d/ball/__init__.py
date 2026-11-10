@@ -23,4 +23,16 @@ Every backend has the same face, which is all core/transport.py uses:
                     normal, and path length in mean free paths, for a walk
                     that scatters at least once.  seeds/idx are the waiting
                     particles' random streams, for backends that use them.
+
+and, since v2.1, a backend that also walks balls in anisotropic materials
+(only the oracle, until interface v2 has trained models) adds
+
+    aniso = True
+    sample_aniso(R, mats, ang, seeds, idx) -> (cos_n, mu, phi, s)
+                    a walk in material mats[j], whose scattering law is
+                    row mats[j] of ang (core/scattering.py), started along
+                    a known direction u0: cos_n of the exit normal to u0,
+                    mu as above, phi the exit azimuth about the normal
+                    (walk.py), s as above.  Balls in isotropic materials
+                    still use sample().
 """

@@ -23,8 +23,10 @@ reference, compared with checks/validate.py's rule), plus:
                  law is the only thing that moves E[x]: P3 2.000 cm against
                  0.909 isotropic.
 
-Balls are switched off in anisotropic materials in v2.0 (the exact walk
-inside a ball is isotropic); v2.1 adds anisotropic balls.
+v2.0 had no balls in anisotropic materials.  v2.1 walks them exactly
+(ball/walk.walk_aniso): every case runs with exact balls too (held to one
+voxel where a mesh tally exists), and the *_balls cases repeat seven of
+them without mesh tallies, so the anisotropic balls keep their full size.
 """
 
 import json
@@ -68,6 +70,25 @@ CASES = {
 }
 
 
+# v2.1: the same problems with every mesh tally removed, so that balls in
+# anisotropic materials keep their full size (with a mesh an anisotropic
+# ball is held inside one voxel, transport._track)
+# (lattice3d is left out: its cells are too thin for a ball of 1 mfp even
+# when isotropic, so it would test nothing)
+FULL_BALLS = ("sphere_p3", "nested_clipped", "cask_p1",
+              "hexcore_histogram", "tilted_tabular", "curved_backward",
+              "mixed_cask")
+
+
+def _no_meshes(model):
+    model.tallies = openmc.Tallies([
+        t for t in model.tallies
+        if not any(isinstance(f, (openmc.MeshFilter, openmc.MeshSurfaceFilter,
+                                  openmc.MeshBornFilter))
+                   for f in t.filters)])
+    return model
+
+
 def _build(problem, law, tag, settings):
     with common.scattering_law(law, tag):
         model = PROBLEMS[problem]()
@@ -100,7 +121,7 @@ def _histogram_scatter_fix(ref, model):
 
 
 def _compare(name, model, workdir, particles, batches, log, balls=True,
-             seed=3):
+             seed=3, need_balls=False):
     pr = openmc_import.load(model)
     n = particles * batches
     ref = openmc_ref.run(model, f"{workdir}/aniso_{name}",
@@ -125,6 +146,8 @@ def _compare(name, model, workdir, particles, batches, log, balls=True,
         ok, bad = validate.verdict(cmp)
         if r.counters["lost"]:
             ok, bad = False, bad + [f"{r.counters['lost']} lost"]
+        if label == "balls" and need_balls and not r.counters["balls"]:
+            ok, bad = False, bad + ["no balls were used"]
         out[label] = {"pass": ok, "bad": bad, "balls": r.counters["balls"],
                       "seconds": time.perf_counter() - t, "cmp": cmp}
         log(f"  {name:22s} {label:5s} {'PASS' if ok else 'FAIL'}  balls "
@@ -243,6 +266,13 @@ def suite(workdir, particles=PARTICLES, batches=BATCHES, names=None,
         guard(name, lambda: _compare(
             name, _build(prob, law, name, st), workdir, particles, batches,
             log))
+    log("\n== the same without mesh tallies: full-size anisotropic balls "
+        "(v2.1)")
+    for name in FULL_BALLS:
+        prob, law, st = CASES[name]
+        guard(name + "_balls", lambda: _compare(
+            name + "_balls", _no_meshes(_build(prob, law, name, st)),
+            workdir, particles, batches, log, need_balls=True))
     guard("filters", lambda: _compare("filters", filters_model(), workdir,
                                       particles, batches, log, balls=False))
     guard("detectors", lambda: _detectors(workdir, particles, batches, log))

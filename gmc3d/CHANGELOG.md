@@ -7,6 +7,37 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v2.1.0 (10 Nov 2026): balls in anisotropic materials, exact walk
+
+Phani's go (10 Nov): v2.1 before the benchmarks; network matters with
+Development. The ball step now works in anisotropic materials with the
+exact walk (the Oracle). Trained models stay isotropic-only until
+interface v2 (agreed with Development on 10 Nov, its own push next).
+
+- **`ball/walk.py` walk_aniso** (new): the walk starts at the centre along
+  the direction u0 just sampled from the law (or the source's), and every
+  scatter turns by the law. Its exit, by symmetry, is four numbers:
+  cos_n (exit normal . u0), mu, phi (exit azimuth about the normal, from
+  the plane of n and u0; the driver draws its sign), s. With isotropic
+  scattering it reproduces v1's (mu, s) (KS tests). The exit point leans
+  towards u0 even then, because the first flight runs along it.
+- **Driver**: anisotropic materials get balls when the backend has
+  `aniso = True` (the Oracle; `sample_aniso`) and no point detector or
+  point-scored ext tally needs a point inside a ball. With a mesh tally,
+  an anisotropic ball is held inside one voxel, because ball/profile.py's
+  radial table is for isotropic walks only. Isotropic problems are still
+  bit-identical (5 problems, plain and balls).
+- **anisocheck**: 20 of 20 (`runs/2026-11-10/v2.1/anisocheck.log`). Every
+  case now also runs with exact balls, and 7 problems are repeated without
+  mesh tallies so the anisotropic balls keep their full size: sphere P3
+  (1.0M balls), nested clipped, cask P1 (3.8M), hexcore histogram,
+  tilted tabular (5.2M), curved backward (7.1M), and the cask with only
+  the concrete anisotropic. lattice3d is left out because its cells hold
+  no ball even when isotropic.
+- validate, detcheck (11/11), robust (27 pass + 3 refused of 30) as
+  before; 227 tests pass (7 new in `tests/test_aniso_balls_v21.py`); score
+  9.9. Plain MC speed unchanged within this machine's noise (`speed.log`).
+
 ## v2.0.0 (10 Nov 2026): anisotropic scattering, plain Monte Carlo
 
 Phani's go (10 Nov) for v2 after the plan doc. v2.0 is Stage 2 without

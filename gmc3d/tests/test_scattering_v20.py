@@ -152,20 +152,27 @@ def test_angle_representation_is_refused():
         openmc_import.load(model)
 
 
+class _IsoOnly(Oracle):
+    """A backend without anisotropic walks (as every trained model until
+    interface v2; since v2.1 the Oracle itself walks them)."""
+    aniso = False
+
+
 def test_balls_only_in_isotropic_materials():
-    """Cask with only the concrete anisotropic: balls still run (in fuel
-    and steel), none start in concrete."""
+    """Cask with only the concrete anisotropic, and a backend that walks
+    isotropic balls only: balls still run (in fuel and steel), none start
+    in concrete."""
     with common.scattering_law({"concrete": [1.0, 0.6, 0.3, 0.1]}, "mix"):
         model = PROBLEMS["cask"]()
     pr = openmc_import.load(model)
     kinds = [k for k, _ in pr.mats.laws]
     assert sorted(set(kinds)) == [SC.ISO, SC.TAB]
-    r = transport.run(pr, 2000, 2, seed=1, backend=Oracle(), r_star=1.0)
+    r = transport.run(pr, 2000, 2, seed=1, backend=_IsoOnly(), r_star=1.0)
     assert r.counters["balls"] > 0
     with common.scattering_law([1.0, 0.6, 0.3, 0.1], "p3"):
         model = PROBLEMS["cask"]()
     r = transport.run(openmc_import.load(model), 2000, 2, seed=1,
-                      backend=Oracle(), r_star=1.0)
+                      backend=_IsoOnly(), r_star=1.0)
     assert r.counters["balls"] == 0
 
 
