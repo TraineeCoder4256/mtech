@@ -26,7 +26,9 @@ What the score does NOT measure (printed with it, so nobody reads 10 as
       ("exact balls").  The network has its own known error (the rare
       short-path tail, GAPS.md), and is checked by `run.py ballcheck`.
     * speed
-    * physics beyond Stage 1 (one group, isotropic, fixed source)
+    * anisotropic scattering (v2.0): checked by `run.py anisocheck`, not
+      yet a part of the score
+    * physics beyond that (one group, fixed source)
 """
 
 import json
@@ -41,8 +43,9 @@ PARTS = (("unit tests", 2.0), ("against OpenMC", 4.0),
 NOT_SCORED = ("the trained network backend (every check here uses the "
               "exact walk; the network is checked by run.py ballcheck)",
               "speed",
-              "physics beyond Stage 1 (one group, isotropic scattering, "
-              "fixed source)")
+              "anisotropic scattering (v2.0; checked by run.py anisocheck, "
+              "not yet a part of the score)",
+              "physics beyond one group and fixed source")
 
 
 def _tests(path):

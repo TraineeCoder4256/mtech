@@ -25,7 +25,7 @@ Columns of part 1:
   (interface v1); a "YES" row means a new interface version.
 - **plan**: a version, "hold" (waits for model work) or "later".
 
-Last updated: v1.6.1 (30 Oct 2026). v1.6.1 closed 20 rows of the v1.6.0
+Last updated: v2.0.0 (10 Nov 2026): anisotropic scattering is used, every law OpenMC multigroup accepts (`python run.py anisocheck`, `runs/2026-11-10/v2.0/`); balls in anisotropic materials wait for v2.1. Before that, v1.6.1 (30 Oct 2026). v1.6.1 closed 20 rows of the v1.6.0
 list (`CHANGELOG.md`); every one is checked against OpenMC by
 `python run.py gapcheck` (20 cases, `runs/2026-10-30/v1.6.1/`).
 
@@ -35,7 +35,7 @@ list (`CHANGELOG.md`); every one is checked against OpenMC by
 
 | gap | shows as | size | model change? | plan |
 |---|---|---|---|---|
-| Anisotropic scattering | refused | L | **YES**: the scattering law becomes a network input | v2.0 |
+| Angle-dependent multigroup data (`representation='angle'`) | refused (v2.0) | M | **YES**: the cross sections depend on the direction, so a ball is no longer uniform | later |
 | More than one energy group (and with it real energies in `EnergyFilter`, source energy, `energy_bounds`) | refused | L | **YES** | Stage 3 |
 | Nuclides inside materials (and tallies by nuclide) | refused | M | no at one group (sum to macroscopic), YES once energy enters | Stage 3 |
 | Scattering multiplicity other than 1 ((n,xn)) | refused | M | **YES** (a ball's walk would gain particles) | Stage 3 |
@@ -60,7 +60,8 @@ list (`CHANGELOG.md`); every one is checked against OpenMC by
 
 | gap | shows as | size | model change? | plan |
 |---|---|---|---|---|
-| A tally with a `MuFilter` or `CollisionFilter`, or a `Polar`/`Azimuthal`/`SphericalHarmonics` filter on a track tally | slower: the whole run is plain Monte Carlo (warned); they bin by what happens inside a ball's walk, which the ball hides | - | **YES** to keep balls: the network would have to return the walk's last cosine, its scatter count, or its exit direction distribution | hold |
+| A tally with a `MuFilter` or `CollisionFilter`, or a `Polar`/`Azimuthal`/`SphericalHarmonics` filter on a track tally (a scatter-cosine `SphericalHarmonics` only when some material is anisotropic, v2.0) | slower: the whole run is plain Monte Carlo (warned); they bin by what happens inside a ball's walk, which the ball hides | - | **YES** to keep balls: the network would have to return the walk's last cosine, its scatter count, or its exit direction distribution | hold |
+| Anisotropic scattering inside balls | slower: balls are off in an anisotropic material, which runs plain Monte Carlo (v2.0); isotropic materials of the same problem keep them. The exact walk and the network are isotropic only | L | **YES**: interface v2, the law as a network input | v2.1 |
 | `MeshSurfaceFilter` present | slower: balls stay inside one voxel of its mesh | - | YES to keep full-size balls ((mu, s) cannot say which faces a walk crossed) | hold |
 | Balls bigger than 30 mfp | **SILENT** shrink to 30 mfp (exact, slower) | M | **YES**: retrain on a wider R range | hold |
 | Network's rare short-path tail (R = 29, kappa = 0.1: weight +73%, z 3.1, 5 Oct ballcheck) | **SILENT** | M | **YES**: retraining or another architecture | hold |
@@ -81,6 +82,7 @@ These give OpenMC's expected answer; only the error bar differs.
 |---|---|
 | Mesh flux and the general scorer's tallies inside balls | scored at profile points (exact on average, v1.1) |
 | Point detectors in balls | 4 profile points plus the conditioned-walk term (v1.6) |
+| Point detector with `r0` > 0, scatter closer than `r0` to it in an anisotropic material | inside the averaging sphere the angular weight 2 pdf(mu) uses the direction to the detector's centre; that is part of the O(r0) bias `r0` already brings (v2.0) |
 | Point detector in a scattering material without `r0` | mean right, variance infinite (the estimator's own property, as in MCNP) |
 | Mu filter on a flight before the first scatter | OpenMC never resets the scatter cosine, so it bins that flight by the cosine the previous history on its thread ended with. gmc3d does the same in distribution: each run with a Mu filter follows the analog history its weighted walk stands for, so the carried cosine is the one OpenMC's history would end with (v1.6.1) |
 | `WeightFilter` | bins by the weight an analog game carries (the birth weight), which is what OpenMC's analog run sees |
@@ -122,6 +124,7 @@ These give OpenMC's expected answer; only the error bar differs.
 | Distributed materials with a `None` (void) entry | OpenMC 0.16 stops on it in multigroup mode (v1.4.1) | unit test |
 | `PointCloud` / `MeshSpatial` source `bias` | OpenMC 0.16 refuses the XML its own Python writes for it (v1.2) | unit test |
 | `'scatter'` score in a model with a void cell | OpenMC 0.16 segfaults in multigroup mode (v1.1.3) | unit tests; left out of the robustness suite |
+| `'scatter'` / `'nu-scatter'` score with histogram scattering data | OpenMC scores sigma_s times order/2 (4 bins 2.0x, 12 bins 6.0x, hexcore 8 bins 4.0x), while its flux, absorption and total are right: a material's data is rebuilt from `ScattDataHistogram::get_matrix`, which returns sigma_s times a density whose bins sum to order/2 (`runs/2026-11-10/v2.0/openmc_histogram_bug.log`, v2.0) | `anisocheck` divides OpenMC's scatter column by order/2, then everything matches |
 | A lattice inside a rotated cell: the cosine OpenMC uses for a crossing tally's flux at a lattice wall | OpenMC dots the global direction with the lattice-frame normal (`particle.cpp` event_cross_surface); gmc3d uses the true cosine | not compared (an unrotated lattice matches OpenMC, `gapcheck` lattice_crossings); this is a reading of OpenMC's source, not measured |
 
 ## 3. Open checks (unfinished, not missing features)
@@ -133,4 +136,6 @@ These give OpenMC's expected answer; only the error bar differs.
 | No race against OpenMC with weight windows | v1.0 | the fair comparison for shielding claims |
 | The validation pass rule treats a tally's bins as independent; neighbouring mesh bins are correlated (slab depth bins +0.88 next door), so a correct code fails it by chance (7 of 40 seeds on the slab, `runs/2026-10-30/v1.6/slab_corr.log`) | v1.6 | a rule counting effective bins (about 6 of the slab's 60) passes them (p 0.04): decision for Phani |
 | The pass rule trusts a reference bin that scored almost nothing (OpenMC's analog run can give a deep bin 0 +- 0; robustness model 26) | v1.6 | the suite reruns a FAIL once at 5x; the same effective-dof decision could also drop bins with too few reference counts |
+| Point detectors IN an anisotropic medium have no reference: OpenMC has no point detector and balls (the v1.6 cross-check) are off there; only detectors in a void are checked against OpenMC (`anisocheck` detectors) | v2.0 | v2.1 balls give the cross-check back |
+| The robustness suite draws only isotropic laws | v2.0 | add random laws to its models: later |
 | The robustness suite leaves out the OpenMC errors of 2b and draws 30 models | v1.6 | more models or more kinds of object: later |

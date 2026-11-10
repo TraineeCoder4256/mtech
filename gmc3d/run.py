@@ -19,6 +19,10 @@
     python run.py gapcheck                         the v1.6.1 features (albedo,
                                                    new filters, sources,
                                                    triggers, ...) vs OpenMC
+    python run.py anisocheck                       anisotropic scattering
+                                                   (v2.0): every OpenMC law
+                                                   vs OpenMC, exact beam
+                                                   displacement, detectors
     python run.py score                            one number out of 10 from
                                                    the latest test, validate,
                                                    robust and detector runs
@@ -278,6 +282,15 @@ def cmd_gapcheck(args, log):
     return "gapcheck"
 
 
+def cmd_anisocheck(args, log):
+    from checks import aniso
+    res = aniso.suite(DATA / "openmc", args.particles, args.batches,
+                      names=args.cases or None, log=log)
+    (out_dir(args) / "anisocheck.json").write_text(
+        json.dumps(output._plain(res), indent=1))
+    return "anisocheck"
+
+
 def cmd_score(args, log):
     from checks import score
     parts, total = score.score(out_dir(args))
@@ -374,6 +387,10 @@ def main():
     s = sub.add_parser("gapcheck")
     s.add_argument("cases", nargs="*")
     common(s, particles=20_000)
+
+    s = sub.add_parser("anisocheck")
+    s.add_argument("cases", nargs="*")
+    common(s, particles=50_000)
 
     s = sub.add_parser("score")
     common(s)

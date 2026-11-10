@@ -1,0 +1,15 @@
+Plain MC transport seconds, 500,000 histories (100k x 5), default tallies, after a warm-up run; old = v1.6.5 (75b53b8), new = v2.0.0; two interleaved passes, same 4-core container, quiet (10 Nov 2026).
+old sphere 5.31
+old slab 5.85
+old cask 8.95
+new sphere 5.17
+new slab 5.52
+new cask 9.21
+old sphere 5.3
+old slab 5.84
+old cask 8.92
+new sphere 4.92
+new slab 5.47
+new cask 8.69
+
+Anisotropic sampling cost, sphere, same settings: isotropic 4.96 s, 9,294,421 flights, 533.6 ns/flight; P3 [1, 0.6, 0.3, 0.1] (tabular, 33 points) 4.62 s, 8,373,467 flights, 552.0 ns/flight (+3.4% per flight; fewer flights because forward scattering leaks sooner).

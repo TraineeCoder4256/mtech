@@ -353,6 +353,18 @@ def _filter(E, ML, MX, e, j, ef, ei, path, prev, born, outb, outc):
     elif k == X_SPH:
         _sph(E.f_nb[e, j], ef[F_U], ef[F_U + 1], ef[F_U + 2], outc, 0)
         L = E.f_nb[e, j]
+        if par >= 0:
+            # cosine = 'scatter': term (n, m) times E[P_n(mu)] of the
+            # material's law (v2.0)
+            a = E.rp_start[par]
+            w = int(E.rp[a])
+            mt = ei[I_MAT]
+            q = 0
+            for nn in range(L + 1):
+                c = E.rp[a + 1 + mt * w + nn] if mt >= 0 else 0.0
+                for _ in range(2 * nn + 1):
+                    outc[q] *= c
+                    q += 1
         for q in range((L + 1) * (L + 1)):
             outb[q] = q
         return (L + 1) * (L + 1)
@@ -380,10 +392,22 @@ def _filter(E, ML, MX, e, j, ef, ei, path, prev, born, outb, outc):
             outb[q] = q
         return nb
     elif k == X_LEG:
-        # scatter moments P_n(mu) of an isotropic scatter: P_0 = 1 and
-        # every higher moment 0 on average (scored exactly so)
-        outb[0], outc[0] = 0, 1.0
-        return 1
+        # scatter moments P_n(mu): on average E[P_n(mu)] under the
+        # material's law (isotropic: P_0 = 1, the rest 0), scored exactly
+        # so (v2.0)
+        a = E.rp_start[par]
+        w = int(E.rp[a])
+        mt = ei[I_MAT]
+        if mt < 0:
+            return 0
+        N = E.f_nb[e, j]
+        nb = 0
+        for q in range(N):
+            c = E.rp[a + 1 + mt * w + q]
+            if c != 0.0:
+                outb[nb], outc[nb] = q, c
+                nb += 1
+        return nb
     else:
         return 0
     if b < 0:
@@ -1000,6 +1024,9 @@ def build(ext_tallies, offsets, cell_univ, n_cells, n_mats, iv, occ):
                 set_lut(f_par[e, j], cnt, range(len(cnt)))
             elif k == X_SPH:
                 f_nb[e, j] = x["order"]
+                if x.get("moments") is not None:      # cosine = scatter
+                    mo = np.asarray(x["moments"], float)
+                    f_par[e, j] = new_rp([mo.shape[1]] + list(mo.ravel()))
             elif k == X_SLEG:
                 f_nb[e, j] = x["order"]
                 f_par[e, j] = new_rp([x["axis"], x["lo"], x["hi"]])
@@ -1008,6 +1035,8 @@ def build(ext_tallies, offsets, cell_univ, n_cells, n_mats, iv, occ):
                 f_par[e, j] = new_rp([x["x"], x["y"], x["r"]])
             elif k == X_LEG:
                 f_nb[e, j] = f.nbins
+                mo = np.asarray(x["moments"], float)
+                f_par[e, j] = new_rp([mo.shape[1]] + list(mo.ravel()))
         if stride != tl.nbins:
             raise AssertionError("ext strides do not multiply to the bins")
         if stride > MAXC and t_event[e] != EV_FACES:

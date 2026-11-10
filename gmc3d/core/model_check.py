@@ -31,6 +31,19 @@ from . import openmc_import as I
 Unsupported = I.Unsupported
 
 
+def _law_text(law):
+    """How a material's scattering will be sampled (v2.0)."""
+    from . import scattering as SC
+    kind, v = law
+    if kind == SC.ISO:
+        return "isotropic (balls allowed)"
+    name = {SC.TAB: f"tabular, {v[0].size} points",
+            SC.HIST: f"histogram, {v[0].size} bins",
+            SC.LEG: f"Legendre P{v[0].size - 1} by rejection"}[kind]
+    return (f"anisotropic ({name}, mean cosine "
+            f"{SC.mean_cosine(kind, v):+.4f}; balls off in it)")
+
+
 def load_model(spec):
     """A problem name, .py file, model.xml or folder -> openmc.Model."""
     from problems import PROBLEMS
@@ -136,7 +149,8 @@ def check(model):
         for k, name in enumerate(mats.names):
             rep.used.append(
                 f"material {mats.ids[k]} '{name}': sigma_s "
-                f"{mats.sig_s[k]:.4g}, sigma_a {mats.sig_a[k]:.4g} /cm")
+                f"{mats.sig_s[k]:.4g}, sigma_a {mats.sig_a[k]:.4g} /cm, "
+                f"scattering {_law_text(mats.laws[k])}")
 
     cells = sorted(geo.get_all_cells().values(), key=lambda c: c.id)
     lats = sorted(geo.get_all_lattices().values(), key=lambda l: l.id)

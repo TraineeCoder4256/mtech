@@ -7,6 +7,54 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v2.0.0 (10 Nov 2026): anisotropic scattering, plain Monte Carlo
+
+Phani's go (10 Nov) for v2 after the plan doc. v2.0 is Stage 2 without
+balls: every scattering law OpenMC 0.16 multigroup accepts is read and
+sampled exactly as OpenMC samples it (read from its scattdata.cpp,
+mgxs.cpp, settings.cpp). Balls stay on in isotropic materials and are
+switched off in anisotropic ones; v2.1 brings balls (and interface v2).
+
+- **`core/scattering.py`** (new): Legendre data through OpenMC's tabular
+  conversion (33 points by default, `settings.tabular_legendre`
+  num_points, negative density set to 0, trapezoid norm, piecewise
+  linear sampling), or by rejection when that conversion is disabled;
+  histogram and tabular formats; `settings.max_order` truncation. One
+  row per material in `Physics.ang`. Also the law's pdf and its Legendre
+  moments.
+- **Import**: the old "anisotropic is stage 2" refusal is gone; refused
+  now are `representation='angle'` and histogram bins below 0.
+  `run.py check` prints each material's law and mean cosine.
+- **Transport**: an isotropic material samples exactly the same random
+  numbers as before, so isotropic problems are bit-identical to v1.6.5
+  (5 problems, plain and balls, every tally compared bit by bit).
+- **Detectors**: an anisotropic scatter weights the next-event kernel by
+  2 pdf(mu). **Filters**: LegendreFilter and scatter-cosine
+  SphericalHarmonicsFilter score the law's moments (with a law the
+  latter makes the run plain Monte Carlo; all-isotropic stays as before).
+- **`checks/aniso.py`, `run.py anisocheck`** (new): 13 of 13 pass
+  (`runs/2026-11-10/v2.0/anisocheck.log`). Exact: a beam's mean
+  absorption depth 1 / (sigma_t - sigma_s mu_bar) for 7 laws (|z| <= 1.43;
+  P3 2.007 +- 0.006 cm against 2.001). Against OpenMC (1M histories
+  each): 10 problem/law cases (P1, P3, clipped, backward, histogram,
+  tabular, rejection, 9 points, max_order, one anisotropic material in
+  the cask with balls in the others: 2.79M balls), the scatter-cosine
+  filters, and void point detectors (z +1.34, -0.96).
+- **OpenMC bug found**: with histogram data its `scatter` score is
+  sigma_s times order/2 (4 bins 2.0x, 12 bins 6.0x; flux and absorption
+  right). Proved from its source and measured
+  (`runs/2026-11-10/v2.0/openmc_histogram_bug.log`, GAPS.md 2b).
+- validate: as v1.6.5 (all pass but the known slab plain-MC depth item,
+  chi2/dof 2.156). Tests: 220 pass (23 new in
+  `tests/test_scattering_v20.py`).
+- `run.py score` 9.9 / 10 as v1.6.5 (detcheck 11 / 11, robust 27 pass
+  + 3 refused of 30; `runs/2026-11-10/v2.0/SCORE.md`). Speed: plain MC
+  as v1.6.5 (sphere 4.92-5.17 s vs 5.30-5.31, slab 5.47-5.52 vs
+  5.84-5.85, cask 8.69-9.21 vs 8.92-8.95; `speed.log`); an anisotropic
+  flight costs 3.4% more (552 vs 534 ns).
+- `problems/common.scattering_law` gives any problem a law (one for all
+  materials, or per material) without touching its isotropic library.
+
 ## v1.6.5 (5 Nov 2026): model race seeds 2 and 3, medians
 
 `runs/2026-11-05/race-models/`: seeds 12 and 13 plus `medians.py` and its

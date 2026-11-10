@@ -1,0 +1,21 @@
+OpenMC 0.16 multigroup, histogram scattering data: the 'scatter' score is
+sigma_s * order / 2 (10 Nov 2026).
+
+Model: checks/aniso.displacement_model (one material, sigma_s 1.0,
+sigma_a 0.1 /cm, vacuum sphere r 60), histogram law, one tally of
+flux / scatter / nu-scatter, OpenMC 2,000 x 20 histories.
+
+  4 bins:  scatter / flux = 2.0                (sigma_s 1.0; order/2 = 2)
+  12 bins: scatter / flux = 5.999999999999979  (sigma_s 1.0; order/2 = 6)
+  hexcore, 8 bins (anisocheck): total scatter 63.6042 against gmc3d's
+           15.9027 +- 0.0119; divided by 4 it is 15.9011 (z ~0.1), while
+           flux, absorption and total agree (z 0.09, -1.36, 0.02)
+
+Cause (OpenMC source, src/scattdata.cpp): a material's macroscopic data is
+rebuilt by ScattData::base_combine from ScattDataHistogram::get_matrix,
+which returns scattxs * energy * fmu, and fmu is normalised as a density
+(sum fmu * dmu = 1, so sum fmu = 1/dmu = order/2).  The rebuilt object's
+init sums the matrix to get scattxs, so it is order/2 too big.  Transport
+uses total and absorption, so the flux and every other score are right;
+only scatter and nu-scatter scores are off.  Tabular and Legendre data
+are not affected (tilted_tabular and all Legendre cases match OpenMC).

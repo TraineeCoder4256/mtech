@@ -4,13 +4,18 @@ Used by: transport.py (scores them), openmc_import.py (reads and checks
 them), problems/common.point_detector (how a problem asks for one).
 
 THE ESTIMATOR.  A particle of weight w that leaves a point x isotropically
-(born from an isotropic source, or just scattered: scattering is
-isotropic in Stage 1) reaches a point P at distance d without colliding
+(born from an isotropic source, or just scattered isotropically)
+reaches a point P at distance d without colliding
 with probability exp(-tau), tau the optical depth (sigma_t times length,
 summed over the cells the straight line crosses).  Its contribution to
 the scalar flux at P is
 
     w exp(-tau) / (4 pi d^2).
+
+An anisotropic scatter (v2.0) multiplies this by 2 pdf(mu), mu the
+cosine between the particle's direction and the line to P, pdf the
+density of the scattering cosine (scattering.pdf): 4 pi times the
+probability per steradian of leaving towards P.
 
 Summing that over every emission (source sites and scatters) gives the
 flux at P exactly on average: the collided flux at P is the sum, over all
@@ -103,6 +108,7 @@ import numpy as np
 from numba import njit
 
 from . import geometry as G
+from . import scattering as SC
 from . import surfaces as S
 
 TINY = 1.0e-8            # cm, as transport.TINY
@@ -209,6 +215,33 @@ def score(row, D, g, sig_t, wgt, x, y, z, path):
                                  D.pos[j, 2])
         if tr > 0.0:
             row[D.base + j] += wgt * _kernel(D, j, tr, d, st)
+
+
+@njit(cache=True)
+def score_aniso(row, D, g, sig_t, wgt, x, y, z, u, v, w, ang, mat, path):
+    """`score` for an anisotropic scatter (v2.0) of a particle flying
+    along (u, v, w): the line towards each image starts in a direction
+    of scattering cosine mu, emitted with density pdf(mu) / (2 pi) per
+    steradian instead of 1 / (4 pi), so the isotropic kernel is weighted
+    by 2 pdf(mu).  Closer than r0 to the detector the averaging kernel
+    keeps the direction to the detector's centre (an approximation,
+    GAPS.md)."""
+    for m in range(D.img.shape[0]):
+        j = D.img_det[m]
+        px, py, pz = D.img[m, 0], D.img[m, 1], D.img[m, 2]
+        ex, ey, ez = px - x, py - y, pz - z
+        dd = np.sqrt(ex * ex + ey * ey + ez * ez)
+        if D.walls and dd > D.img_cut:
+            continue
+        mu = (u * ex + v * ey + w * ez) / dd if dd > 0.0 else 1.0
+        f = 2.0 * SC.pdf(ang, mat, mu)
+        if f <= 0.0:
+            continue
+        tr, d, st = transmission(g, sig_t, x, y, z, px, py, pz, path,
+                                 D.walls, D.pos[j, 0], D.pos[j, 1],
+                                 D.pos[j, 2])
+        if tr > 0.0:
+            row[D.base + j] += wgt * f * _kernel(D, j, tr, d, st)
 
 
 @njit(cache=True)

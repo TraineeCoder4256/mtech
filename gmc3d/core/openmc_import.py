@@ -19,8 +19,11 @@ feature (S1-GEO-6), instead of being run wrongly:
     cells         material, void, distributed-material, universe or
                   lattice (rectangular or hexagonal) fills, with
                   translation and rotation
-    materials     one energy group, isotropic scattering, no fission,
-                  from an OpenMC multigroup library (Macroscopic data)
+    materials     one energy group, no fission, from an OpenMC multigroup
+                  library (Macroscopic data); scattering isotropic or
+                  anisotropic in any scatter_format (Legendre, histogram,
+                  tabular), sampled as OpenMC samples it (v2.0,
+                  scattering.py); balls only in isotropic materials
     sources       every OpenMC source except CompiledSource: independent
                   sources with any spatial, angular (biased too) and time
                   distribution, FileSource (.h5 and MCPL), MeshSource, and
@@ -52,6 +55,7 @@ import numpy as np
 import openmc
 
 from . import geometry as G
+from . import scattering as SC
 from . import sources
 from . import surfaces as S
 
@@ -79,6 +83,13 @@ class Materials:
                                  # (what an EnergyFilter sees)
     inv_vel: np.ndarray = None   # s/cm per material, then void's (time
                                  # and the inverse-velocity score, v1.6.1)
+    laws: list = None            # (kind, values) per material: the
+                                 # scattering law (core/scattering.py, v2)
+    ang: np.ndarray = None       # the laws packed for the kernels
+
+    def aniso(self, m):
+        """Does material m scatter anisotropically (no balls there)?"""
+        return bool(self.laws) and self.laws[m][0] != 0
 
 
 @dataclass
@@ -406,7 +417,11 @@ def _materials(model):
         raise Unsupported(f"library has {lib.energy_groups.num_groups} "
                           f"groups; stage 1 handles 1 (multigroup is stage 3)")
     edges = np.asarray(lib.energy_groups.group_edges, float)
-    st, ss, sa, iv = [], [], [], []
+    st, ss, sa, iv, laws = [], [], [], [], []
+    tl = model.settings.tabular_legendre or {}
+    tab_enable = bool(tl.get("enable", True))
+    tab_points = tl.get("num_points")
+    max_order = model.settings.max_order
     from .ext import default_inverse_velocity
     iv_default = float(default_inverse_velocity(edges[0], edges[-1]))
     for m in mats:
@@ -418,11 +433,24 @@ def _materials(model):
         dens = m.density if m.density is not None else 1.0
         tot = float(np.ravel(xs.total[0])[0])
         absn = float(np.ravel(xs.absorption[0])[0])
-        sm = np.asarray(xs.scatter_matrix[0])
-        if xs.order and np.any(np.abs(sm[..., 1:]) > 0.0):
-            raise Unsupported(f"{macro} scatters anisotropically; "
-                              f"that is stage 2")
-        sct = float(np.sum(sm[..., 0]) if sm.ndim == 3 else np.sum(sm))
+        sm = np.asarray(xs.scatter_matrix[0], float)
+        if getattr(xs, "representation", "isotropic") != "isotropic":
+            raise Unsupported(f"{macro}: angle-dependent cross sections "
+                              f"(representation '{xs.representation}'); "
+                              f"gmc3d takes isotropic representation only")
+        fmt = (xs.scatter_format or "legendre").lower()
+        row = sm.reshape(-1)[-sm.shape[-1]:] if sm.ndim == 3 else \
+            sm.reshape(-1)
+        if fmt == "legendre":
+            sct = float(row[0])
+        elif fmt == "histogram":
+            sct = float(np.sum(row))
+        else:                                  # tabular: trapezoid, as OpenMC
+            sct = float(np.trapezoid(row, np.linspace(-1, 1, row.size)))
+        try:
+            laws.append(SC.law(fmt, row, tab_enable, tab_points, max_order))
+        except ValueError as e:
+            raise Unsupported(f"{macro}: {e}") from None
         if xs.fissionable:
             raise Unsupported(f"{macro} is fissile; criticality is "
                               f"stage 4")
@@ -443,7 +471,8 @@ def _materials(model):
     return Materials([m.id for m in mats], [m.name for m in mats],
                      np.array(st), np.array(ss), np.array(sa),
                      0.5 * (edges[0] + edges[-1]),
-                     np.array(iv + [iv_default], float))
+                     np.array(iv + [iv_default], float), laws,
+                     SC.pack(laws))
 
 
 # ----------------------------------------------------------------- settings
@@ -452,6 +481,7 @@ def _materials(model):
 # named in a warning.
 _SETTINGS_USED = {"run_mode", "particles", "batches", "source",
                   "energy_mode", "seed", "trigger",
+                  "tabular_legendre", "max_order",   # scattering laws (v2)
                   "mesh"}          # meshes a MeshSpatial / MeshSource uses
 # Settings that only say where OpenMC writes its own files or how much it
 # prints: no effect on any answer and nothing for gmc3d to do, so no
@@ -725,6 +755,13 @@ def _edges(t, f, lo=None, hi=None):
     return e
 
 
+def _law_moments(mats, order):
+    """(materials, order + 1): E[P_n(mu)] of each material's law."""
+    laws = mats.laws or [(SC.ISO, None)] * len(mats.ids)
+    return np.array([SC.moments(k, v, order) for k, v in laws]).reshape(
+        len(laws), order + 1)
+
+
 def _filter(t, f, kind, model, mats, cell_index, mat_index, surf_index,
             ctx):
     shift = getattr(f, "translation", None)
@@ -789,18 +826,31 @@ def _filter(t, f, kind, model, mats, cell_index, mat_index, surf_index,
             raise Unsupported(f"tally {t.id}: negative collision counts")
         return Filter(kind, len(cnt), bin_ids=cnt, extra={"counts": cnt})
     if kind == "sph":
-        if f.cosine == "scatter":
-            # the cosine of the scatter being scored: isotropic, so every
-            # term but (0, 0) is 0 on average, and that one is the score
-            # (OpenMC's analog estimate has the same mean; measured)
+        if f.cosine == "scatter" and not any(
+                mats.aniso(m) for m in range(len(mats.ids))):
+            # every law isotropic: every term but (0, 0) is 0 on average,
+            # and that one is the score, so balls stay usable (as v1.6)
             return Filter("legendre", (f.order + 1) ** 2,
-                          bin_ids=list(range((f.order + 1) ** 2)))
+                          bin_ids=list(range((f.order + 1) ** 2)),
+                          extra={"moments": np.c_[
+                              np.ones(len(mats.ids)),
+                              np.zeros((len(mats.ids),
+                                        (f.order + 1) ** 2 - 1))]})
+        if f.cosine == "scatter":
+            # OpenMC weights term (n, m) by P_n(mu) of the scatter being
+            # scored and R_nm of the direction BEFORE it: on average
+            # E[P_n(mu)] (the material's law) times R_nm of the flight
+            # direction, scored exactly so (v2.0; isotropic: only (0, 0))
+            return Filter(kind, (f.order + 1) ** 2, extra={
+                "order": f.order, "moments": _law_moments(mats, f.order)})
         return Filter(kind, (f.order + 1) ** 2, extra={"order": f.order})
     if kind == "legendre":
         # Legendre moments of the scattering cosine (any score: OpenMC's
-        # analog estimate at a scatter); isotropic, so P_0 = 1 and every
-        # higher moment 0 on average, scored exactly so
-        return Filter(kind, f.order + 1, bin_ids=list(range(f.order + 1)))
+        # analog estimate at a scatter): on average E[P_n(mu)] under the
+        # material's law, scored exactly so (isotropic: P_0 = 1, the rest
+        # 0; v2.0: the law's moments, scattering.moments)
+        return Filter(kind, f.order + 1, bin_ids=list(range(f.order + 1)),
+                      extra={"moments": _law_moments(mats, f.order)})
     if kind == "sleg":
         return Filter(kind, f.order + 1, extra={
             "order": f.order, "axis": "xyz".index(f.axis),

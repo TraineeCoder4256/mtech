@@ -29,6 +29,7 @@ and whether closing each one needs the network to change, are in
 | `source` | used, see Sources |
 | `photon_transport` | refused (neutrons only) |
 | tally `triggers` (with `trigger_active`, `trigger_max_batches`, `trigger_batch_interval`) | used: batches run until every trigger is met (v1.6.1) |
+| `tabular_legendre`, `max_order` | used: how anisotropic scattering is sampled (v2.0) |
 | `survival_biasing`, `weight_windows`, `cutoff`, `temperature`, `max_lost_particles`, and every other setting | warned. They change only the noise or the run's length |
 | `output`, `verbosity`, `statepoint`, `sourcepoint`, `track`, `max_tracks` | quiet: these only concern OpenMC's own files |
 
@@ -39,7 +40,10 @@ and whether closing each one needs the network to change, are in
 | `Material` holding one `Macroscopic` (with any density) from an `MGXSLibrary` with 1 group | used |
 | more than one group | refused (stage 3) |
 | nuclides in a material | refused (macroscopic data only) |
-| anisotropic scattering (Legendre order > 0, non-zero) | refused (stage 2) |
+| anisotropic scattering, `scatter_format` legendre, histogram or tabular (any order) | used (v2.0), sampled exactly as OpenMC 0.16 does: Legendre data through the tabular conversion (`settings.tabular_legendre`, 33 points by default, negative density set to 0) or, with it disabled, by rejection; `settings.max_order` truncates. Balls are off inside an anisotropic material (plain Monte Carlo there); isotropic materials keep them |
+| a Legendre law with only P0 (or all higher moments zero), a flat histogram or table | treated as isotropic (balls allowed) |
+| `representation='angle'` (angle-dependent data) | refused |
+| histogram data with a negative bin | refused (OpenMC cannot sample it either) |
 | fissile data | refused (stage 4) |
 | scattering multiplicity other than 1 ((n,xn)) | refused (v1.6.1) |
 | `inverse_velocity` | used for time filters and the inverse-velocity score (v1.6.1) |

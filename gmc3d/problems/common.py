@@ -17,6 +17,60 @@ import openmc
 LIBRARY_DIR = Path(__file__).resolve().parent.parent / "data" / "mgxs"
 
 
+# The scattering law every problem's materials get (v2.0): None =
+# isotropic, as before; otherwise set by `scattering_law` below.
+_LAW = {"law": None, "tag": ""}
+
+
+class scattering_law:
+    """`with common.scattering_law(law, tag): model = build()` gives every
+    material of the problem built inside that law, and writes its library
+    as data/mgxs/<name>_<tag>.h5 (so the isotropic one is untouched).
+
+    law: Legendre moments [1, E P_1, E P_2, ...] (OpenMC's 'legendre'
+    format; a_l / a_0 = E[P_l(mu)]), ("histogram", bins) for OpenMC's
+    histogram format (equal bins on [-1, 1], any positive heights),
+    ("tabular", f) for its tabular format (f at equally spaced points on
+    [-1, 1]), or a dict {material name: law} for one law per material
+    (a material not named stays isotropic).
+    """
+
+    def __init__(self, law, tag):
+        self.law, self.tag = law, tag
+
+    def __enter__(self):
+        self.old = dict(_LAW)
+        _LAW.update(law=self.law, tag=self.tag)
+        return self
+
+    def __exit__(self, *exc):
+        _LAW.update(self.old)
+
+
+def _scattering(d, ss, mname):
+    """Set d's format and order; return its scatter matrix (OpenMC needs
+    the order before any cross section is set)."""
+    law = _LAW["law"]
+    if isinstance(law, dict):
+        law = law.get(mname)
+    if law is None:
+        d.order = 0
+        return np.array([[[ss]]])
+    if isinstance(law, tuple) and law[0] == "histogram":
+        h = np.asarray(law[1], float)
+        d.scatter_format = "histogram"
+        d.order = h.size
+        return np.array([[ss * h / h.sum()]])
+    if isinstance(law, tuple) and law[0] == "tabular":
+        f = np.asarray(law[1], float)
+        d.scatter_format = "tabular"
+        d.order = f.size
+        return np.array([[ss * f / np.trapezoid(f, dx=2.0 / (f.size - 1))]])
+    a = np.asarray(law, float)
+    d.order = a.size - 1
+    return np.array([[ss * a / a[0]]])
+
+
 def one_group_materials(name, xs):
     """xs = {material name: (sigma_s, sigma_a)} in 1/cm.
 
@@ -25,12 +79,14 @@ def one_group_materials(name, xs):
     groups = openmc.mgxs.EnergyGroups([0.0, 20.0e6])
     lib = openmc.MGXSLibrary(groups)
     mats = {}
+    if _LAW["tag"]:
+        name = f"{name}_{_LAW['tag']}"
     for mname, (ss, sa) in xs.items():
         d = openmc.XSdata(mname, groups)
-        d.order = 0
+        sm = _scattering(d, ss, mname)
         d.set_total([ss + sa])
         d.set_absorption([sa])
-        d.set_scatter_matrix(np.array([[[ss]]]))
+        d.set_scatter_matrix(sm)
         lib.add_xsdata(d)
         m = openmc.Material(name=mname)
         m.set_density("macro", 1.0)

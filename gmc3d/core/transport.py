@@ -5,7 +5,8 @@ Uses: geometry.py (where am I, how far to the next surface or the nearest
 one), tallies.py (scoring), rng.py (random numbers), and a ball backend
 from ball/ (the exact walk, the lookup table or a trained network).
 
-One energy, isotropic scattering, fixed source (SRS Stage 1).
+One energy, fixed source (SRS Stage 1); isotropic or anisotropic scattering
+(v2.0: anisotropic materials are tracked flight by flight, no balls).
 
 THE PHYSICS, as in gmc2d's mc.py.  A particle flies a distance drawn from
 the SCATTERING cross section, -ln(xi)/sigma_s.  Absorption never kills it;
@@ -92,6 +93,7 @@ from . import detectors as DT
 from . import ext as EX
 from . import geometry as G
 from . import rng
+from . import scattering as SC
 from . import surfaces as S
 from . import tallies as T
 from ball import profile as ball_profile
@@ -132,6 +134,8 @@ Physics = namedtuple("Physics", [
     "mesh_h", "k_max",                # smallest voxel width; most points
     "prof_log_r", "prof_log1p_ell", "prof_f_unsc", "prof_cdf",
                                       # ball/profile.py's table
+    "ang",                            # scattering laws, one row per
+                                      # material (scattering.py, v2.0)
 ])
 
 # point detectors (detectors.py), passed as their own argument like
@@ -487,7 +491,8 @@ def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
         d_sc = -np.log(1.0 - rng.rand(P.seed, i)) / ss if ss > 0.0 else INF
 
         # ---- a ball step, if one fits and the particle would scatter in it
-        if want_near and ss > 0.0:
+        # (isotropic materials only: the walk inside a ball assumes it)
+        if want_near and ss > 0.0 and ph.ang[mat, 0] == SC.ISO:
             room = near - GUARD
             if ph.mesh_cap:
                 room = min(room, T.mesh_room(L, X, x, y, z) - GUARD)
@@ -557,9 +562,19 @@ def _track(i, g, ph, L, X, D, P, row, cnt, pth, last, to, univ, scr,
         cnt[C_FLIGHT] += 1
 
         if scatter:
+            iso = ph.ang[mat, 0] == SC.ISO
             if D.on:
-                DT.score(row, D, g, D.sig_t, wgt, x, y, z, dpth)
-            nu, nv, nw = rng.isotropic(P.seed, i)
+                if iso:
+                    DT.score(row, D, g, D.sig_t, wgt, x, y, z, dpth)
+                else:
+                    DT.score_aniso(row, D, g, D.sig_t, wgt, x, y, z, u, v,
+                                   w, ph.ang, mat, dpth)
+            if iso:
+                nu, nv, nw = rng.isotropic(P.seed, i)
+            else:
+                nu, nv, nw = rotate(u, v, w, SC.sample_mu(ph.ang, mat,
+                                                          P.seed, i),
+                                    2.0 * np.pi * rng.rand(P.seed, i))
             if E.n:
                 XS.mu_last[i] = u * nu + v * nv + w * nw
                 XS.ncoll[i] += 1
@@ -807,7 +822,8 @@ def physics(problem, backend=None, r_star=3.0, r_max=None,
                  np.flatnonzero(g.surf_bc != G.BC_TRANSMISSION),
                  float(w_cut), float(w_surv), backend is not None,
                  float(r_star), float(r_max or INF), mesh_rule == "cap",
-                 use_profile, mesh_h, int(k_max), *tab)
+                 use_profile, mesh_h, int(k_max), *tab,
+                 m.ang if m.ang is not None else np.zeros((1, SC.HEAD)))
     return ph, L, r_max, X
 
 
