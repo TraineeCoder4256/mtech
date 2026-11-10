@@ -74,15 +74,19 @@ def exact(law_list, n, seed=4242):
     return out, ang
 
 
-def score(backend, law_list, ref, ang):
-    """One row per (law, R)."""
-    g_all = backend.moments(ang)
+def score(backend, law_list, ref, ang, seed=777):
+    """One row per (law, R).  Whole balls (backend.sample_aniso, so an
+    m2.1 model's exact first scatter is included), on random streams of
+    their own (master seed `seed`, not the exact walk's)."""
+    from core import rng
     rows = []
     for m, (name, _) in enumerate(law_list):
-        for R in RADII:
+        for j, R in enumerate(RADII):
             e = ref[name, R]
             n = e[0].size
-            d = backend.draw(np.full(n, R), np.repeat(g_all[m:m + 1], n, 0))
+            st = rng.streams(np.uint64(seed), (m * len(RADII) + j) * n, n)
+            d = backend.sample_aniso(np.full(n, R), np.full(n, m), ang, st,
+                                     np.arange(n))
             ee = (e[0], e[1], e[2], e[3] / R)
             dd = (d[0], d[1], d[2], d[3] / R)
             noise = 1.36 * np.sqrt(2.0 / n)
@@ -109,16 +113,20 @@ def worst(rows, laws_in=None):
 
 
 def cost_per_draw(backend, batches=(1000, 10000, 100000), repeats=3):
-    g = np.tile(backend.moments(np.asarray(
-        _p3_ang(), float))[0], (max(batches), 1))
+    """Microseconds per whole ball (sample_aniso), P3 law, R log-uniform
+    in [1, 30]; streams made outside the timer, as the driver has them."""
+    from core import rng
+    ang = _p3_ang()
     out = {}
     for b in batches:
         R = np.exp(np.random.default_rng(0).uniform(0, np.log(30), b))
-        backend.draw(R, g[:b])
+        mats = np.zeros(b, np.int64)
+        st = [rng.streams(np.uint64(99), r * b, b) for r in range(repeats + 1)]
+        backend.sample_aniso(R, mats, ang, st[0], np.arange(b))
         best = np.inf
-        for _ in range(repeats):
+        for r in range(repeats):
             t = time.perf_counter()
-            backend.draw(R, g[:b])
+            backend.sample_aniso(R, mats, ang, st[r + 1], np.arange(b))
             best = min(best, time.perf_counter() - t)
         out[b] = 1e6 * best / b
     return out
@@ -150,8 +158,8 @@ def report(name, rows, cost, log=print):
 
 def smoke(backend, n=200_000, log=print):
     """Innovation's P3 reference point at R = 5 (model means)."""
-    g = backend.moments(_p3_ang())
-    d = backend.draw(np.full(n, 5.0), np.repeat(g, n, 0))
+    d = backend.sample_aniso(np.full(n, 5.0), np.zeros(n, np.int64),
+                             _p3_ang())
     m = [float(a.mean()) for a in d]
     log(f"smoke P3 R=5  cos_n {m[0]:.3f} (0.382)  mu {m[1]:.3f} (0.778)  "
         f"phi {m[2]:.3f} (1.864)  s {m[3]:.2f} (8.91)")

@@ -80,7 +80,8 @@ def save(out_dir, family, config, net, data, facts, shared=True,
     out_dir.mkdir(parents=True, exist_ok=True)
     info = {**facts, "r_min": data["r_min"], "r_max": data["r_max"],
             "n_train": int(data["y_train"].shape[0]),
-            **({k: config[k] for k in config})}
+            **({k: config[k] for k in config}),
+            **({"k_min": data["k_min"]} if "k_min" in data else {})}
     torch.save({"family": family.name, "config": dict(config),
                 "interface": interface,
                 "ema": {k: v.cpu() for k, v in net.state_dict().items()},
@@ -102,7 +103,8 @@ def save(out_dir, family, config, net, data, facts, shared=True,
                  "n_val": int(data["y_val"].shape[0]),
                  "r_min": data["r_min"], "r_max": data["r_max"],
                  "seed": data.get("seed"), "sha256": data.get("sha256"),
-                 **({"parts_sha256": data["parts_sha256"]}
+                 **({"parts_sha256": data["parts_sha256"],
+                     "k_min": data.get("k_min", 1)}
                     if "parts_sha256" in data else {})},
         "commit": _commit(),
         "created": datetime.datetime.now(datetime.timezone.utc)

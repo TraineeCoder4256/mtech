@@ -28,11 +28,12 @@ class _Iso:
         return np.full(len(R), 0.5), 2.0 * np.asarray(R)
 
 
-def _data(n=3000, seed=3):
+def _data(n=3000, seed=3, k_min=2):
     raw = D.make_aniso(n, I.R_MIN, I.R_MAX, seed=seed, pool=40)
     iso = pipeline.iso_rows(400, I.R_MIN, I.R_MAX, seed=seed, cache=False)
     d = E.prepare_aniso([(raw, n - 500), (iso, 300)], n - 200, I.R_MIN,
-                        I.R_MAX, [D.data_hash(raw), D.data_hash(iso)])
+                        I.R_MAX, [D.data_hash(raw), D.data_hash(iso)],
+                        k_min=k_min)
     d["seed"] = seed
     return d
 
@@ -91,3 +92,39 @@ def test_v2_train_save_load_draw(family, tmp_path):
         store.read(out)
     with pytest.raises(store.NotSupported):
         pipeline.load(family, 0, out_dir=out)
+
+
+def test_k_min_filter():
+    d1, d2 = _data(k_min=1), _data(k_min=2)
+    assert d2["k_min"] == 2 and d2["sha256"] != d1["sha256"]
+    assert d2["y_train"].shape[0] < d1["y_train"].shape[0]
+
+
+def test_first_scatter_is_the_walks_own(tmp_path):
+    """m2.1: whole balls = the exact walk to its second collision, then the
+    family.  On the same streams the balls that exit at the first chance
+    are exactly the walk's k = 1 walks, outputs identical, phi = pi."""
+    from ball import walk
+    from core import rng
+    F = get("cvae")
+    d = _data()
+    net, cfg, facts = F.fit(d, seed=0, steps=5, log=lambda *a: None,
+                            interface=V2)
+    store.save(tmp_path, F, cfg, net, d, facts, shared=False, interface=V2)
+    be = pipeline.load("cvae", 0, out_dir=tmp_path, interface=V2, iso=_Iso())
+    assert be.k_min == 2 and be.describe()["first_scatter_exact"]
+    ang = SC.pack(list(LW.held_out().values()))
+    n = 4000
+    R = np.full(n, 1.0)
+    mats = np.arange(n) % ang.shape[0]
+    a = be.sample_aniso(R, mats, ang, rng.streams(np.uint64(5), 0, n),
+                        np.arange(n))
+    cn, mu, phi, s, k = walk.walk_many_aniso(
+        R, mats.astype(np.int64), ang, rng.streams(np.uint64(5), 0, n),
+        np.arange(n))
+    one = k == 1
+    assert 0.3 < one.mean() < 0.6 and be.single == one.sum()
+    for x, y in zip(a, (cn, mu, phi, s)):
+        assert np.array_equal(x[one], y[one])
+    assert np.allclose(a[2][one], np.pi, rtol=0, atol=1e-9)   # pi to rounding
+    assert not any(I.check_aniso_outputs(R, *a).values())

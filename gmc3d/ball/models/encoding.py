@@ -146,17 +146,25 @@ def decode_aniso(R, y):
             np.pi * _sigmoid(y[:, 2]), R * (1.0 + np.exp(y[:, 3])))
 
 
-def prepare_aniso(parts, n_train, r_min, r_max, hashes):
+def prepare_aniso(parts, n_train, r_min, r_max, hashes, k_min=1):
     """Anisotropic walks -> the standardised arrays every family trains on.
 
     parts   list of (raw, n_train_rows): each raw is a make_aniso() dict
             (R, cos_n, mu, phi, s, k, law, g_pool), its first n_train_rows
             rows go to training and the rest to validation.  Several parts
             let isotropic rows (g = 0) join the anisotropic ones.
+    k_min   keep only walks with at least k_min scatters (m2.1: 2, since
+            the backend walks single-scatter exits exactly).
     Built in float32 a slice at a time: 41M rows x 13 conditions is 2 GB.
     """
-    ctr, ytr, cva, yva = [], [], [], []
+    ctr, ytr, cva, yva, ks = [], [], [], [], []
     for raw, nt in parts:
+        if k_min > 1:
+            keep = raw["k"] >= k_min
+            nt = int(keep[:nt].sum())
+            raw = {key: (v if key == "g_pool" else v[keep])
+                   for key, v in raw.items()}
+        ks.append(raw["k"])
         c = np.empty((raw["R"].size, C_DIM_ANISO), np.float32)
         c[:, 0] = np.log(raw["R"])
         c[:, 1:] = raw["g_pool"].astype(np.float32)[raw["law"]]
@@ -179,9 +187,10 @@ def prepare_aniso(parts, n_train, r_min, r_max, hashes):
                 a[lo:lo + 4_000_000] -= mean.astype(np.float32)
                 a[lo:lo + 4_000_000] /= std.astype(np.float32)
         norms.append(Norm(mean, std))
-    k = np.concatenate([raw["k"] for raw, _ in parts])
-    h = hashlib.sha256("".join(hashes).encode()).hexdigest()[:16]
+    k = np.concatenate(ks)
+    tag = "".join(hashes) + ("" if k_min == 1 else f"k>={k_min}")
+    h = hashlib.sha256(tag.encode()).hexdigest()[:16]
     return {"c_train": c_tr, "y_train": y_tr, "c_val": c_va, "y_val": y_va,
             "cnorm": norms[0], "ynorm": norms[1],
             "mean_scatters": float(k.mean()), "r_min": r_min, "r_max": r_max,
-            "sha256": h, "parts_sha256": list(hashes)}
+            "sha256": h, "parts_sha256": list(hashes), "k_min": k_min}

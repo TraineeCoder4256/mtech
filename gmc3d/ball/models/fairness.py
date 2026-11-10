@@ -46,6 +46,12 @@ TRAIN = {"steps": 8000, "batch": 4096, "lr": 2e-3, "warmup": 300,
 N_TRAIN_ANISO, N_VAL_ANISO = 40_000_000, 500_000
 N_TRAIN_ISO, N_VAL_ISO = 1_000_000, 12_500          # 2.5% of the rows
 TRAIN_ANISO = {**TRAIN, "steps": 24_000, "val_every": 1000}
+# m2.1: a walk that scatters once exits with phi exactly pi (it stays in
+# one plane), up to half of all walks at R = 1, a point mass no smooth
+# model draws.  The backend walks every ball exactly to its second
+# collision (walk.first_scatter_many_aniso) and only the walks that go on
+# reach the family, so every family learns the k >= 2 rows only.
+K_MIN_ANISO = 2
 
 
 def reference_params(interface=1):

@@ -66,6 +66,21 @@ class AnisoBackend:
                                       anisotropic balls: (cos_n, mu, phi, s)
                                       from the v2 model
 
+    SINGLE-SCATTER EXITS ARE WALKED EXACTLY (m2.1).  A walk that scatters
+    once stays in one plane, so it leaves with phi exactly pi: a point
+    mass (up to half the walks at R = 1) that no smooth model can draw.
+    So sample_aniso first walks every ball exactly up to its second
+    collision (walk.first_scatter_many_aniso, Innovation's, with the
+    particles' own random streams, like the exact walk).  The balls that
+    exit there are done, exactly; for the others the walk's state is
+    thrown away and the family draws from what it learned, p(exit | at
+    least 2 scatters, R, law).  That mixture is exact apart from the
+    family itself: the share that exits after one scatter is the walk's
+    own, and the family is asked exactly what it was trained on.  An
+    analogy: a shop assistant who hands over the common items from the
+    counter and only sends to the warehouse for the rest.  A model trained
+    on all rows (m2.0, info without k_min) is used as before, without this.
+
     The v2 model needs each ball's law as 12 Legendre moments.  The driver
     hands over the material index of each ball and the packed laws `ang`
     (core/scattering.pack); the moments of every row of `ang` are worked
@@ -86,6 +101,9 @@ class AnisoBackend:
         self.r_min, self.r_max = info["r_min"], info["r_max"]
         self.gen = torch.Generator(device=self.device).manual_seed(seed)
         self.draws = 0
+        self.single = 0                  # balls finished by the first scatter
+        self.k_min = int(info.get("k_min", 1))
+        self._seed, self._used = seed, 0
         self._ang_key, self._g = None, None
 
     def sample(self, R, seeds=None, idx=None):
@@ -101,7 +119,9 @@ class AnisoBackend:
 
     @torch.no_grad()
     def draw(self, R, g):
-        """(cos_n, mu, phi, s) for radii R (n,) and moments g (n, 12)."""
+        """The FAMILY's draw alone: (cos_n, mu, phi, s) for radii R (n,)
+        and moments g (n, 12).  For an m2.1 model this is the k >= 2 part
+        only; whole balls come from sample_aniso."""
         R = np.asarray(R, np.float64)
         c = torch.from_numpy(self.cnorm(E.condition_aniso(R, g)).astype(
             np.float32)).to(self.device)
@@ -111,11 +131,35 @@ class AnisoBackend:
         return E.decode_aniso(R, self.ynorm.undo(y))
 
     def sample_aniso(self, R, mats, ang, seeds=None, idx=None):
-        return self.draw(R, self.moments(ang)[np.asarray(mats)])
+        """(cos_n, mu, phi, s) for balls of radius R in materials mats of
+        the packed laws ang.  seeds/idx: the particles' random streams, as
+        the exact walk takes them; without them the backend uses its own
+        (seeded once, never reused)."""
+        R = np.ascontiguousarray(R, np.float64)
+        mats = np.ascontiguousarray(mats, np.int64)
+        g = self.moments(ang)
+        if self.k_min < 2:
+            return self.draw(R, g[mats])
+        from core import rng
+        from .. import walk
+        if seeds is None:
+            seeds = rng.streams(np.uint64(self._seed), self._used, R.size)
+            idx = np.arange(R.size)
+            self._used += R.size
+        ex, cn, mu, phi, s = walk.first_scatter_many_aniso(
+            R, mats, np.ascontiguousarray(ang, np.float64), seeds,
+            np.ascontiguousarray(idx, np.int64))
+        rest = np.flatnonzero(~ex)
+        self.single += R.size - rest.size
+        if rest.size:
+            cn[rest], mu[rest], phi[rest], s[rest] = self.draw(
+                R[rest], g[mats[rest]])
+        return cn, mu, phi, s
 
     def describe(self):
         return {"name": self.name, "family": self.family.name,
                 "nfe": self.family.nfe, "interface": 2,
+                "first_scatter_exact": self.k_min >= 2,
                 "isotropic_balls": getattr(self.iso, "name", "?"),
                 **{k: v for k, v in self.info.items() if k != "history"}}
 

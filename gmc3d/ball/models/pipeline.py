@@ -122,11 +122,14 @@ def aniso_data(log=print):
     data = E.prepare_aniso([(raw, fairness.N_TRAIN_ANISO),
                             (iso, fairness.N_TRAIN_ISO)],
                            fairness.N_TRAIN_ANISO + fairness.N_TRAIN_ISO,
-                           I.R_MIN, I.R_MAX, hashes)
+                           I.R_MIN, I.R_MAX, hashes,
+                           k_min=fairness.K_MIN_ANISO)
     data["seed"] = fairness.DATA_SEED
     del raw, iso
     log(f"data   {na:,} anisotropic + {ni:,} isotropic walks (interface "
-        f"v2), mean {data['mean_scatters']:.1f} scatters, "
+        f"v2), of which {data['y_train'].shape[0]:,} + "
+        f"{data['y_val'].shape[0]:,} with k >= {data['k_min']} kept, "
+        f"mean {data['mean_scatters']:.1f} scatters, "
         f"{time.time() - t0:.0f} s  (hash {data['sha256']}; parts "
         f"{hashes[0][:16]}, {hashes[1][:16]})")
     _ANISO_CACHE["data"] = data

@@ -86,3 +86,26 @@ built on its handoff (0b232f4). Interface v1 models are untouched.
   Innovation's P3 reference point and cost per draw. Innovation's gate
   decides acceptance.
 - `models.train/load(..., interface=2)`. `tests/test_models_m20.py`.
+
+## m2.1 (interface v2) - 10 Nov 2026
+
+The single-scatter fix, agreed with Innovation (its v2.1.3 2278ce3 gives
+`walk.first_scatter_many_aniso`).
+
+- Why: m2.0 failed Innovation's gate at every R <= 3 for every family. A
+  walk that scatters once stays in one plane and exits with phi = pi (to
+  rounding): 37-53% of walks at R = 1, a point mass no smooth model can
+  draw (runs/2026-11-10/models-v2/README.md).
+- `AnisoBackend.sample_aniso` walks every ball exactly to its second
+  collision on the particles' own streams; balls that exit there are the
+  walk's own (exact), the rest are drawn by the family. Exact mixture, no
+  extra weights, the same for every family. Without streams the backend
+  uses its own (seeded) ones. `draw(R, g)` is the family's k >= 2 part.
+- Every family trains on k >= 2 rows only (`fairness.K_MIN_ANISO = 2`,
+  `prepare_aniso(..., k_min)`, recorded in info and manifest). An m2.0
+  model (no k_min) answers as before. m2.0 weights moved to
+  `/mnt/project-files/models/m2.0/`.
+- `compare_aniso` scores whole balls on streams of its own; cost per draw
+  is per whole ball, streams made outside the timer.
+- Tests: the first-scatter balls equal the walk's k = 1 walks on the same
+  streams, outputs identical, phi = pi; k_min filter.
