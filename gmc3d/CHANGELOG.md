@@ -7,6 +7,51 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v2.1.5 (10 Nov 2026): the m2.1 models judged; weight rule to Phani
+
+Development's m2.1 (code fb89e55, results 850156a) walks each ball
+exactly to its second collision and learns only the k >= 2 exits.
+
+- **`checks/gate_v2.py`**: now also REPORTS each weight error as a share
+  of what the ball absorbs, (E_walk - E_model) / (1 - E_walk). It also
+  counts how many weight checks a two-condition rule would fail: |z| >
+  3.29 AND that share off by more than 0.5%, 1% or 2%. The rule itself
+  is unchanged until Phani picks one.
+- **`run.py anisocheck --backend <v2 model>`**: the "balls" runs walk
+  with that model instead of the exact walk. Output goes to
+  `anisocheck_<model>.json`.
+- **gate2, all six m2.1 models** (`runs/2026-11-10/gate-v2-m2.1/`).
+  Failing checks of 343 reproduce Development's exactly:
+
+  | model | fail | KS worst | weight fails: z only / +0.5% / +1% / +2% | worst absorbed share | us per ball (walk) |
+  |---|---|---|---|---|---|
+  | nflow seed 0 | 11 | 0.015 | 11 / 7 / 2 / 0 | 1.12% | 6.16 (1.40) |
+  | nflow seed 1 | 18 | 0.018 | 18 / 11 / 5 / 0 | 1.71% | 5.30 (1.36) |
+  | cvae seed 0 | 21 | 0.021 | 21 / 15 / 1 / 0 | 1.13% | 1.91 (1.40) |
+  | cvae seed 1 | 27 | 0.021 | 27 / 20 / 5 / 0 | 1.77% | 2.01 (1.40) |
+  | cfm seed 0 | 22 | 0.017 | 22 / 16 / 5 / 0 | 1.34% | 21.7 (1.43) |
+  | cfm seed 1 | 25 | 0.027 | 25 / 20 / 2 / 0 | 1.15% | 24.0 (1.39) |
+
+  - Every KS is inside 0.03 and nothing is out of range. Every failure
+    is a weight z (3.3 to 8.1).
+  - The errors above 1% of absorption are mostly the clipped law at R 5
+    to 29, plus p3, backward and tabular at R = 29, kappa 0.001.
+- **anisocheck against OpenMC with a model walking the balls**
+  (`runs/2026-11-10/anisocheck-m2.1/`):
+  - cvae_v2_seed0: 20 of 20. That covers 7 problems with full-size
+    anisotropic balls (1.0M to 7.1M balls each).
+  - nflow_v2_seed0: 19 of 20. The one fail is cask_p1 (mesh tallies,
+    balls held to one voxel): plan2d flux chi2/dof 1.222 over 484 bins
+    (p 6e-4).
+  - That cask_p1 fail is chance, not the model (`cask_reseed.log`). At
+    seed 5, plain MC with no balls fails the same tally (1.247), while
+    the exact walk and nflow give 1.169 and 1.169. At seed 7 all three
+    pass (0.976, 1.026, 0.974). These are the correlated mesh bins
+    already known from the slab item.
+- Not accepted yet: under the provisional rule every model fails the
+  gate, so `run.py` keeps the exact walk for anisotropic balls. The
+  final weight rule is Phani's decision.
+
 ## v2.1.4 (10 Nov 2026): the v2 gate tests whole balls
 
 From m2.1 on, a v2 model walks each ball's first scatter exactly

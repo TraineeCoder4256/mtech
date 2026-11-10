@@ -1,0 +1,20 @@
+seed 5 balls by oracle
+  cask_p1_s5_oracle      mc    FAIL  balls 0  plan2d/flux chi2/dof 1.247 over 484 bins (p 1.7e-04)
+  cask_p1_s5_oracle      balls PASS  balls 2,632,101  
+    mc {'plan2d/flux': 1.247, 'duct_grid/flux': 1.185, 'mesh/flux': 1.056} leak z 0.81
+    balls {'plan2d/flux': 1.169, 'duct_grid/flux': 1.0, 'mesh/flux': 1.105} leak z 0.57
+seed 5 balls by nflow_v2_seed0
+  cask_p1_s5_nflow_v2_seed0 mc    FAIL  balls 0  plan2d/flux chi2/dof 1.247 over 484 bins (p 1.7e-04)
+  cask_p1_s5_nflow_v2_seed0 balls PASS  balls 2,631,466  
+    mc {'plan2d/flux': 1.247, 'duct_grid/flux': 1.185, 'mesh/flux': 1.056} leak z 0.81
+    balls {'plan2d/flux': 1.169, 'duct_grid/flux': 1.071, 'mesh/flux': 1.101} leak z 0.76
+seed 7 balls by oracle
+  cask_p1_s7_oracle      mc    PASS  balls 0  
+  cask_p1_s7_oracle      balls PASS  balls 2,634,915  
+    mc {'plan2d/flux': 0.976, 'duct_grid/flux': 0.897, 'mesh/flux': 0.987} leak z -0.57
+    balls {'plan2d/flux': 1.026, 'duct_grid/flux': 0.84, 'mesh/flux': 1.01} leak z -0.17
+seed 7 balls by nflow_v2_seed0
+  cask_p1_s7_nflow_v2_seed0 mc    PASS  balls 0  
+  cask_p1_s7_nflow_v2_seed0 balls PASS  balls 2,635,212  
+    mc {'plan2d/flux': 0.976, 'duct_grid/flux': 0.897, 'mesh/flux': 0.987} leak z -0.57
+    balls {'plan2d/flux': 0.974, 'duct_grid/flux': 0.917, 'mesh/flux': 1.036} leak z -1.06

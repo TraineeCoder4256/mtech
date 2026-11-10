@@ -297,11 +297,15 @@ def cmd_gapcheck(args, log):
 
 def cmd_anisocheck(args, log):
     from checks import aniso
+    be = None if args.backend == "oracle" else backend(args.backend)
+    if be is not None:
+        log(f"balls walked by {args.backend}: {be.describe()}")
     res = aniso.suite(DATA / "openmc", args.particles, args.batches,
-                      names=args.cases or None, log=log)
-    (out_dir(args) / "anisocheck.json").write_text(
+                      names=args.cases or None, log=log, ball_backend=be)
+    tag = "anisocheck" + ("" if be is None else f"_{args.backend}")
+    (out_dir(args) / f"{tag}.json").write_text(
         json.dumps(output._plain(res), indent=1))
-    return "anisocheck"
+    return tag
 
 
 def cmd_gate2(args, log):
@@ -411,6 +415,9 @@ def main():
 
     s = sub.add_parser("anisocheck")
     s.add_argument("cases", nargs="*")
+    s.add_argument("--backend", default="oracle",
+                   help="what walks the balls: oracle (exact) or a v2 "
+                        "model, e.g. nflow_v2_seed0")
     common(s, particles=50_000)
 
     s = sub.add_parser("gate2")

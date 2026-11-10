@@ -121,7 +121,7 @@ def _histogram_scatter_fix(ref, model):
 
 
 def _compare(name, model, workdir, particles, batches, log, balls=True,
-             seed=3, need_balls=False):
+             seed=3, need_balls=False, ball_backend=None):
     pr = openmc_import.load(model)
     n = particles * batches
     ref = openmc_ref.run(model, f"{workdir}/aniso_{name}",
@@ -137,7 +137,8 @@ def _compare(name, model, workdir, particles, batches, log, balls=True,
     kinds = sorted({int(k) for k, _ in pr.mats.laws})
     out = {"kinds": kinds, "openmc_scatter_divided_by": factor,
            "mean_cosines": [SC.mean_cosine(k, v) for k, v in pr.mats.laws]}
-    runs = (("mc", None),) + ((("balls", Oracle()),) if balls else ())
+    runs = (("mc", None),) + ((("balls", ball_backend or Oracle()),)
+                              if balls else ())
     for label, be in runs:
         t = time.perf_counter()
         r = transport.run(pr, particles, batches, seed=seed, backend=be,
@@ -242,7 +243,10 @@ def _displacement(log, particles=20_000, batches=20):
 
 
 def suite(workdir, particles=PARTICLES, batches=BATCHES, names=None,
-          log=print):
+          log=print, ball_backend=None):
+    """ball_backend: what walks the balls in the "balls" runs (default the
+    Oracle, the exact walk; v2.1.5: a v2 model, `run.py anisocheck
+    --backend nflow_v2`)."""
     Path(workdir).mkdir(parents=True, exist_ok=True)
     rows = {}
 
@@ -265,14 +269,15 @@ def suite(workdir, particles=PARTICLES, batches=BATCHES, names=None,
     for name, (prob, law, st) in CASES.items():
         guard(name, lambda: _compare(
             name, _build(prob, law, name, st), workdir, particles, batches,
-            log))
+            log, ball_backend=ball_backend))
     log("\n== the same without mesh tallies: full-size anisotropic balls "
         "(v2.1)")
     for name in FULL_BALLS:
         prob, law, st = CASES[name]
         guard(name + "_balls", lambda: _compare(
             name + "_balls", _no_meshes(_build(prob, law, name, st)),
-            workdir, particles, batches, log, need_balls=True))
+            workdir, particles, batches, log, need_balls=True,
+            ball_backend=ball_backend))
     guard("filters", lambda: _compare("filters", filters_model(), workdir,
                                       particles, batches, log, balls=False))
     guard("detectors", lambda: _detectors(workdir, particles, batches, log))

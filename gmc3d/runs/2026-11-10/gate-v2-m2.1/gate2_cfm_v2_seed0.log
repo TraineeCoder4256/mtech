@@ -1,0 +1,100 @@
+model cfm_v2_seed0: manifest interface 2 (OK)
+
+== p1: g1 +0.300
+  R    1  cos_n z  +1.25 KS 0.005  mu z  +3.07 KS 0.006  phi z  +0.85 KS 0.005  s z  -0.89 KS 0.006  weight z +0.89 +0.91 +1.03
+  R  1.5  cos_n z  -1.44 KS 0.005  mu z  +2.91 KS 0.007  phi z  +0.69 KS 0.003  s z  -0.44 KS 0.004  weight z +0.44 +0.43 +0.36
+  R    3  cos_n z  -0.19 KS 0.003  mu z  +0.40 KS 0.004  phi z  +2.16 KS 0.006  s z  -0.32 KS 0.003  weight z +0.32 +0.32 +0.26
+  R    5  cos_n z  -0.49 KS 0.004  mu z  -0.23 KS 0.002  phi z  +1.22 KS 0.005  s z  -0.05 KS 0.004  weight z +0.06 +0.13 +0.05
+  R   10  cos_n z  -0.46 KS 0.003  mu z  +0.11 KS 0.002  phi z  -1.47 KS 0.006  s z  -1.03 KS 0.003  weight z +1.03 +0.91 +0.18
+  R   20  cos_n z  -0.01 KS 0.004  mu z  +0.01 KS 0.002  phi z  +0.40 KS 0.003  s z  +2.05 KS 0.004  weight z -1.86 -1.16 +0.58
+  R   29  cos_n z  +1.20 KS 0.004  mu z  +0.54 KS 0.003  phi z  +0.61 KS 0.004  s z  +2.15 KS 0.004  weight z -1.83 -0.69 +1.89
+
+== p3: g1 +0.600
+           absorbed share, model/walk - 1: -0.52% -0.52% -0.47%
+  R    1  cos_n z  +4.22 KS 0.008  mu z  -1.26 KS 0.004  phi z  +3.81 KS 0.006  s z  -4.40 KS 0.009  weight z +4.40 +4.40 +4.44  FAIL
+  R  1.5  cos_n z  +2.51 KS 0.006  mu z  -0.53 KS 0.003  phi z  +1.19 KS 0.004  s z  -2.64 KS 0.010  weight z +2.64 +2.66 +2.81
+  R    3  cos_n z  +0.93 KS 0.003  mu z  +0.63 KS 0.005  phi z  -1.17 KS 0.005  s z  -1.81 KS 0.007  weight z +1.82 +1.84 +1.97
+  R    5  cos_n z  -0.26 KS 0.003  mu z  -0.02 KS 0.004  phi z  +1.27 KS 0.005  s z  +1.33 KS 0.005  weight z -1.32 -1.26 -0.99
+  R   10  cos_n z  -1.47 KS 0.005  mu z  -0.16 KS 0.003  phi z  +0.05 KS 0.003  s z  +1.61 KS 0.006  weight z -1.61 -1.66 -2.42
+           absorbed share, model/walk - 1: +0.33% +0.18% +0.02%
+  R   20  cos_n z  +1.11 KS 0.004  mu z  -0.82 KS 0.003  phi z  +0.25 KS 0.002  s z  +1.34 KS 0.006  weight z -1.28 -1.28 -3.39  FAIL
+  R   29  cos_n z  -0.72 KS 0.004  mu z  +1.33 KS 0.007  phi z  -0.67 KS 0.004  s z  +1.45 KS 0.006  weight z -1.37 -1.82 -2.23
+
+== clipped: g1 +0.448
+           absorbed share, model/walk - 1: -0.55% -0.54% -0.48%
+  R    1  cos_n z  +2.91 KS 0.015  mu z  -6.49 KS 0.015  phi z  +5.19 KS 0.010  s z  -3.41 KS 0.015  weight z +3.41 +3.41 +3.37  FAIL
+  R  1.5  cos_n z  +2.22 KS 0.014  mu z  -3.06 KS 0.011  phi z  +4.62 KS 0.009  s z  -1.28 KS 0.016  weight z +1.28 +1.28 +1.26
+  R    3  cos_n z  -1.93 KS 0.012  mu z  -0.46 KS 0.003  phi z  +2.15 KS 0.006  s z  +0.15 KS 0.017  weight z -0.15 -0.15 -0.22
+  R    5  cos_n z  -0.02 KS 0.004  mu z  +2.90 KS 0.009  phi z  +1.96 KS 0.005  s z  -2.46 KS 0.013  weight z +2.48 +2.63 +3.09
+           absorbed share, model/walk - 1: -1.34% -1.10% -0.13%
+  R   10  cos_n z  +1.70 KS 0.005  mu z  -1.11 KS 0.005  phi z  -1.38 KS 0.005  s z  -5.05 KS 0.015  weight z +5.11 +5.39 +3.17  FAIL
+           absorbed share, model/walk - 1: -1.01% -0.43% +0.00%
+  R   20  cos_n z  -1.12 KS 0.004  mu z  -0.46 KS 0.004  phi z  -1.34 KS 0.006  s z  -4.04 KS 0.008  weight z +4.06 +3.41 -1.20  FAIL
+  R   29  cos_n z  +0.80 KS 0.004  mu z  +0.43 KS 0.002  phi z  -2.52 KS 0.007  s z  -2.42 KS 0.006  weight z +2.26 +0.53 -2.80
+
+== backward: g1 -0.300
+  R    1  cos_n z  -1.14 KS 0.005  mu z  +1.37 KS 0.005  phi z  +1.90 KS 0.007  s z  +2.24 KS 0.004  weight z -2.24 -2.22 -2.08
+  R  1.5  cos_n z  -0.43 KS 0.004  mu z  -0.96 KS 0.005  phi z  +1.35 KS 0.005  s z  +0.25 KS 0.005  weight z -0.25 -0.27 -0.43
+  R    3  cos_n z  -0.34 KS 0.003  mu z  +0.87 KS 0.003  phi z  +0.04 KS 0.005  s z  -0.31 KS 0.006  weight z +0.30 +0.21 -0.64
+  R    5  cos_n z  -0.69 KS 0.003  mu z  -2.75 KS 0.006  phi z  +0.00 KS 0.003  s z  -0.54 KS 0.005  weight z +0.54 +0.48 -0.58
+  R   10  cos_n z  -0.84 KS 0.004  mu z  +0.32 KS 0.004  phi z  -3.19 KS 0.008  s z  +2.04 KS 0.005  weight z -1.95 -1.59 -1.02
+  R   20  cos_n z  -2.10 KS 0.007  mu z  -0.14 KS 0.003  phi z  +0.06 KS 0.002  s z  +3.11 KS 0.009  weight z -2.99 -3.23 +0.02
+           absorbed share, model/walk - 1: +1.02% +0.13% -0.00%
+  R   29  cos_n z  -0.97 KS 0.005  mu z  -1.82 KS 0.004  phi z  +1.36 KS 0.005  s z  +5.13 KS 0.012  weight z -5.45 -4.96 +2.80  FAIL
+
+== p5_order2: g1 +0.616
+           absorbed share, model/walk - 1: -0.84% -0.83% -0.73%
+  R    1  cos_n z  +5.54 KS 0.015  mu z  -3.71 KS 0.009  phi z  +5.91 KS 0.010  s z  -6.87 KS 0.013  weight z +6.87 +6.85 +6.67  FAIL
+           absorbed share, model/walk - 1: -0.67% -0.66% -0.55%
+  R  1.5  cos_n z  +4.98 KS 0.016  mu z  -4.33 KS 0.010  phi z  +6.02 KS 0.011  s z  -4.79 KS 0.013  weight z +4.79 +4.78 +4.63  FAIL
+  R    3  cos_n z  +0.12 KS 0.008  mu z  -0.03 KS 0.003  phi z  +3.21 KS 0.008  s z  -1.45 KS 0.012  weight z +1.46 +1.50 +1.76
+  R    5  cos_n z  +1.17 KS 0.005  mu z  +1.93 KS 0.005  phi z  +0.19 KS 0.004  s z  -0.64 KS 0.008  weight z +0.65 +0.74 +1.14
+  R   10  cos_n z  -1.43 KS 0.005  mu z  +0.73 KS 0.003  phi z  -0.08 KS 0.002  s z  -0.82 KS 0.009  weight z +0.82 +0.75 -0.64
+  R   20  cos_n z  -1.53 KS 0.006  mu z  -1.88 KS 0.009  phi z  -1.67 KS 0.008  s z  -0.03 KS 0.004  weight z +0.04 -0.17 -2.83
+  R   29  cos_n z  +0.85 KS 0.005  mu z  +0.45 KS 0.004  phi z  +0.69 KS 0.004  s z  +1.75 KS 0.004  weight z -1.73 -1.67 -3.00
+
+== histogram: g1 +0.502
+  R    1  cos_n z  +1.28 KS 0.004  mu z  -1.70 KS 0.005  phi z  +1.06 KS 0.003  s z  -1.94 KS 0.006  weight z +1.94 +1.95 +2.00
+  R  1.5  cos_n z  +2.89 KS 0.006  mu z  +0.29 KS 0.003  phi z  +1.83 KS 0.006  s z  -3.03 KS 0.008  weight z +3.03 +3.06 +3.24
+  R    3  cos_n z  +2.01 KS 0.007  mu z  +0.69 KS 0.003  phi z  +1.95 KS 0.007  s z  -0.44 KS 0.006  weight z +0.44 +0.51 +1.01
+  R    5  cos_n z  -1.95 KS 0.006  mu z  +0.76 KS 0.004  phi z  +1.54 KS 0.007  s z  +2.76 KS 0.009  weight z -2.76 -2.79 -3.10
+  R   10  cos_n z  -1.83 KS 0.005  mu z  -2.02 KS 0.006  phi z  -1.97 KS 0.006  s z  +1.30 KS 0.006  weight z -1.30 -1.34 -2.32
+  R   20  cos_n z  -1.22 KS 0.005  mu z  +0.15 KS 0.003  phi z  +0.93 KS 0.004  s z  +1.67 KS 0.006  weight z -1.73 -2.24 -1.85
+           absorbed share, model/walk - 1: +0.80% +0.26% +0.00%
+  R   29  cos_n z  -0.52 KS 0.004  mu z  +1.25 KS 0.005  phi z  +0.19 KS 0.003  s z  +3.52 KS 0.009  weight z -3.42 -3.27 -0.24  FAIL
+
+== tabular: g1 +0.375
+  R    1  cos_n z  -0.69 KS 0.004  mu z  +0.29 KS 0.004  phi z  +0.21 KS 0.003  s z  -0.92 KS 0.003  weight z +0.92 +0.92 +0.91
+  R  1.5  cos_n z  -0.46 KS 0.003  mu z  +0.66 KS 0.004  phi z  +1.13 KS 0.003  s z  -0.09 KS 0.004  weight z +0.09 +0.10 +0.14
+  R    3  cos_n z  +0.81 KS 0.005  mu z  +2.17 KS 0.006  phi z  +1.83 KS 0.005  s z  -1.11 KS 0.005  weight z +1.12 +1.20 +1.71
+  R    5  cos_n z  -1.74 KS 0.006  mu z  -0.63 KS 0.005  phi z  -0.89 KS 0.004  s z  +2.56 KS 0.006  weight z -2.56 -2.51 -2.16
+  R   10  cos_n z  -0.94 KS 0.004  mu z  -0.12 KS 0.003  phi z  +1.21 KS 0.005  s z  +0.62 KS 0.004  weight z -0.64 -0.74 -1.13
+  R   20  cos_n z  +1.74 KS 0.006  mu z  +2.62 KS 0.006  phi z  -0.01 KS 0.004  s z  +1.29 KS 0.003  weight z -1.21 -0.79 +1.24
+           absorbed share, model/walk - 1: +1.12% +0.26% -0.00%
+  R   29  cos_n z  +0.33 KS 0.003  mu z  +0.14 KS 0.004  phi z  -1.11 KS 0.003  s z  +4.91 KS 0.011  weight z -4.96 -4.09 +0.92  FAIL
+
+cost: model 21.74 us per draw, exact walk 1.43 us (batch 100,000, these radii)
+gate v2: FAIL (22 failing checks of 343)
+  p3 R 1: weight z +4.40 at kappa 0.001
+  p3 R 1: weight z +4.40 at kappa 0.01
+  p3 R 1: weight z +4.44 at kappa 0.1
+  p3 R 20: weight z -3.39 at kappa 0.1
+  clipped R 1: weight z +3.41 at kappa 0.001
+  clipped R 1: weight z +3.41 at kappa 0.01
+  clipped R 1: weight z +3.37 at kappa 0.1
+  clipped R 10: weight z +5.11 at kappa 0.001
+  clipped R 10: weight z +5.39 at kappa 0.01
+  clipped R 20: weight z +4.06 at kappa 0.001
+  clipped R 20: weight z +3.41 at kappa 0.01
+  backward R 29: weight z -5.45 at kappa 0.001
+  backward R 29: weight z -4.96 at kappa 0.01
+  p5_order2 R 1: weight z +6.87 at kappa 0.001
+  p5_order2 R 1: weight z +6.85 at kappa 0.01
+  p5_order2 R 1: weight z +6.67 at kappa 0.1
+  p5_order2 R 1.5: weight z +4.79 at kappa 0.001
+  p5_order2 R 1.5: weight z +4.78 at kappa 0.01
+  p5_order2 R 1.5: weight z +4.63 at kappa 0.1
+  histogram R 29: weight z -3.42 at kappa 0.001
+  tabular R 29: weight z -4.96 at kappa 0.001
+  tabular R 29: weight z -4.09 at kappa 0.01
+weight checks failing: 22 on |z| alone; with the absorbed share also off by more than 0.5%: 16, 1.0%: 5, 2.0%: 0  (report only; the rule above decides)
