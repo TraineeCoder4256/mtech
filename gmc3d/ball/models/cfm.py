@@ -67,16 +67,18 @@ class FourierTime(nn.Module):
 class VelocityField(nn.Module):
     """v(x, t, c): (n, X_DIM) + (n, 1) + (n, C_DIM) -> (n, X_DIM)."""
 
-    def __init__(self, width=WIDTH, depth=DEPTH, emb=EMB, t_dim=T_DIM):
+    def __init__(self, width=WIDTH, depth=DEPTH, emb=EMB, t_dim=T_DIM,
+                 x_dim=X_DIM, c_dim=C_DIM):
         super().__init__()
+        self.x_dim = x_dim
         self.time = FourierTime(t_dim)
-        self.embed = nn.Sequential(nn.Linear(t_dim + C_DIM, emb), nn.SiLU(),
+        self.embed = nn.Sequential(nn.Linear(t_dim + c_dim, emb), nn.SiLU(),
                                    nn.Linear(emb, emb), nn.SiLU())
-        self.proj_in = nn.Linear(X_DIM, width)
+        self.proj_in = nn.Linear(x_dim, width)
         self.blocks = nn.ModuleList(FiLMBlock(width, emb)
                                     for _ in range(depth))
         self.norm_out = nn.LayerNorm(width)
-        self.proj_out = nn.Linear(width, X_DIM)
+        self.proj_out = nn.Linear(width, x_dim)
         nn.init.zeros_(self.proj_out.weight)      # start at zero velocity
         nn.init.zeros_(self.proj_out.bias)
 
@@ -122,7 +124,8 @@ class CFM(Family):
     @classmethod
     def build(cls, config):
         return VelocityField(config["width"], config["depth"], config["emb"],
-                             config["t_dim"])
+                             config["t_dim"], config.get("x_dim", X_DIM),
+                             config.get("c_dim", C_DIM))
 
     @staticmethod
     def loss(net, y, c):
@@ -132,6 +135,6 @@ class CFM(Family):
 
     @classmethod
     def draw(cls, net, c, generator):
-        z = torch.randn(c.shape[0], X_DIM, generator=generator,
+        z = torch.randn(c.shape[0], net.x_dim, generator=generator,
                         device=c.device)
         return integrate(net, z, c, ODE_STEPS, SOLVER)

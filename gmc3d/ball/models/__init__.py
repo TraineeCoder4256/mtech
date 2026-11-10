@@ -13,6 +13,7 @@ is a family), ball/network.py (re-exports the flow for older code).
     backend.py    any trained family behind the transport's backend face
     store.py      where trained models live, and their manifest.json
     compare.py    families side by side against the exact walk
+    compare_aniso.py  the same at interface v2 (anisotropic balls, m2.0)
     CHANGELOG.md  model-side versions (m1.0 ...), each naming the interface
                   version it targets
 
@@ -24,6 +25,12 @@ build, loss, draw -- see base.py) + one line in REGISTRY below.  Then
     python run.py solve slab --backend <name>          in transport
 
 work with no other change.
+
+INTERFACE V2 (m2.0, anisotropic balls).  Every family also trains at
+interface v2 with no family-specific code beyond an optional CONFIG_ANISO:
+
+    models.train("<name>", seed, interface=2)
+    models.load("<name>", seed, interface=2)        an AnisoBackend
 
 WHO OWNS WHAT.  This folder is the model side.  What a model must learn
 (the inputs and outputs in physical units, and the exact walk that makes
@@ -58,13 +65,18 @@ def get(name):
     return getattr(importlib.import_module(f"{__name__}.{module}"), cls)
 
 
-def train(family, seed=0, steps=None, out_dir=None, log=print, shared=True):
-    """Train one family on the shared data, save it, return the backend."""
+def train(family, seed=0, steps=None, out_dir=None, log=print, shared=True,
+          interface=1):
+    """Train one family on the shared data, save it, return the backend.
+    interface=2: the anisotropic version (m2.0)."""
     from .pipeline import train as _train
-    return _train(family, seed, steps, out_dir, log, shared)
+    return _train(family, seed, steps, out_dir, log, shared, interface)
 
 
-def load(family, seed=0, device="cpu", out_dir=None, name=None):
-    """A trained family as a transport backend (see backend.py)."""
+def load(family, seed=0, device="cpu", out_dir=None, name=None,
+         interface=1, iso=None):
+    """A trained family as a transport backend (see backend.py).
+    interface=2: AnisoBackend, isotropic balls going to `iso` (a v1
+    backend; default the flow, seed 0)."""
     from .pipeline import load as _load
-    return _load(family, seed, device, out_dir, name)
+    return _load(family, seed, device, out_dir, name, interface, iso)

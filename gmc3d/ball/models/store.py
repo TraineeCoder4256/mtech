@@ -26,6 +26,10 @@ model.pt keeps the format ball/network.py has always written (ema, info,
 cnorm, ynorm), plus family/config/interface, so older flow checkpoints
 still load: one without a family is a flow, one without an interface
 version was trained for interface 1.
+
+Interface v2 models (m2.0, anisotropic balls) live beside them as
+<family>_v2_seed<k>, record interface 2, and load only where v2 is asked
+for (read(..., expect=2)); a v1 model is never loaded as a v2 one or back.
 """
 
 import datetime
@@ -47,8 +51,10 @@ class NotSupported(RuntimeError):
     """A model trained for a different interface version."""
 
 
-def folder(family, seed):
-    return f"{family}_seed{int(seed)}"
+def folder(family, seed, interface=1):
+    """<family>_seed<k> (interface v1) or <family>_v2_seed<k> (v2)."""
+    v = "" if interface == 1 else f"_v{interface}"
+    return f"{family}{v}_seed{int(seed)}"
 
 
 def _commit():
@@ -67,7 +73,8 @@ def _commit():
         return "unknown"
 
 
-def save(out_dir, family, config, net, data, facts, shared=True):
+def save(out_dir, family, config, net, data, facts, shared=True,
+         interface=I.INTERFACE_VERSION):
     """Write model.pt and manifest.json; copy both to the shared home."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -75,7 +82,7 @@ def save(out_dir, family, config, net, data, facts, shared=True):
             "n_train": int(data["y_train"].shape[0]),
             **({k: config[k] for k in config})}
     torch.save({"family": family.name, "config": dict(config),
-                "interface": I.INTERFACE_VERSION,
+                "interface": interface,
                 "ema": {k: v.cpu() for k, v in net.state_dict().items()},
                 "info": info,
                 "cnorm": (data["cnorm"].mean, data["cnorm"].std),
@@ -83,7 +90,7 @@ def save(out_dir, family, config, net, data, facts, shared=True):
                out_dir / "model.pt")
     manifest = {
         "family": family.name, "seed": facts["seed"],
-        "interface": I.INTERFACE_VERSION, "nfe": family.nfe,
+        "interface": interface, "nfe": family.nfe,
         "config": dict(config),
         "params": facts["params"], "steps": facts["steps"],
         "steps_done": facts["steps_done"],
@@ -94,7 +101,9 @@ def save(out_dir, family, config, net, data, facts, shared=True):
         "data": {"n_train": int(data["y_train"].shape[0]),
                  "n_val": int(data["y_val"].shape[0]),
                  "r_min": data["r_min"], "r_max": data["r_max"],
-                 "seed": data.get("seed"), "sha256": data.get("sha256")},
+                 "seed": data.get("seed"), "sha256": data.get("sha256"),
+                 **({"parts_sha256": data["parts_sha256"]}
+                    if "parts_sha256" in data else {})},
         "commit": _commit(),
         "created": datetime.datetime.now(datetime.timezone.utc)
         .isoformat(timespec="seconds"),
@@ -108,13 +117,13 @@ def save(out_dir, family, config, net, data, facts, shared=True):
     return manifest
 
 
-def locate(family, seed):
-    """The local folder for <family>_seed<k>, copied in from the shared
-    home if only that exists.  None if neither has it."""
-    local = MODEL_DIR / folder(family, seed)
+def locate(family, seed, interface=1):
+    """The local folder for folder(family, seed, interface), copied in
+    from the shared home if only that exists.  None if neither has it."""
+    local = MODEL_DIR / folder(family, seed, interface)
     if (local / "model.pt").exists():
         return local
-    shared = SHARED_DIR / folder(family, seed)
+    shared = SHARED_DIR / folder(family, seed, interface)
     if (shared / "model.pt").exists():
         local.mkdir(parents=True, exist_ok=True)
         for f in shared.iterdir():
@@ -123,17 +132,19 @@ def locate(family, seed):
     return None
 
 
-def read(out_dir):
+def read(out_dir, expect=I.INTERFACE_VERSION):
     """model.pt -> (family name, config, state dict, info, cnorm, ynorm).
-    Raises NotSupported for a model trained for another interface."""
+    Raises NotSupported for a model trained for another interface than
+    `expect` (v1 by default; the anisotropic backend asks for v2)."""
+    if expect not in (I.INTERFACE_VERSION, I.ANISO_INTERFACE_VERSION):
+        raise NotSupported(f"interface v{expect} does not exist")
     st = torch.load(Path(out_dir) / "model.pt", map_location="cpu",
                     weights_only=False)
     version = st.get("interface", 1)
-    if version != I.INTERFACE_VERSION:
+    if version != expect:
         raise NotSupported(
-            f"{out_dir} was trained for interface v{version}; the current "
-            f"interface is v{I.INTERFACE_VERSION}.  Not yet supported: "
-            f"retrain it.")
+            f"{out_dir} was trained for interface v{version}; this use "
+            f"needs interface v{expect}.  Not yet supported: retrain it.")
     info = st["info"]
     family = st.get("family", "nflow")
     config = st.get("config") or {k: info[k] for k in

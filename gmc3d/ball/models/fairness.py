@@ -37,16 +37,27 @@ DATA_SEED = 1
 TRAIN = {"steps": 8000, "batch": 4096, "lr": 2e-3, "warmup": 300,
          "ema_decay": 0.999, "val_every": 500}
 
+# interface v2 (m2.0, anisotropic balls), agreed with Innovation 10 Nov 2026.
+# Data: Innovation's data.dataset_aniso rows (pool of 20,000 training laws,
+# seed 1) plus isotropic rows (g = 0) walked by the same walk_aniso, so the
+# model meets the isotropic end of the family it will border on.  The
+# problem is harder (4 outputs, 13 inputs, 20,000 laws), so 3x the steps;
+# everything else as v1.  Size: within +-20% of the v2 flow.
+N_TRAIN_ANISO, N_VAL_ANISO = 40_000_000, 500_000
+N_TRAIN_ISO, N_VAL_ISO = 1_000_000, 12_500          # 2.5% of the rows
+TRAIN_ANISO = {**TRAIN, "steps": 24_000, "val_every": 1000}
 
-def reference_params():
+
+def reference_params(interface=1):
     from . import get
     fam = get(REFERENCE)
-    return sum(p.numel() for p in fam.build(dict(fam.CONFIG)).parameters())
+    return sum(p.numel() for p in
+               fam.build(fam.config_for(interface)).parameters())
 
 
-def check_size(params):
+def check_size(params, interface=1):
     """None if params is inside the budget, else a one-line warning."""
-    ref = reference_params()
+    ref = reference_params(interface)
     lo, hi = (1 - BUDGET) * ref, (1 + BUDGET) * ref
     if lo <= params <= hi:
         return None

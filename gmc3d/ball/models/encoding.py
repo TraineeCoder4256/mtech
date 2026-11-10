@@ -100,3 +100,88 @@ def fingerprint(raw):
     for k in ("R", "mu", "s"):
         h.update(np.ascontiguousarray(raw[k], np.float64).tobytes())
     return h.hexdigest()[:16]
+
+
+# ------------------------------------------------------- interface v2 (m2.0)
+# Anisotropic balls (ball/interface.py ANISO_*): 13 inputs, 4 outputs.  The
+# same idea as above, one line per quantity:
+#
+#     condition   c  = (log R, g_1 .. g_12)     the moments are already
+#                                               numbers near zero; they are
+#                                               only standardised
+#     target 1    y0 = logit((1 + cos_n) / 2)   -1..1 stretched onto the line
+#     target 2    y1 = logit(mu)                as v1
+#     target 3    y2 = logit(phi / pi)          0..pi stretched onto the line
+#     target 4    y3 = log(s / R - 1)           as v1
+#
+# so v1's two targets are v2's middle and last ones, encoded identically.
+
+C_DIM_ANISO, X_DIM_ANISO = I.ANISO_N_IN, I.ANISO_N_OUT
+
+
+def _logit(p):
+    p = np.clip(p, EPS, 1.0 - EPS)
+    return np.log(p / (1.0 - p))
+
+
+def _sigmoid(y):
+    return 1.0 / (1.0 + np.exp(-y))
+
+
+def condition_aniso(R, g):
+    """Physical R (n,) and moments g (n, 12) -> raw condition (n, 13)."""
+    return np.concatenate([np.log(R)[:, None], np.asarray(g)], axis=1)
+
+
+def encode_aniso(R, cos_n, mu, phi, s):
+    """Physical outputs -> raw targets (n, 4) (not standardised)."""
+    return np.stack([_logit(0.5 * (1.0 + cos_n)), _logit(mu),
+                     _logit(phi / np.pi),
+                     np.log(np.maximum(s / R - 1.0, EPS))], axis=1)
+
+
+def decode_aniso(R, y):
+    """Raw targets -> (cos_n, mu, phi, s).  The inverse of encode_aniso."""
+    return (2.0 * _sigmoid(y[:, 0]) - 1.0, _sigmoid(y[:, 1]),
+            np.pi * _sigmoid(y[:, 2]), R * (1.0 + np.exp(y[:, 3])))
+
+
+def prepare_aniso(parts, n_train, r_min, r_max, hashes):
+    """Anisotropic walks -> the standardised arrays every family trains on.
+
+    parts   list of (raw, n_train_rows): each raw is a make_aniso() dict
+            (R, cos_n, mu, phi, s, k, law, g_pool), its first n_train_rows
+            rows go to training and the rest to validation.  Several parts
+            let isotropic rows (g = 0) join the anisotropic ones.
+    Built in float32 a slice at a time: 41M rows x 13 conditions is 2 GB.
+    """
+    ctr, ytr, cva, yva = [], [], [], []
+    for raw, nt in parts:
+        c = np.empty((raw["R"].size, C_DIM_ANISO), np.float32)
+        c[:, 0] = np.log(raw["R"])
+        c[:, 1:] = raw["g_pool"].astype(np.float32)[raw["law"]]
+        y = np.empty((raw["R"].size, X_DIM_ANISO), np.float32)
+        for lo in range(0, raw["R"].size, 4_000_000):
+            sl = slice(lo, lo + 4_000_000)
+            y[sl] = encode_aniso(raw["R"][sl], raw["cos_n"][sl],
+                                 raw["mu"][sl], raw["phi"][sl], raw["s"][sl])
+        ctr.append(c[:nt]); ytr.append(y[:nt])
+        cva.append(c[nt:]); yva.append(y[nt:])
+    c_tr, y_tr = np.concatenate(ctr), np.concatenate(ytr)
+    c_va, y_va = np.concatenate(cva), np.concatenate(yva)
+    del ctr, ytr, cva, yva
+    norms = []
+    for tr, va in ((c_tr, c_va), (y_tr, y_va)):
+        mean = tr.mean(axis=0, dtype=np.float64)
+        std = tr.std(axis=0, dtype=np.float64)
+        for a in (tr, va):
+            for lo in range(0, a.shape[0], 4_000_000):
+                a[lo:lo + 4_000_000] -= mean.astype(np.float32)
+                a[lo:lo + 4_000_000] /= std.astype(np.float32)
+        norms.append(Norm(mean, std))
+    k = np.concatenate([raw["k"] for raw, _ in parts])
+    h = hashlib.sha256("".join(hashes).encode()).hexdigest()[:16]
+    return {"c_train": c_tr, "y_train": y_tr, "c_val": c_va, "y_val": y_va,
+            "cnorm": norms[0], "ynorm": norms[1],
+            "mean_scatters": float(k.mean()), "r_min": r_min, "r_max": r_max,
+            "sha256": h, "parts_sha256": list(hashes)}

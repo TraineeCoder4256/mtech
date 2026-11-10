@@ -27,12 +27,19 @@ SIZE.  6 couplings of width 64, 16 spline bins, 146,554 weights: an
 engineering default, far smaller than gmc2d's 1.7M because the target is
 2-D.  It is the fairness reference (fairness.REFERENCE).
 
-The coupling picks "the other target" as column 1 - bend, which assumes
-X_DIM = 2.  A wider interface needs a mask instead (gmc2d's flow had six
-targets and cycled through masks); that is a model-side change to make
-when Innovation's interface grows.
+MORE TARGETS (m2.0, interface v2: 4 targets, 13 conditions).  With two
+targets each coupling bends one and reads the other.  With d targets it
+bends half of them and reads the other half, and the couplings cycle
+through every way of cutting the targets in two (masks()): for 4 targets,
+{0,1 | 2,3}, {2,3 | 0,1}, {0,2 | 1,3}, {1,3 | 0,2}, {0,3 | 1,2},
+{1,2 | 0,3}.  So with 6 couplings every target is bent 3 times, as in
+v1, and every pair of targets meets.  For d = 2 the cycle is exactly v1's
+alternation (bend 0, then 1), with the same weights in the same order, so
+v1 models load and draw bit-identically.  The sizes come from the config
+("x_dim", "c_dim"; v1's when absent).
 """
 
+import itertools
 import math
 
 import torch
@@ -116,49 +123,65 @@ class FiLMBlock(nn.Module):
         return h + self.fc2(F.silu(self.fc1(x)))
 
 
-class Coupling(nn.Module):
-    """One step: bend target `bend` with a spline chosen from the other
-    target and the condition."""
+def masks(d, layers):
+    """(bend, keep) column lists for each coupling: every split of the d
+    targets into two halves, both ways round, cycled.  d = 2 gives
+    ([0], [1]), ([1], [0]), ... as v1."""
+    cuts = []
+    for half in itertools.combinations(range(d), d // 2):
+        if 0 not in half:
+            continue                    # each split once (and its mirror)
+        rest = tuple(i for i in range(d) if i not in half)
+        cuts += [(list(half), list(rest)), (list(rest), list(half))]
+    return [cuts[i % len(cuts)] for i in range(layers)]
 
-    def __init__(self, bend, width, emb, bins, bound):
+
+class Coupling(nn.Module):
+    """One step: bend the targets `bend` with splines chosen from the
+    targets `keep` and the condition."""
+
+    def __init__(self, bend, keep, width, emb, bins, bound):
         super().__init__()
-        self.bend, self.keep = bend, 1 - bend
+        self.bend, self.keep = list(bend), list(keep)
         self.bins, self.bound = bins, bound
-        self.proj_in = nn.Linear(1, width)
+        self.proj_in = nn.Linear(len(self.keep), width)
         self.block = FiLMBlock(width, emb)
         self.norm = nn.LayerNorm(width)
-        self.proj_out = nn.Linear(width, 3 * bins - 1)
+        self.proj_out = nn.Linear(width, len(self.bend) * (3 * bins - 1))
         nn.init.zeros_(self.proj_out.weight)     # start as the identity
         nn.init.zeros_(self.proj_out.bias)
 
     def forward(self, x, emb, inverse=False):
         p = self.proj_out(self.norm(self.block(
-            self.proj_in(x[:, self.keep:self.keep + 1]), emb)))
+            self.proj_in(x[:, self.keep]), emb)))
+        p = p.view(x.shape[0], len(self.bend), 3 * self.bins - 1)
         k = self.bins
-        yb, ld = rq_spline(x[:, self.bend], p[:, :k], p[:, k:2 * k],
-                           p[:, 2 * k:], inverse=inverse, bound=self.bound)
+        yb, ld = rq_spline(x[:, self.bend], p[..., :k], p[..., k:2 * k],
+                           p[..., 2 * k:], inverse=inverse, bound=self.bound)
         out = x.clone()
         out[:, self.bend] = yb
-        return out, ld
+        return out, ld.sum(1)
 
 
 class SplineFlow(nn.Module):
-    """p(y | c) for 2 targets y and 1 condition c (both standardised)."""
+    """p(y | c) for x_dim targets y and c_dim conditions c (standardised)."""
 
     def __init__(self, layers=LAYERS, width=WIDTH, bins=BINS, emb=EMB,
-                 bound=BOUND):
+                 bound=BOUND, x_dim=X_DIM, c_dim=C_DIM):
         super().__init__()
-        self.embed = nn.Sequential(nn.Linear(C_DIM, emb), nn.SiLU(),
+        self.x_dim = x_dim
+        self.embed = nn.Sequential(nn.Linear(c_dim, emb), nn.SiLU(),
                                    nn.Linear(emb, emb), nn.SiLU())
-        self.steps = nn.ModuleList(Coupling(i % 2, width, emb, bins, bound)
-                                   for i in range(layers))
+        self.steps = nn.ModuleList(Coupling(b, k, width, emb, bins, bound)
+                                   for b, k in masks(x_dim, layers))
 
     def log_prob(self, y, c):
         emb, z, logdet = self.embed(c), y, 0.0
         for step in self.steps:
             z, ld = step(z, emb)
             logdet = logdet + ld
-        return -0.5 * (z * z).sum(1) - math.log(2 * math.pi) + logdet
+        return (-0.5 * (z * z).sum(1)
+                - 0.5 * self.x_dim * math.log(2 * math.pi) + logdet)
 
     def sample(self, z, c):
         emb = self.embed(c)
@@ -177,7 +200,8 @@ class NFlow(Family):
     @classmethod
     def build(cls, config):
         return SplineFlow(config["layers"], config["width"], config["bins"],
-                          config["emb"])
+                          config["emb"], x_dim=config.get("x_dim", X_DIM),
+                          c_dim=config.get("c_dim", C_DIM))
 
     @staticmethod
     def loss(net, y, c):
@@ -185,6 +209,6 @@ class NFlow(Family):
 
     @classmethod
     def draw(cls, net, c, generator):
-        z = torch.randn(c.shape[0], X_DIM, generator=generator,
+        z = torch.randn(c.shape[0], net.x_dim, generator=generator,
                         device=c.device)
         return net.sample(z, c)

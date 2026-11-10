@@ -38,7 +38,7 @@ train by one loss per batch (a GAN) overrides fit() and copies the shared
 loop's conventions by hand.  The fairness rules are in fairness.py.
 """
 
-from .encoding import C_DIM, X_DIM
+from .encoding import C_DIM, X_DIM, C_DIM_ANISO, X_DIM_ANISO
 from . import fairness
 from .training import fit_loop
 
@@ -48,6 +48,7 @@ class Family:
     nfe = 0
     loss_name = "loss"
     CONFIG = {}
+    CONFIG_ANISO = {}               # interface v2 overrides (m2.0), if any
     TRAIN = fairness.TRAIN          # a family may override within its
                                     # tuning budget (fairness.TUNING_RUNS)
 
@@ -64,12 +65,22 @@ class Family:
         raise NotImplementedError
 
     @classmethod
+    def config_for(cls, interface=1):
+        """The settings for interface v1 (CONFIG, sizes implied) or v2
+        (CONFIG + CONFIG_ANISO, sizes written in as x_dim and c_dim, so a
+        saved v2 model rebuilds at the right size)."""
+        if interface == 1:
+            return dict(cls.CONFIG)
+        return {**cls.CONFIG, **cls.CONFIG_ANISO,
+                "x_dim": X_DIM_ANISO, "c_dim": C_DIM_ANISO}
+
+    @classmethod
     def fit(cls, data, *, seed, steps=None, time_cap=fairness.TIME_CAP,
-            log=print):
-        """Train on encoding.prepare() output.
+            log=print, interface=1):
+        """Train on encoding.prepare() (or prepare_aniso()) output.
         Returns (net, config, facts)."""
-        cfg = dict(cls.CONFIG)
-        tr = dict(cls.TRAIN)
+        cfg = cls.config_for(interface)
+        tr = dict(cls.TRAIN if interface == 1 else fairness.TRAIN_ANISO)
         if steps:
             tr["steps"] = steps
         net, facts = fit_loop(lambda: cls.build(cfg), cls.loss, data,
@@ -80,6 +91,7 @@ class Family:
 
     @classmethod
     def describe(cls, config=None):
-        return {"name": cls.name, "nfe": cls.nfe,
-                "config": dict(config or cls.CONFIG),
-                "x_dim": X_DIM, "c_dim": C_DIM}
+        config = dict(config or cls.CONFIG)
+        return {"name": cls.name, "nfe": cls.nfe, "config": config,
+                "x_dim": config.get("x_dim", X_DIM),
+                "c_dim": config.get("c_dim", C_DIM)}

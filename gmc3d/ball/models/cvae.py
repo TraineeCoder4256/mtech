@@ -43,6 +43,9 @@ draws a standard Gaussian.  Log-variances are clamped to [-12, 6] for
 stability.  148,776 weights in all (+1.5% on the flow's 146,554); a draw
 uses the embedding and decoder only (85,412).  Tuning trials: none yet
 (budget fairness.TUNING_RUNS).
+
+Interface v2 (m2.0): 4 targets and 13 conditions, latent size 4
+(CONFIG_ANISO), 149,936 weights.
 """
 
 import math
@@ -83,13 +86,13 @@ class _Net(nn.Module):
 class CVAENet(nn.Module):
 
     def __init__(self, width=WIDTH, enc_depth=ENC_DEPTH, dec_depth=DEC_DEPTH,
-                 emb=EMB, latent=LATENT):
+                 emb=EMB, latent=LATENT, x_dim=X_DIM, c_dim=C_DIM):
         super().__init__()
-        self.latent = latent
-        self.embed = nn.Sequential(nn.Linear(C_DIM, emb), nn.SiLU(),
+        self.latent, self.x_dim = latent, x_dim
+        self.embed = nn.Sequential(nn.Linear(c_dim, emb), nn.SiLU(),
                                    nn.Linear(emb, emb), nn.SiLU())
-        self.encoder = _Net(X_DIM, 2 * latent, width, enc_depth, emb, False)
-        self.decoder = _Net(latent, 2 * X_DIM, width, dec_depth, emb, True)
+        self.encoder = _Net(x_dim, 2 * latent, width, enc_depth, emb, False)
+        self.decoder = _Net(latent, 2 * x_dim, width, dec_depth, emb, True)
 
     def decode(self, z, emb):
         mean, logvar = self.decoder(z, emb).chunk(2, dim=1)
@@ -114,11 +117,14 @@ class CVAE(Family):
     loss_name = "-ELBO"
     CONFIG = {"width": WIDTH, "enc_depth": ENC_DEPTH, "dec_depth": DEC_DEPTH,
               "emb": EMB, "latent": LATENT}
+    # interface v2: as many latent numbers as targets (4), as in v1 (2)
+    CONFIG_ANISO = {"latent": 4}
 
     @classmethod
     def build(cls, config):
         return CVAENet(config["width"], config["enc_depth"],
-                       config["dec_depth"], config["emb"], config["latent"])
+                       config["dec_depth"], config["emb"], config["latent"],
+                       config.get("x_dim", X_DIM), config.get("c_dim", C_DIM))
 
     @staticmethod
     def loss(net, y, c):
@@ -129,5 +135,5 @@ class CVAE(Family):
         n = c.shape[0]
         z = torch.randn(n, net.latent, generator=generator, device=c.device)
         mean, logvar = net.decode(z, net.embed(c))
-        eps = torch.randn(n, X_DIM, generator=generator, device=c.device)
+        eps = torch.randn(n, net.x_dim, generator=generator, device=c.device)
         return mean + torch.exp(0.5 * logvar) * eps

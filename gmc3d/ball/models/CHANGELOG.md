@@ -50,3 +50,39 @@ Not yet: trained models at two seeds and the first comparison (next).
   seeds 0 and 1 (code 3f96133). Worst |z| 3.9 / 4.7 (only the R = 29,
   kappa 0.1 tail), -ELBO 2.164 below the flow's NLL 2.183, 2-3x cheaper
   per draw than the flow. Results in `runs/2026-11-05/models/README.md`.
+
+## m2.0 (interface v2) - 10 Nov 2026
+
+Every family at interface v2 (anisotropic balls: 13 inputs R, g_1..g_12;
+4 outputs cos_n, mu, phi, s), agreed with Innovation on 10 Nov 2026 and
+built on its handoff (0b232f4). Interface v1 models are untouched.
+
+- Families are dimension-agnostic: sizes come from the config (`x_dim`,
+  `c_dim`; v1's when absent). `Family.config_for(interface)`;
+  `CONFIG_ANISO` per family (cVAE: latent 4). The flow's couplings bend
+  half the targets and read the other half, cycling through every split
+  (`nflow.masks`): for d = 2 that is exactly v1's alternation.
+  Checked before pushing: the three saved v1 models draw identically with
+  the old and new code, and 300 training steps (nflow, cVAE) give
+  identical weights (166 arrays, all equal).
+- Encoding (`encoding.py`): c = (log R, g_1..g_12); y = (logit((1+cos_n)/2),
+  logit mu, logit(phi/pi), log(s/R - 1)), standardised. `prepare_aniso`
+  builds the 41M-row set in float32.
+- Data (`fairness.py`, `pipeline.aniso_data`): Innovation's
+  `dataset_aniso(40.5M, 1, 30, seed 1)` (hash f444267f...) plus 1.01M
+  isotropic rows walked by `walk_many_aniso` with a flat table
+  (`pipeline.iso_rows`, own streams; hash db43737b...); 40M + 1M train,
+  0.5M + 12.5k validation. Steps 24,000 (3x v1), all else as v1.
+- Sizes: nflow 165,652 (the v2 reference), cfm 149,732 (-9.6%), cVAE
+  149,936 (-9.5%).
+- Store: v2 models in `<family>_v2_seed<k>/`, manifest interface 2;
+  `store.read(..., expect=2)`; a v1 model never loads as v2 or back.
+- Backend (`backend.AnisoBackend`): `aniso = True`; `sample()` goes to the
+  accepted v1 model (default the flow, seed 0); `sample_aniso(R, mats,
+  ang, ...)` works out each material's moments once from the packed laws
+  (`law_moments`, equal to `laws.moments` on every held-out law).
+- `compare_aniso.py`: model-side check against the exact walk on the 7
+  held-out laws and the isotropic law at R = 1, 3, 5, 10, 30, plus
+  Innovation's P3 reference point and cost per draw. Innovation's gate
+  decides acceptance.
+- `models.train/load(..., interface=2)`. `tests/test_models_m20.py`.
