@@ -3,7 +3,10 @@
 Used by: run.py (`python run.py gate2 <family>_v2[_seed<k>]`).  Writes
 gate2_<name>.json and a log.
 Uses: ball/walk.py walk_aniso (the truth), ball/laws.py held_out (laws no
-model trained on), a v2 backend (ball/models AnisoBackend: .draw(R, g)).
+model trained on), a v2 backend (ball/models AnisoBackend), called as the
+driver calls it: .sample_aniso(R, mats, ang, streams, idx), whole balls
+(from v2.1.4; m2.1 models walk the first scatter exactly and draw only
+the k >= 2 exits, which .draw(R, g) alone cannot show).
 
 Agreed 5 Nov 2026 (Innovation/Development protocol): the gate checks
 accuracy against the exact walk at every radius, near r_max too, the
@@ -31,8 +34,8 @@ Means are reported (z) but do not fail a model on their own: with
 problem.  The end-to-end judge is `run.py anisocheck` with the model as
 backend, against OpenMC.
 
-COST: microseconds per draw at a batch of 100,000, against the exact walk
-at the same radii.
+COST: microseconds per ball at a batch of 100,000, against the exact walk
+at the same radii; random streams are made outside the timers.
 """
 
 import json
@@ -94,14 +97,19 @@ def run(backend, n=100_000, seed=21, log=print, laws=None):
         ang = SC.pack([law])
         log(f"\n== {name}: g1 {g[0]:+.3f}")
         for R in RADII:
+            # own streams per (law, radius), so rows share no numbers; the
+            # model's from another master seed, so its exact first scatter
+            # (walk.first_scatter_aniso, v2.1.3) is not the walk's own.
+            # Made outside the timers: rng.streams is a Python loop.
+            first = len(out["rows"]) * n
+            st = rng.streams(np.uint64(seed), first, n)
+            st_model = rng.streams(np.uint64(seed + 1), first, n)
+            Rs, mats, idx = np.full(n, R), np.zeros(n, np.int64), np.arange(n)
             t = time.perf_counter()
-            # own streams per (law, radius): rows do not share numbers
-            st = rng.streams(np.uint64(seed), len(out["rows"]) * n, n)
-            ex = walk.walk_many_aniso(np.full(n, R), np.zeros(n, np.int64),
-                                      ang, st, np.arange(n))[:4]
+            ex = walk.walk_many_aniso(Rs, mats, ang, st, idx)[:4]
             t_walk += time.perf_counter() - t
             t = time.perf_counter()
-            md = backend.draw(np.full(n, R), np.tile(g, (n, 1)))
+            md = backend.sample_aniso(Rs, mats, ang, st_model, idx)
             t_model += time.perf_counter() - t
             n_draws += n
             md = tuple(np.asarray(a, np.float64) for a in md)

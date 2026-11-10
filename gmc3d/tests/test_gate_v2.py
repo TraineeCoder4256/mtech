@@ -1,4 +1,4 @@
-"""v2.1.2: the interface v2 acceptance gate (checks/gate_v2.py) passes the
+"""v2.1.2 (v2.1.4: whole balls via sample_aniso): the interface v2 acceptance gate (checks/gate_v2.py) passes the
 exact walk itself and fails a model that ignores the law."""
 import numpy as np
 
@@ -17,17 +17,10 @@ class _Walk:
     def __init__(self, ignore_law=False):
         self.calls, self.ignore = 0, ignore_law
 
-    def draw(self, R, g):
+    def sample_aniso(self, R, mats, ang, seeds, idx):
         self.calls += 1
-        if self.ignore:
-            ang = FLAT
-        else:
-            law = [l for l in LAWS.values()
-                   if np.allclose(LW.moments(l), g[0])][0]
-            ang = SC.pack([law])
-        st = rng.streams(np.uint64(900 + self.calls), 0, R.size)
-        return walk.walk_many_aniso(R, np.zeros(R.size, np.int64), ang, st,
-                                    np.arange(R.size))[:4]
+        return walk.walk_many_aniso(R, mats, FLAT if self.ignore else ang,
+                                    seeds, idx)[:4]
 
 
 def test_gate_passes_the_exact_walk():

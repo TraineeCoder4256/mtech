@@ -7,6 +7,27 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v2.1.4 (10 Nov 2026): the v2 gate tests whole balls
+
+From m2.1 on, a v2 model walks each ball's first scatter exactly
+(`walk.first_scatter_aniso`, v2.1.3), and its `draw(R, g)` is only the
+k >= 2 part. Development pointed out that the gate called `draw`.
+
+- **`checks/gate_v2.py`**: the model side calls
+  `backend.sample_aniso(R, mats, ang, streams, idx)`, the way the
+  driver does.
+  - The model's streams come from master seed + 1, so its exact first
+    scatter is not the walk's own. With shared streams the k = 1 rows
+    would be identical and the comparison correlated.
+  - Both sets of streams are made outside the timers, since
+    `rng.streams` is a Python loop.
+  - m2.0 models answer `sample_aniso` with the family alone, so their
+    numbers are unchanged.
+- Self-test rerun: the exact walk as a model passes, 0 of 343 failing
+  (`runs/2026-11-10/gate-v2/selftest.log`). The exact walk costs 1.61
+  to 1.67 us per ball over the gate's radii. `tests/test_gate_v2.py`
+  uses the new call.
+
 ## v2.1.3 (10 Nov 2026): one-scatter walks drawn exactly
 
 Development's first v2 models (m2.0 results, daf648f) fail the gate at
