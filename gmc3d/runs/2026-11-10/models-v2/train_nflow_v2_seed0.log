@@ -1,0 +1,26 @@
+model  nflow (interface v2, 1 network pass(es) per draw), seed 0, {'layers': 6, 'width': 64, 'bins': 16, 'emb': 32, 'x_dim': 4, 'c_dim': 13}
+step   1000  train NLL 3.2274  val NLL (EMA) 3.8590  84 s
+step   2000  train NLL 3.0459  val NLL (EMA) 3.2468  190 s
+step   3000  train NLL 3.0187  val NLL (EMA) 3.0135  329 s
+step   4000  train NLL 3.1901  val NLL (EMA) 2.9430  412 s
+step   5000  train NLL 3.0701  val NLL (EMA) 2.8596  497 s
+step   6000  train NLL 2.9778  val NLL (EMA) 2.9026  581 s
+step   7000  train NLL 3.3365  val NLL (EMA) 2.9399  665 s
+step   8000  train NLL 2.9849  val NLL (EMA) 2.8903  751 s
+step   9000  train NLL 2.9355  val NLL (EMA) 2.7976  836 s
+step  10000  train NLL 3.0040  val NLL (EMA) 2.7601  922 s
+step  11000  train NLL 2.7591  val NLL (EMA) 2.7404  1008 s
+step  12000  train NLL 2.7059  val NLL (EMA) 2.7177  1095 s
+step  13000  train NLL 2.8340  val NLL (EMA) 2.6420  1182 s
+step  14000  train NLL 2.7307  val NLL (EMA) 2.6164  1268 s
+step  15000  train NLL 2.6689  val NLL (EMA) 2.5906  1353 s
+step  16000  train NLL 2.6831  val NLL (EMA) 2.6088  1442 s
+step  17000  train NLL 2.6709  val NLL (EMA) 2.5558  1527 s
+step  18000  train NLL 2.5381  val NLL (EMA) 2.5174  1612 s
+step  19000  train NLL 2.5733  val NLL (EMA) 2.4908  1695 s
+step  20000  train NLL 2.4583  val NLL (EMA) 2.3893  1776 s
+step  21000  train NLL 2.3451  val NLL (EMA) 2.3310  1860 s
+step  22000  train NLL 2.2604  val NLL (EMA) 2.2558  1944 s
+step  23000  train NLL 2.1392  val NLL (EMA) 2.2239  2023 s
+step  24000  train NLL 2.1317  val NLL (EMA) 2.1577  2110 s
+       165,652 weights, 24,000 steps in 2110 s

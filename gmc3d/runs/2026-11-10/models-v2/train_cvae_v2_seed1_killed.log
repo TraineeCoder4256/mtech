@@ -1,0 +1,3 @@
+model  cvae (interface v2, 1 network pass(es) per draw), seed 1, {'width': 64, 'enc_depth': 3, 'dec_depth': 4, 'emb': 32, 'latent': 4, 'x_dim': 4, 'c_dim': 13}
+step   1000  train -ELBO 3.7135  val -ELBO (EMA) 5.0798  40 s
+step   2000  train -ELBO 3.6810  val -ELBO (EMA) 7.7573  79 s

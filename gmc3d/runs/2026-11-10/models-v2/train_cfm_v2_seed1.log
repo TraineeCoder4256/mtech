@@ -1,0 +1,26 @@
+model  cfm (interface v2, 10 network pass(es) per draw), seed 1, {'width': 64, 'depth': 7, 'emb': 32, 't_dim': 32, 'ode_steps': 5, 'solver': 'heun', 'x_dim': 4, 'c_dim': 13}
+step   1000  train CFM loss 1.1192  val CFM loss (EMA) 1.5033  38 s
+step   2000  train CFM loss 1.1092  val CFM loss (EMA) 1.2110  77 s
+step   3000  train CFM loss 1.1053  val CFM loss (EMA) 1.1247  116 s
+step   4000  train CFM loss 1.1055  val CFM loss (EMA) 1.1080  154 s
+step   5000  train CFM loss 1.1071  val CFM loss (EMA) 1.0999  193 s
+step   6000  train CFM loss 1.1032  val CFM loss (EMA) 1.0994  229 s
+step   7000  train CFM loss 1.1011  val CFM loss (EMA) 1.0956  265 s
+step   8000  train CFM loss 1.1005  val CFM loss (EMA) 1.0886  303 s
+step   9000  train CFM loss 1.1039  val CFM loss (EMA) 1.0980  343 s
+step  10000  train CFM loss 1.0996  val CFM loss (EMA) 1.1018  382 s
+step  11000  train CFM loss 1.1021  val CFM loss (EMA) 1.0946  421 s
+step  12000  train CFM loss 1.0977  val CFM loss (EMA) 1.1051  458 s
+step  13000  train CFM loss 1.1029  val CFM loss (EMA) 1.1037  497 s
+step  14000  train CFM loss 1.1011  val CFM loss (EMA) 1.1060  536 s
+step  15000  train CFM loss 1.0972  val CFM loss (EMA) 1.1017  578 s
+step  16000  train CFM loss 1.0982  val CFM loss (EMA) 1.0989  619 s
+step  17000  train CFM loss 1.0983  val CFM loss (EMA) 1.0944  663 s
+step  18000  train CFM loss 1.0989  val CFM loss (EMA) 1.1026  705 s
+step  19000  train CFM loss 1.0979  val CFM loss (EMA) 1.0990  744 s
+step  20000  train CFM loss 1.0976  val CFM loss (EMA) 1.1037  783 s
+step  21000  train CFM loss 1.0977  val CFM loss (EMA) 1.1045  824 s
+step  22000  train CFM loss 1.0963  val CFM loss (EMA) 1.0953  866 s
+step  23000  train CFM loss 1.0990  val CFM loss (EMA) 1.1010  906 s
+step  24000  train CFM loss 1.0984  val CFM loss (EMA) 1.1014  946 s
+       149,732 weights, 24,000 steps in 946 s

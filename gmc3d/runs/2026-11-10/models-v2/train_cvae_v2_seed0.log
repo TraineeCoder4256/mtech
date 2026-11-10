@@ -1,0 +1,26 @@
+model  cvae (interface v2, 1 network pass(es) per draw), seed 0, {'width': 64, 'enc_depth': 3, 'dec_depth': 4, 'emb': 32, 'latent': 4, 'x_dim': 4, 'c_dim': 13}
+step   1000  train -ELBO 3.7599  val -ELBO (EMA) 5.0708  44 s
+step   2000  train -ELBO 3.6532  val -ELBO (EMA) 7.7270  87 s
+step   3000  train -ELBO 3.6923  val -ELBO (EMA) 6.9905  131 s
+step   4000  train -ELBO 4.0285  val -ELBO (EMA) 4.6633  174 s
+step   5000  train -ELBO 3.7401  val -ELBO (EMA) 3.7336  221 s
+step   6000  train -ELBO 3.7484  val -ELBO (EMA) 3.5392  263 s
+step   7000  train -ELBO 3.7869  val -ELBO (EMA) 3.4721  307 s
+step   8000  train -ELBO 3.8235  val -ELBO (EMA) 3.4360  353 s
+step   9000  train -ELBO 3.7220  val -ELBO (EMA) 3.4437  399 s
+step  10000  train -ELBO 3.5853  val -ELBO (EMA) 3.3875  444 s
+step  11000  train -ELBO 3.5247  val -ELBO (EMA) 3.3605  489 s
+step  12000  train -ELBO 3.4961  val -ELBO (EMA) 3.3313  534 s
+step  13000  train -ELBO 3.4593  val -ELBO (EMA) 3.3030  583 s
+step  14000  train -ELBO 3.6227  val -ELBO (EMA) 3.2942  629 s
+step  15000  train -ELBO 4.5803  val -ELBO (EMA) 3.2931  678 s
+step  16000  train -ELBO 3.4539  val -ELBO (EMA) 3.2522  723 s
+step  17000  train -ELBO 3.3837  val -ELBO (EMA) 3.2131  768 s
+step  18000  train -ELBO 3.3854  val -ELBO (EMA) 3.1921  812 s
+step  19000  train -ELBO 3.5077  val -ELBO (EMA) 3.1677  858 s
+step  20000  train -ELBO 3.1691  val -ELBO (EMA) 3.1664  904 s
+step  21000  train -ELBO 3.0656  val -ELBO (EMA) 3.1434  950 s
+step  22000  train -ELBO 2.9852  val -ELBO (EMA) 3.0962  994 s
+step  23000  train -ELBO 3.0068  val -ELBO (EMA) 3.0204  1035 s
+step  24000  train -ELBO 2.9616  val -ELBO (EMA) 2.9646  1076 s
+       149,936 weights, 24,000 steps in 1076 s

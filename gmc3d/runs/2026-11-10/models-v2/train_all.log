@@ -1,0 +1,7 @@
+data   40,500,000 anisotropic + 1,012,500 isotropic walks (interface v2), mean 56.7 scatters, 25 s  (hash 5a07321cf122e667; parts f444267faffffddd, db43737b8f757c12)
+--- nflow seed 0
+--- cfm seed 0
+--- cvae seed 0
+--- nflow seed 1
+--- cfm seed 1
+--- cvae seed 1

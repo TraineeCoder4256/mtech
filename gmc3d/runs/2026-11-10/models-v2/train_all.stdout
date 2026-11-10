@@ -1,0 +1,140 @@
+data   40,500,000 anisotropic + 1,012,500 isotropic walks (interface v2), mean 56.7 scatters, 25 s  (hash 5a07321cf122e667; parts f444267faffffddd, db43737b8f757c12)
+--- nflow seed 0
+model  nflow (interface v2, 1 network pass(es) per draw), seed 0, {'layers': 6, 'width': 64, 'bins': 16, 'emb': 32, 'x_dim': 4, 'c_dim': 13}
+step   1000  train NLL 3.2274  val NLL (EMA) 3.8590  84 s
+step   2000  train NLL 3.0459  val NLL (EMA) 3.2468  190 s
+step   3000  train NLL 3.0187  val NLL (EMA) 3.0135  329 s
+step   4000  train NLL 3.1901  val NLL (EMA) 2.9430  412 s
+step   5000  train NLL 3.0701  val NLL (EMA) 2.8596  497 s
+step   6000  train NLL 2.9778  val NLL (EMA) 2.9026  581 s
+step   7000  train NLL 3.3365  val NLL (EMA) 2.9399  665 s
+step   8000  train NLL 2.9849  val NLL (EMA) 2.8903  751 s
+step   9000  train NLL 2.9355  val NLL (EMA) 2.7976  836 s
+step  10000  train NLL 3.0040  val NLL (EMA) 2.7601  922 s
+step  11000  train NLL 2.7591  val NLL (EMA) 2.7404  1008 s
+step  12000  train NLL 2.7059  val NLL (EMA) 2.7177  1095 s
+step  13000  train NLL 2.8340  val NLL (EMA) 2.6420  1182 s
+step  14000  train NLL 2.7307  val NLL (EMA) 2.6164  1268 s
+step  15000  train NLL 2.6689  val NLL (EMA) 2.5906  1353 s
+step  16000  train NLL 2.6831  val NLL (EMA) 2.6088  1442 s
+step  17000  train NLL 2.6709  val NLL (EMA) 2.5558  1527 s
+step  18000  train NLL 2.5381  val NLL (EMA) 2.5174  1612 s
+step  19000  train NLL 2.5733  val NLL (EMA) 2.4908  1695 s
+step  20000  train NLL 2.4583  val NLL (EMA) 2.3893  1776 s
+step  21000  train NLL 2.3451  val NLL (EMA) 2.3310  1860 s
+step  22000  train NLL 2.2604  val NLL (EMA) 2.2558  1944 s
+step  23000  train NLL 2.1392  val NLL (EMA) 2.2239  2023 s
+step  24000  train NLL 2.1317  val NLL (EMA) 2.1577  2110 s
+       165,652 weights, 24,000 steps in 2110 s
+--- cfm seed 0
+model  cfm (interface v2, 10 network pass(es) per draw), seed 0, {'width': 64, 'depth': 7, 'emb': 32, 't_dim': 32, 'ode_steps': 5, 'solver': 'heun', 'x_dim': 4, 'c_dim': 13}
+step   1000  train CFM loss 1.1141  val CFM loss (EMA) 1.5278  37 s
+step   2000  train CFM loss 1.1120  val CFM loss (EMA) 1.2168  76 s
+step   3000  train CFM loss 1.1087  val CFM loss (EMA) 1.1347  115 s
+step   4000  train CFM loss 1.1044  val CFM loss (EMA) 1.1081  156 s
+step   5000  train CFM loss 1.1058  val CFM loss (EMA) 1.1011  195 s
+step   6000  train CFM loss 1.1072  val CFM loss (EMA) 1.1070  235 s
+step   7000  train CFM loss 1.1037  val CFM loss (EMA) 1.0954  277 s
+step   8000  train CFM loss 1.1065  val CFM loss (EMA) 1.1011  318 s
+step   9000  train CFM loss 1.1044  val CFM loss (EMA) 1.1033  355 s
+step  10000  train CFM loss 1.1013  val CFM loss (EMA) 1.1001  393 s
+step  11000  train CFM loss 1.0991  val CFM loss (EMA) 1.1050  430 s
+step  12000  train CFM loss 1.1007  val CFM loss (EMA) 1.1063  467 s
+step  13000  train CFM loss 1.1003  val CFM loss (EMA) 1.0920  505 s
+step  14000  train CFM loss 1.0988  val CFM loss (EMA) 1.1072  543 s
+step  15000  train CFM loss 1.0983  val CFM loss (EMA) 1.0989  580 s
+step  16000  train CFM loss 1.0986  val CFM loss (EMA) 1.1000  619 s
+step  17000  train CFM loss 1.0982  val CFM loss (EMA) 1.0960  656 s
+step  18000  train CFM loss 1.0976  val CFM loss (EMA) 1.1017  695 s
+step  19000  train CFM loss 1.0925  val CFM loss (EMA) 1.0943  734 s
+step  20000  train CFM loss 1.0990  val CFM loss (EMA) 1.0906  775 s
+step  21000  train CFM loss 1.0984  val CFM loss (EMA) 1.0981  813 s
+step  22000  train CFM loss 1.0963  val CFM loss (EMA) 1.0922  853 s
+step  23000  train CFM loss 1.0991  val CFM loss (EMA) 1.1003  892 s
+step  24000  train CFM loss 1.0995  val CFM loss (EMA) 1.0953  931 s
+       149,732 weights, 24,000 steps in 931 s
+--- cvae seed 0
+model  cvae (interface v2, 1 network pass(es) per draw), seed 0, {'width': 64, 'enc_depth': 3, 'dec_depth': 4, 'emb': 32, 'latent': 4, 'x_dim': 4, 'c_dim': 13}
+step   1000  train -ELBO 3.7599  val -ELBO (EMA) 5.0708  44 s
+step   2000  train -ELBO 3.6532  val -ELBO (EMA) 7.7270  87 s
+step   3000  train -ELBO 3.6923  val -ELBO (EMA) 6.9905  131 s
+step   4000  train -ELBO 4.0285  val -ELBO (EMA) 4.6633  174 s
+step   5000  train -ELBO 3.7401  val -ELBO (EMA) 3.7336  221 s
+step   6000  train -ELBO 3.7484  val -ELBO (EMA) 3.5392  263 s
+step   7000  train -ELBO 3.7869  val -ELBO (EMA) 3.4721  307 s
+step   8000  train -ELBO 3.8235  val -ELBO (EMA) 3.4360  353 s
+step   9000  train -ELBO 3.7220  val -ELBO (EMA) 3.4437  399 s
+step  10000  train -ELBO 3.5853  val -ELBO (EMA) 3.3875  444 s
+step  11000  train -ELBO 3.5247  val -ELBO (EMA) 3.3605  489 s
+step  12000  train -ELBO 3.4961  val -ELBO (EMA) 3.3313  534 s
+step  13000  train -ELBO 3.4593  val -ELBO (EMA) 3.3030  583 s
+step  14000  train -ELBO 3.6227  val -ELBO (EMA) 3.2942  629 s
+step  15000  train -ELBO 4.5803  val -ELBO (EMA) 3.2931  678 s
+step  16000  train -ELBO 3.4539  val -ELBO (EMA) 3.2522  723 s
+step  17000  train -ELBO 3.3837  val -ELBO (EMA) 3.2131  768 s
+step  18000  train -ELBO 3.3854  val -ELBO (EMA) 3.1921  812 s
+step  19000  train -ELBO 3.5077  val -ELBO (EMA) 3.1677  858 s
+step  20000  train -ELBO 3.1691  val -ELBO (EMA) 3.1664  904 s
+step  21000  train -ELBO 3.0656  val -ELBO (EMA) 3.1434  950 s
+step  22000  train -ELBO 2.9852  val -ELBO (EMA) 3.0962  994 s
+step  23000  train -ELBO 3.0068  val -ELBO (EMA) 3.0204  1035 s
+step  24000  train -ELBO 2.9616  val -ELBO (EMA) 2.9646  1076 s
+       149,936 weights, 24,000 steps in 1076 s
+--- nflow seed 1
+model  nflow (interface v2, 1 network pass(es) per draw), seed 1, {'layers': 6, 'width': 64, 'bins': 16, 'emb': 32, 'x_dim': 4, 'c_dim': 13}
+step   1000  train NLL 3.2900  val NLL (EMA) 3.8049  85 s
+step   2000  train NLL 3.0837  val NLL (EMA) 3.1903  171 s
+step   3000  train NLL 3.0163  val NLL (EMA) 3.1116  257 s
+step   4000  train NLL 3.1187  val NLL (EMA) 3.0290  342 s
+step   5000  train NLL 3.3603  val NLL (EMA) 3.0441  424 s
+step   6000  train NLL 3.1388  val NLL (EMA) 3.0484  509 s
+step   7000  train NLL 2.9073  val NLL (EMA) 2.9181  591 s
+step   8000  train NLL 3.0808  val NLL (EMA) 2.9351  674 s
+step   9000  train NLL 3.0482  val NLL (EMA) 2.8514  758 s
+step  10000  train NLL 2.9292  val NLL (EMA) 2.9258  842 s
+step  11000  train NLL 2.9408  val NLL (EMA) 2.8496  927 s
+step  12000  train NLL 3.0089  val NLL (EMA) 2.8672  1010 s
+step  13000  train NLL 2.8926  val NLL (EMA) 2.8120  1089 s
+step  14000  train NLL 2.8928  val NLL (EMA) 2.7705  1169 s
+step  15000  train NLL 2.7886  val NLL (EMA) 2.7679  1251 s
+step  16000  train NLL 2.8699  val NLL (EMA) 2.7640  1334 s
+step  17000  train NLL 2.8296  val NLL (EMA) 2.7195  1418 s
+step  18000  train NLL 2.8710  val NLL (EMA) 2.7141  1502 s
+step  19000  train NLL 2.7905  val NLL (EMA) 2.6524  1583 s
+step  20000  train NLL 2.7265  val NLL (EMA) 2.5170  1668 s
+step  21000  train NLL 2.4360  val NLL (EMA) 2.4097  1752 s
+step  22000  train NLL 2.3901  val NLL (EMA) 2.3628  1836 s
+step  23000  train NLL 2.2722  val NLL (EMA) 2.2945  1924 s
+step  24000  train NLL 2.2178  val NLL (EMA) 2.2646  2011 s
+       165,652 weights, 24,000 steps in 2011 s
+--- cfm seed 1
+model  cfm (interface v2, 10 network pass(es) per draw), seed 1, {'width': 64, 'depth': 7, 'emb': 32, 't_dim': 32, 'ode_steps': 5, 'solver': 'heun', 'x_dim': 4, 'c_dim': 13}
+step   1000  train CFM loss 1.1192  val CFM loss (EMA) 1.5033  38 s
+step   2000  train CFM loss 1.1092  val CFM loss (EMA) 1.2110  77 s
+step   3000  train CFM loss 1.1053  val CFM loss (EMA) 1.1247  116 s
+step   4000  train CFM loss 1.1055  val CFM loss (EMA) 1.1080  154 s
+step   5000  train CFM loss 1.1071  val CFM loss (EMA) 1.0999  193 s
+step   6000  train CFM loss 1.1032  val CFM loss (EMA) 1.0994  229 s
+step   7000  train CFM loss 1.1011  val CFM loss (EMA) 1.0956  265 s
+step   8000  train CFM loss 1.1005  val CFM loss (EMA) 1.0886  303 s
+step   9000  train CFM loss 1.1039  val CFM loss (EMA) 1.0980  343 s
+step  10000  train CFM loss 1.0996  val CFM loss (EMA) 1.1018  382 s
+step  11000  train CFM loss 1.1021  val CFM loss (EMA) 1.0946  421 s
+step  12000  train CFM loss 1.0977  val CFM loss (EMA) 1.1051  458 s
+step  13000  train CFM loss 1.1029  val CFM loss (EMA) 1.1037  497 s
+step  14000  train CFM loss 1.1011  val CFM loss (EMA) 1.1060  536 s
+step  15000  train CFM loss 1.0972  val CFM loss (EMA) 1.1017  578 s
+step  16000  train CFM loss 1.0982  val CFM loss (EMA) 1.0989  619 s
+step  17000  train CFM loss 1.0983  val CFM loss (EMA) 1.0944  663 s
+step  18000  train CFM loss 1.0989  val CFM loss (EMA) 1.1026  705 s
+step  19000  train CFM loss 1.0979  val CFM loss (EMA) 1.0990  744 s
+step  20000  train CFM loss 1.0976  val CFM loss (EMA) 1.1037  783 s
+step  21000  train CFM loss 1.0977  val CFM loss (EMA) 1.1045  824 s
+step  22000  train CFM loss 1.0963  val CFM loss (EMA) 1.0953  866 s
+step  23000  train CFM loss 1.0990  val CFM loss (EMA) 1.1010  906 s
+step  24000  train CFM loss 1.0984  val CFM loss (EMA) 1.1014  946 s
+       149,732 weights, 24,000 steps in 946 s
+--- cvae seed 1
+model  cvae (interface v2, 1 network pass(es) per draw), seed 1, {'width': 64, 'enc_depth': 3, 'dec_depth': 4, 'emb': 32, 'latent': 4, 'x_dim': 4, 'c_dim': 13}
+step   1000  train -ELBO 3.7135  val -ELBO (EMA) 5.0798  40 s
+step   2000  train -ELBO 3.6810  val -ELBO (EMA) 7.7573  79 s

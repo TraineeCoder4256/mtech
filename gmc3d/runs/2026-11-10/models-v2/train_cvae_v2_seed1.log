@@ -1,0 +1,27 @@
+data   40,500,000 anisotropic + 1,012,500 isotropic walks (interface v2), mean 56.7 scatters, 24 s  (hash 5a07321cf122e667; parts f444267faffffddd, db43737b8f757c12)
+model  cvae (interface v2, 1 network pass(es) per draw), seed 1, {'width': 64, 'enc_depth': 3, 'dec_depth': 4, 'emb': 32, 'latent': 4, 'x_dim': 4, 'c_dim': 13}
+step   1000  train -ELBO 3.7135  val -ELBO (EMA) 5.0798  43 s
+step   2000  train -ELBO 3.6810  val -ELBO (EMA) 7.7573  86 s
+step   3000  train -ELBO 3.7706  val -ELBO (EMA) 7.1699  129 s
+step   4000  train -ELBO 3.7439  val -ELBO (EMA) 4.9015  171 s
+step   5000  train -ELBO 3.4756  val -ELBO (EMA) 3.7524  212 s
+step   6000  train -ELBO 3.6815  val -ELBO (EMA) 3.4977  253 s
+step   7000  train -ELBO 3.5727  val -ELBO (EMA) 3.4620  292 s
+step   8000  train -ELBO 3.6175  val -ELBO (EMA) 3.3917  333 s
+step   9000  train -ELBO 3.6296  val -ELBO (EMA) 3.3667  373 s
+step  10000  train -ELBO 3.6763  val -ELBO (EMA) 3.3503  414 s
+step  11000  train -ELBO 3.6123  val -ELBO (EMA) 3.3213  457 s
+step  12000  train -ELBO 3.5106  val -ELBO (EMA) 3.2840  498 s
+step  13000  train -ELBO 3.3270  val -ELBO (EMA) 3.2888  539 s
+step  14000  train -ELBO 3.3881  val -ELBO (EMA) 3.2318  581 s
+step  15000  train -ELBO 3.3566  val -ELBO (EMA) 3.2305  622 s
+step  16000  train -ELBO 3.2859  val -ELBO (EMA) 3.1942  663 s
+step  17000  train -ELBO 3.1281  val -ELBO (EMA) 3.1398  702 s
+step  18000  train -ELBO 3.0183  val -ELBO (EMA) 3.0810  743 s
+step  19000  train -ELBO 2.9745  val -ELBO (EMA) 3.0080  784 s
+step  20000  train -ELBO 2.9102  val -ELBO (EMA) 2.9537  826 s
+step  21000  train -ELBO 2.8822  val -ELBO (EMA) 2.9017  866 s
+step  22000  train -ELBO 2.9164  val -ELBO (EMA) 2.8724  909 s
+step  23000  train -ELBO 2.8466  val -ELBO (EMA) 2.8311  950 s
+step  24000  train -ELBO 2.8529  val -ELBO (EMA) 2.8344  994 s
+       149,936 weights, 24,000 steps in 994 s
