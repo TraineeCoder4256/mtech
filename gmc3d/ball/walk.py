@@ -37,8 +37,22 @@ exit normal, so four numbers describe its exit:
            chance by the mirror symmetry, so the driver draws the sign
     s, k   as above
 
-An isotropic law gives cos_n uniform on (-1, 1) and phi uniform on
-[0, pi], with (mu, s) distributed as walk() (checked in tests).
+An isotropic law gives (mu, s) distributed as walk() (checked in tests),
+but cos_n is NOT uniform: the first flight runs along u0.
+
+ONE SCATTER (v2.1.3, `first_scatter_aniso`).  A walk with k = 1 stays in
+one plane (u0, the turn, the exit), so phi is exactly pi (never 0: the
+turn points the exit direction away from u0's side), and s is fixed by
+(R, cos_n, mu): R n = d1 u0 + d2 u1 is two equations for d1, d2.  These
+walks are 38-53% of all at R = 1 for the test laws, 6-13% at R = 3,
+0.02% at R = 10.  A smooth model cannot draw that atom on a surface, so
+interface-v2 models do not learn it (agreed with Development 10 Nov
+2026): first_scatter_aniso runs walk_aniso up to its second collision,
+with the same random numbers, and returns the exit when there is none.
+Otherwise the backend throws that state away and draws from a model
+trained on the k >= 2 rows only, which is p(exit | k >= 2, R, law): the
+mixture is exact, the k = 1 share is the walk's own, and every ball
+costs one try.
 
 Cost: about R^2 scatters per walk for big R (a diffusing particle needs
 ~R^2 steps to travel R), which is the whole case for replacing it.
@@ -180,6 +194,47 @@ def walk_many_aniso(R, mats, ang, state, idx):
         cn[j], mu[j], phi[j], s[j], k[j] = walk_aniso(R[j], ang, mats[j],
                                                       state, idx[j])
     return cn, mu, phi, s, k
+
+
+@njit(cache=True)
+def first_scatter_aniso(R, ang, m, state, i):
+    """walk_aniso up to its second collision, consuming the same random
+    numbers in the same order.  Returns (exited, cos_n, mu, phi, s):
+    exited is True exactly when walk_aniso on these streams gives k = 1,
+    and then the outputs are its own; otherwise they are NaN (the state is
+    discarded: the backend draws from its k >= 2 model)."""
+    xi = rng.rand(state, i)
+    l1 = -np.log(1.0 - xi * (-np.expm1(-R)))
+    mu_s = SC.sample_mu(ang, m, state, i)
+    u, v, w = _rotate(0.0, 0.0, 1.0, mu_s, 2.0 * np.pi * rng.rand(state, i))
+    x, y, z = 0.0, 0.0, l1
+    b = x * u + y * v + z * w
+    c = x * x + y * y + z * z - R * R
+    t_exit = -b + np.sqrt(max(b * b - c, 0.0))
+    l = -np.log(1.0 - rng.rand(state, i))
+    if l < t_exit:
+        return False, np.nan, np.nan, np.nan, np.nan
+    x, y, z = x + t_exit * u, y + t_exit * v, z + t_exit * w
+    n0, n1, n2 = x / R, y / R, z / R
+    mu = n0 * u + n1 * v + n2 * w
+    e10, e11, e12, e20, e21, e22 = exit_frame(n0, n1, n2, 0.0, 0.0, 1.0)
+    phi = abs(np.arctan2(u * e20 + v * e21 + w * e22,
+                         u * e10 + v * e11 + w * e12))
+    return (True, min(max(n2, -1.0), 1.0), min(max(mu, 0.0), 1.0), phi,
+            l1 + t_exit)
+
+
+@njit(cache=True, parallel=True)
+def first_scatter_many_aniso(R, mats, ang, state, idx):
+    """first_scatter_aniso() for each R[j] in material mats[j], stream
+    idx[j]: (exited, cos_n, mu, phi, s)."""
+    n = R.size
+    ex = np.empty(n, np.bool_)
+    cn, mu, phi, s = np.empty(n), np.empty(n), np.empty(n), np.empty(n)
+    for j in prange(n):
+        ex[j], cn[j], mu[j], phi[j], s[j] = first_scatter_aniso(
+            R[j], ang, mats[j], state, idx[j])
+    return ex, cn, mu, phi, s
 
 
 def sample_aniso(R, ang, m, n, seed=1, first=0):

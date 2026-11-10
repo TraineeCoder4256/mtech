@@ -7,6 +7,42 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v2.1.3 (10 Nov 2026): one-scatter walks drawn exactly
+
+Development's first v2 models (m2.0 results, daf648f) fail the gate at
+every R <= 3, all six of them, for one physical reason, found by
+Development and confirmed here:
+
+- A walk that scatters once stays in one plane, so phi is exactly pi.
+  It is always pi, never 0: the turn points the exit direction away
+  from u0's side.
+- s is then fixed by (R, cos_n, mu): R n = d1 u0 + d2 u1. Rebuilt that
+  way it matches the walk to 4e-11.
+- On the held-out laws the phi atom equals the k = 1 share to 4 digits:
+  0.38-0.53 at R = 1, 0.06-0.13 at R = 3, 0.0002 at R = 10.
+- A smooth model cannot draw a point mass on a surface, so its KS on phi
+  equals the atom (0.48-0.53 at R = 1).
+
+Agreed with Development (no interface change, no extra weights): each
+ball first runs the exact walk up to its second collision. If it leaves
+before that (k = 1), that exit is used as is. Otherwise the state is
+thrown away, and the family, trained on the k >= 2 rows only, draws the
+exit. That is p(exit | k >= 2, R, law), so the mixture is exact, the
+k = 1 share is the walk's own, and every ball costs one try. It also
+saves P(k = 1) of the network passes (about half at R = 1). A
+classifier for P(k = 1), and a rejection sampler for the k = 1 walk,
+were considered and dropped.
+
+- **`ball/walk.py` `first_scatter_aniso`, `first_scatter_many_aniso`**
+  (new): `walk_aniso` up to its second collision, with the same random
+  numbers in the same order. It returns (exited, cos_n, mu, phi, s).
+  Walk for walk on the same streams, exited == (k == 1) and the outputs
+  are identical (`tests/test_first_scatter_v213.py`: 7 held-out laws,
+  20,000 walks each, R log-uniform in [1, 30]). Development's
+  AnisoBackend calls it (m2.1).
+- **`ball/walk.py` docstring**: an isotropic law does NOT give a uniform
+  cos_n (the old text said it did; the tests already knew).
+
 ## v2.1.2 (10 Nov 2026): the acceptance gate for interface v2 models
 
 The 5 Nov protocol gives Innovation the gate, and Development's m2.0
