@@ -1,0 +1,94 @@
+model cvae_v2_seed1: manifest interface 2 (OK)
+
+== p1: g1 +0.300
+  R    1  cos_n z  +1.00 KS 0.004  mu z  +1.72 KS 0.004  phi z  +0.64 KS 0.006  s z  -0.61 KS 0.004  weight z +0.61 +0.62 +0.69
+  R  1.5  cos_n z  -1.32 KS 0.005  mu z  +2.85 KS 0.007  phi z  +0.27 KS 0.004  s z  -0.03 KS 0.003  weight z +0.03 +0.03 -0.01
+  R    3  cos_n z  -0.97 KS 0.007  mu z  -0.64 KS 0.003  phi z  -0.89 KS 0.004  s z  +0.04 KS 0.003  weight z -0.04 -0.02 +0.12
+  R    5  cos_n z  -0.19 KS 0.013  mu z  -0.38 KS 0.004  phi z  -0.10 KS 0.005  s z  -0.46 KS 0.004  weight z +0.45 +0.36 -0.29
+  R   10  cos_n z  -1.39 KS 0.015  mu z  +2.04 KS 0.009  phi z  -3.07 KS 0.008  s z  +0.39 KS 0.006  weight z -0.36 -0.34 -0.27
+  R   20  cos_n z  -1.11 KS 0.013  mu z  +0.79 KS 0.005  phi z  +0.81 KS 0.003  s z  +0.29 KS 0.011  weight z +0.77 +1.70 -1.47
+  R   29  cos_n z  -1.11 KS 0.012  mu z  +1.82 KS 0.005  phi z  -0.35 KS 0.003  s z  +1.60 KS 0.010  weight z +0.11 -0.25 +2.20
+
+== p3: g1 +0.600
+  R    1  cos_n z  +2.14 KS 0.005  mu z  -2.31 KS 0.005  phi z  +0.89 KS 0.005  s z  -3.73 KS 0.007  weight z +3.73 +3.72 +3.63  FAIL
+  R  1.5  cos_n z  +1.42 KS 0.003  mu z  -1.51 KS 0.004  phi z  +0.40 KS 0.004  s z  -2.96 KS 0.007  weight z +2.96 +2.96 +2.91
+  R    3  cos_n z  -0.39 KS 0.004  mu z  -2.84 KS 0.008  phi z  +0.39 KS 0.006  s z  -0.35 KS 0.010  weight z +0.35 +0.29 -0.21
+  R    5  cos_n z  +0.09 KS 0.008  mu z  -2.32 KS 0.005  phi z  +0.38 KS 0.004  s z  -0.59 KS 0.004  weight z +0.59 +0.57 +0.44
+  R   10  cos_n z  -2.82 KS 0.016  mu z  +0.59 KS 0.006  phi z  +1.06 KS 0.004  s z  +0.20 KS 0.003  weight z -0.21 -0.20 +0.45
+  R   20  cos_n z  +0.33 KS 0.017  mu z  -1.66 KS 0.005  phi z  +0.07 KS 0.003  s z  -1.58 KS 0.010  weight z +1.78 +1.35 -1.30
+  R   29  cos_n z  -1.13 KS 0.014  mu z  -0.45 KS 0.004  phi z  +0.60 KS 0.004  s z  -5.89 KS 0.020  weight z +7.15 +6.66 +3.29  FAIL
+
+== clipped: g1 +0.448
+  R    1  cos_n z  +1.35 KS 0.008  mu z  -7.00 KS 0.012  phi z  -0.14 KS 0.006  s z  -5.92 KS 0.015  weight z +5.92 +5.91 +5.77  FAIL
+  R  1.5  cos_n z  +0.22 KS 0.004  mu z  -4.10 KS 0.007  phi z  +1.88 KS 0.006  s z  -4.66 KS 0.014  weight z +4.66 +4.65 +4.52  FAIL
+  R    3  cos_n z  -1.52 KS 0.010  mu z  +0.80 KS 0.012  phi z  +3.16 KS 0.008  s z  -2.94 KS 0.014  weight z +2.94 +2.97 +3.21
+  R    5  cos_n z  +2.07 KS 0.016  mu z  +1.54 KS 0.009  phi z  +3.89 KS 0.009  s z  -3.02 KS 0.021  weight z +3.04 +3.24 +4.95  FAIL
+  R   10  cos_n z  +2.93 KS 0.019  mu z  -0.49 KS 0.004  phi z  -0.34 KS 0.003  s z  -4.46 KS 0.015  weight z +4.50 +4.80 +6.83  FAIL
+  R   20  cos_n z  -3.41 KS 0.017  mu z  +2.51 KS 0.008  phi z  +0.36 KS 0.005  s z  -6.32 KS 0.017  weight z +7.02 +8.07 +4.59  FAIL
+  R   29  cos_n z  +1.73 KS 0.013  mu z  +2.17 KS 0.007  phi z  -0.54 KS 0.004  s z  -5.57 KS 0.019  weight z +7.19 +6.92 +2.55  FAIL
+
+== backward: g1 -0.300
+  R    1  cos_n z  -0.61 KS 0.006  mu z  +2.44 KS 0.009  phi z  +1.40 KS 0.005  s z  -0.86 KS 0.005  weight z +0.86 +0.84 +0.72
+  R  1.5  cos_n z  -0.72 KS 0.008  mu z  -0.54 KS 0.003  phi z  +1.10 KS 0.005  s z  -0.52 KS 0.002  weight z +0.52 +0.49 +0.28
+  R    3  cos_n z  -0.41 KS 0.013  mu z  +1.13 KS 0.006  phi z  -1.09 KS 0.005  s z  -1.22 KS 0.005  weight z +1.21 +1.16 +0.49
+  R    5  cos_n z  -1.83 KS 0.015  mu z  -0.84 KS 0.003  phi z  +0.79 KS 0.004  s z  -2.69 KS 0.006  weight z +2.70 +2.76 +1.67
+  R   10  cos_n z  -0.42 KS 0.013  mu z  +1.55 KS 0.008  phi z  -0.99 KS 0.005  s z  +2.63 KS 0.006  weight z -1.91 +0.61 +0.78
+  R   20  cos_n z  -0.91 KS 0.010  mu z  +0.72 KS 0.004  phi z  -0.83 KS 0.004  s z  +2.73 KS 0.010  weight z -1.79 -3.22 -1.87
+  R   29  cos_n z  +0.29 KS 0.010  mu z  -1.62 KS 0.004  phi z  -0.16 KS 0.004  s z  +0.44 KS 0.008  weight z +1.50 +1.74 +4.06  FAIL
+
+== p5_order2: g1 +0.616
+  R    1  cos_n z  +2.94 KS 0.011  mu z  -7.61 KS 0.015  phi z  +1.73 KS 0.005  s z  -5.65 KS 0.011  weight z +5.65 +5.62 +5.35  FAIL
+  R  1.5  cos_n z  +1.65 KS 0.011  mu z  -6.59 KS 0.011  phi z  +3.96 KS 0.007  s z  -4.61 KS 0.013  weight z +4.60 +4.57 +4.19  FAIL
+  R    3  cos_n z  -3.05 KS 0.010  mu z  -2.60 KS 0.005  phi z  +3.17 KS 0.007  s z  +0.17 KS 0.011  weight z -0.18 -0.21 -0.49
+  R    5  cos_n z  +1.54 KS 0.009  mu z  +0.06 KS 0.006  phi z  +0.83 KS 0.006  s z  +0.15 KS 0.006  weight z -0.15 -0.15 -0.05
+  R   10  cos_n z  -1.73 KS 0.014  mu z  +0.96 KS 0.006  phi z  -0.31 KS 0.004  s z  +0.76 KS 0.004  weight z -0.76 -0.76 +0.07
+  R   20  cos_n z  -2.88 KS 0.016  mu z  -0.10 KS 0.004  phi z  +0.12 KS 0.003  s z  +0.51 KS 0.006  weight z -0.27 +0.13 +1.05
+  R   29  cos_n z  -1.56 KS 0.013  mu z  +0.50 KS 0.003  phi z  +0.48 KS 0.004  s z  -0.93 KS 0.011  weight z +1.95 +3.13 +3.02
+
+== histogram: g1 +0.502
+  R    1  cos_n z  +0.71 KS 0.002  mu z  -3.12 KS 0.007  phi z  -0.05 KS 0.004  s z  -1.73 KS 0.004  weight z +1.73 +1.73 +1.72
+  R  1.5  cos_n z  -0.76 KS 0.004  mu z  +0.40 KS 0.003  phi z  +2.15 KS 0.008  s z  -0.06 KS 0.002  weight z +0.06 +0.07 +0.11
+  R    3  cos_n z  -0.40 KS 0.004  mu z  -2.41 KS 0.006  phi z  +0.77 KS 0.004  s z  -0.68 KS 0.004  weight z +0.68 +0.66 +0.49
+  R    5  cos_n z  -2.24 KS 0.009  mu z  -2.10 KS 0.006  phi z  -0.79 KS 0.004  s z  -0.43 KS 0.004  weight z +0.42 +0.41 +0.23
+  R   10  cos_n z  -0.58 KS 0.016  mu z  -0.95 KS 0.004  phi z  -2.52 KS 0.007  s z  +1.03 KS 0.003  weight z -0.99 -0.73 +0.46
+  R   20  cos_n z  -1.69 KS 0.016  mu z  -0.30 KS 0.004  phi z  +0.87 KS 0.004  s z  +0.18 KS 0.008  weight z +0.35 +0.92 +0.52
+  R   29  cos_n z  -1.92 KS 0.016  mu z  +1.54 KS 0.006  phi z  -0.25 KS 0.004  s z  -0.79 KS 0.012  weight z +2.27 +2.09 +1.98
+
+== tabular: g1 +0.375
+  R    1  cos_n z  -0.01 KS 0.003  mu z  -0.22 KS 0.004  phi z  -0.61 KS 0.005  s z  -0.21 KS 0.005  weight z +0.21 +0.21 +0.19
+  R  1.5  cos_n z  -0.83 KS 0.004  mu z  +1.16 KS 0.004  phi z  +0.38 KS 0.004  s z  +0.01 KS 0.004  weight z -0.01 -0.01 -0.03
+  R    3  cos_n z  -0.46 KS 0.009  mu z  +0.39 KS 0.003  phi z  -0.31 KS 0.004  s z  -0.54 KS 0.005  weight z +0.54 +0.56 +0.61
+  R    5  cos_n z  -1.30 KS 0.011  mu z  -1.20 KS 0.005  phi z  -2.29 KS 0.007  s z  -0.26 KS 0.005  weight z +0.25 +0.11 -0.72
+  R   10  cos_n z  -1.72 KS 0.016  mu z  -0.07 KS 0.003  phi z  +0.56 KS 0.003  s z  +0.99 KS 0.007  weight z -1.01 -1.26 -2.25
+  R   20  cos_n z  +0.55 KS 0.014  mu z  +1.72 KS 0.005  phi z  -1.32 KS 0.005  s z  -0.09 KS 0.010  weight z +0.96 +2.05 +0.73
+  R   29  cos_n z  -1.71 KS 0.013  mu z  -1.72 KS 0.004  phi z  -2.46 KS 0.007  s z  -0.44 KS 0.010  weight z +1.81 +0.84 +1.18
+
+cost: model 2.01 us per draw, exact walk 1.85 us (batch 100,000, these radii)
+gate v2: FAIL (27 failing checks of 343)
+  p3 R 1: weight z +3.73 at kappa 0.001
+  p3 R 1: weight z +3.72 at kappa 0.01
+  p3 R 1: weight z +3.63 at kappa 0.1
+  p3 R 29: weight z +7.15 at kappa 0.001
+  p3 R 29: weight z +6.66 at kappa 0.01
+  clipped R 1: weight z +5.92 at kappa 0.001
+  clipped R 1: weight z +5.91 at kappa 0.01
+  clipped R 1: weight z +5.77 at kappa 0.1
+  clipped R 1.5: weight z +4.66 at kappa 0.001
+  clipped R 1.5: weight z +4.65 at kappa 0.01
+  clipped R 1.5: weight z +4.52 at kappa 0.1
+  clipped R 5: weight z +4.95 at kappa 0.1
+  clipped R 10: weight z +4.50 at kappa 0.001
+  clipped R 10: weight z +4.80 at kappa 0.01
+  clipped R 10: weight z +6.83 at kappa 0.1
+  clipped R 20: weight z +7.02 at kappa 0.001
+  clipped R 20: weight z +8.07 at kappa 0.01
+  clipped R 20: weight z +4.59 at kappa 0.1
+  clipped R 29: weight z +7.19 at kappa 0.001
+  clipped R 29: weight z +6.92 at kappa 0.01
+  backward R 29: weight z +4.06 at kappa 0.1
+  p5_order2 R 1: weight z +5.65 at kappa 0.001
+  p5_order2 R 1: weight z +5.62 at kappa 0.01
+  p5_order2 R 1: weight z +5.35 at kappa 0.1
+  p5_order2 R 1.5: weight z +4.60 at kappa 0.001
+  p5_order2 R 1.5: weight z +4.57 at kappa 0.01
+  p5_order2 R 1.5: weight z +4.19 at kappa 0.1
