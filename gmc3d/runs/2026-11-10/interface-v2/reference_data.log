@@ -1,0 +1,4 @@
+rows 1000000 pool (20000, 12) seconds 256.1
+hash e9969835711a7e93d8499e7f1244115edc51989ebeaada3bafc5b5d82dcbbc31
+{'R_out_of_range': 0, 'cos_n_out_of_range': 0, 'mu_out_of_range': 0, 'phi_out_of_range': 0, 's_not_above_R': 0, 'non_finite': 0}
+mean k 56.170995 g1 range -0.4999191751326984 0.9499500857517454

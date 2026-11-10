@@ -9,6 +9,9 @@
                 plug-in face, the shared training loop, fairness rules,
                 trained-model store, side-by-side comparison (m1.0)
     data.py     training data for every family, made with walk.py
+                (v2 rows too: make_aniso, one law per row)
+    laws.py     the scattering laws v2 models train on, and the
+                held-out test laws (interface v2)
     interface.py  the model interface (inputs, outputs, ranges, version);
                 owned by Innovation, read by the model side (v1.6.2)
     profile.py  not a backend: where in a ball its flux lies, for mesh

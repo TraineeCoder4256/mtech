@@ -1,0 +1,159 @@
+rows/s: anisotropic 812,600 (mean 56.5 scatters per walk), isotropic v1 1,321,357; R log-uniform 1-30
+
+== hg 0.3: g1..g8 = +0.300 +0.090 +0.027 +0.008 +0.002 +0.001 +0.000 +0.000 +0.000
+  R    1  same law      z cos_n  -0.97 mu  +0.28 phi  -1.33 s  +0.47   KS D max 0.0053
+  R    1  L 1  dg1 -0.0000 dg2 -0.034  z cos_n  +0.60 mu  -5.46 phi  -2.33 s  -1.22   KS D max 0.0153
+  R    1  L 2  dg1 +0.0000 dg3 -0.006  z cos_n  -1.02 mu  +0.17 phi  -1.59 s  +0.49   KS D max 0.0059
+  R    1  L 3  dg1 +0.0000 dg4 -0.001  z cos_n  -0.98 mu  +0.32 phi  -1.32 s  +0.47   KS D max 0.0053
+  R    1  L 5  dg1 +0.0000 dg6 -0.000  z cos_n  -0.97 mu  +0.28 phi  -1.32 s  +0.47   KS D max 0.0053
+  R    1  L 8  dg1 +0.0000 dg9 -0.000  z cos_n  -0.97 mu  +0.29 phi  -1.33 s  +0.47   KS D max 0.0053
+  R    3  same law      z cos_n  -0.50 mu  +0.59 phi  -1.05 s  +0.83   KS D max 0.0053
+  R    3  L 1  dg1 -0.0000 dg2 -0.034  z cos_n  -0.25 mu  -3.39 phi  -2.79 s  +0.20   KS D max 0.0111
+  R    3  L 2  dg1 +0.0000 dg3 -0.006  z cos_n  -0.48 mu  +0.55 phi  -1.13 s  +0.81   KS D max 0.0055
+  R    3  L 3  dg1 +0.0000 dg4 -0.001  z cos_n  -0.50 mu  +0.58 phi  -1.06 s  +0.85   KS D max 0.0054
+  R    3  L 5  dg1 +0.0000 dg6 -0.000  z cos_n  -0.50 mu  +0.58 phi  -1.04 s  +0.83   KS D max 0.0053
+  R    3  L 8  dg1 +0.0000 dg9 -0.000  z cos_n  -0.50 mu  +0.60 phi  -1.05 s  +0.83   KS D max 0.0053
+  R   10  same law      z cos_n  +0.24 mu  +0.07 phi  +0.18 s  -0.85   KS D max 0.0052
+  R   10  L 1  dg1 -0.0000 dg2 -0.034  z cos_n  +0.48 mu  -0.98 phi  -0.21 s  -0.49   KS D max 0.0057
+  R   10  L 2  dg1 +0.0000 dg3 -0.006  z cos_n  +0.24 mu  -0.12 phi  +0.47 s  -0.77   KS D max 0.0053
+  R   10  L 3  dg1 +0.0000 dg4 -0.001  z cos_n  +0.28 mu  -0.10 phi  +0.08 s  -0.81   KS D max 0.0051
+  R   10  L 5  dg1 +0.0000 dg6 -0.000  z cos_n  +0.24 mu  +0.01 phi  +0.13 s  -0.85   KS D max 0.0052
+  R   10  L 8  dg1 +0.0000 dg9 -0.000  z cos_n  +0.24 mu  +0.07 phi  +0.19 s  -0.85   KS D max 0.0053
+  R   30  same law      z cos_n  +0.23 mu  -1.31 phi  -0.30 s  +0.91   KS D max 0.0060
+  R   30  L 1  dg1 -0.0000 dg2 -0.034  z cos_n  +0.06 mu  -2.26 phi  -0.06 s  +0.82   KS D max 0.0080
+  R   30  L 2  dg1 +0.0000 dg3 -0.006  z cos_n  +0.27 mu  -1.76 phi  -0.83 s  +1.03   KS D max 0.0070
+  R   30  L 3  dg1 +0.0000 dg4 -0.001  z cos_n  +0.30 mu  -1.53 phi  -0.35 s  +0.79   KS D max 0.0061
+  R   30  L 5  dg1 +0.0000 dg6 -0.000  z cos_n  +0.20 mu  -1.10 phi  -0.24 s  +0.91   KS D max 0.0057
+  R   30  L 8  dg1 +0.0000 dg9 -0.000  z cos_n  +0.23 mu  -1.32 phi  -0.30 s  +0.91   KS D max 0.0060
+
+== hg 0.6: g1..g8 = +0.600 +0.360 +0.216 +0.130 +0.078 +0.047 +0.028 +0.017 +0.010
+  R    1  same law      z cos_n  +0.04 mu  -1.34 phi  -0.06 s  +0.43   KS D max 0.0056
+  R    1  L 1  dg1 -0.0000 dg2 -0.110  z cos_n +10.76 mu -26.28 phi  -5.11 s -11.61   KS D max 0.0808
+  R    1  L 2  dg1 +0.0000 dg3 -0.045  z cos_n  -0.59 mu  -1.14 phi  -3.74 s  +0.56   KS D max 0.0281
+  R    1  L 3  dg1 +0.0000 dg4 -0.018  z cos_n  -0.04 mu  -0.86 phi  -0.99 s  +0.67   KS D max 0.0117
+  R    1  L 5  dg1 +0.0000 dg6 -0.004  z cos_n  +0.01 mu  -1.33 phi  -0.25 s  +0.48   KS D max 0.0063
+  R    1  L 8  dg1 +0.0000 dg9 -0.000  z cos_n  +0.05 mu  -1.31 phi  -0.06 s  +0.42   KS D max 0.0056
+  R    3  same law      z cos_n  -0.36 mu  -0.53 phi  +0.18 s  -0.29   KS D max 0.0048
+  R    3  L 1  dg1 -0.0000 dg2 -0.110  z cos_n  +2.81 mu -20.83 phi  -8.74 s  -6.46   KS D max 0.0568
+  R    3  L 2  dg1 +0.0000 dg3 -0.045  z cos_n  -0.26 mu  -2.07 phi  -3.11 s  -0.77   KS D max 0.0176
+  R    3  L 3  dg1 +0.0000 dg4 -0.018  z cos_n  -0.38 mu  -0.43 phi  -0.57 s  -0.25   KS D max 0.0078
+  R    3  L 5  dg1 +0.0000 dg6 -0.004  z cos_n  -0.36 mu  -0.58 phi  +0.09 s  -0.35   KS D max 0.0049
+  R    3  L 8  dg1 +0.0000 dg9 -0.000  z cos_n  -0.36 mu  -0.53 phi  +0.20 s  -0.30   KS D max 0.0047
+  R   10  same law      z cos_n  -0.01 mu  -0.68 phi  -0.55 s  +0.66   KS D max 0.0053
+  R   10  L 1  dg1 -0.0000 dg2 -0.110  z cos_n  -0.21 mu  -7.12 phi  -3.21 s  +0.44   KS D max 0.0147
+  R   10  L 2  dg1 +0.0000 dg3 -0.045  z cos_n  -0.10 mu  -0.60 phi  -1.53 s  +0.78   KS D max 0.0053
+  R   10  L 3  dg1 +0.0000 dg4 -0.018  z cos_n  -0.18 mu  -0.90 phi  -0.48 s  +0.45   KS D max 0.0050
+  R   10  L 5  dg1 +0.0000 dg6 -0.004  z cos_n  -0.04 mu  -0.86 phi  -0.49 s  +0.55   KS D max 0.0052
+  R   10  L 8  dg1 +0.0000 dg9 -0.000  z cos_n  -0.01 mu  -0.68 phi  -0.52 s  +0.64   KS D max 0.0052
+  R   30  same law      z cos_n  +0.44 mu  +0.99 phi  -1.24 s  +0.68   KS D max 0.0035
+  R   30  L 1  dg1 -0.0000 dg2 -0.110  z cos_n  +0.74 mu  -0.60 phi  +0.03 s  +0.61   KS D max 0.0061
+  R   30  L 2  dg1 +0.0000 dg3 -0.045  z cos_n  +0.63 mu  +1.03 phi  +0.64 s  +0.84   KS D max 0.0043
+  R   30  L 3  dg1 +0.0000 dg4 -0.018  z cos_n  +0.46 mu  -0.88 phi  -2.59 s  +0.91   KS D max 0.0060
+  R   30  L 5  dg1 +0.0000 dg6 -0.004  z cos_n  +0.39 mu  +0.70 phi  -1.02 s  +0.78   KS D max 0.0042
+  R   30  L 8  dg1 +0.0000 dg9 -0.000  z cos_n  +0.41 mu  +0.80 phi  -1.07 s  +0.74   KS D max 0.0034
+
+== hg 0.9: g1..g8 = +0.904 +0.818 +0.740 +0.670 +0.607 +0.549 +0.497 +0.450 +0.408
+  R    1  same law      z cos_n  +0.14 mu  -0.35 phi  -0.49 s  -0.73   KS D max 0.0062
+  R    1  L 1  dg1 -0.0000 dg2 -0.077  z cos_n +24.46 mu -36.30 phi -22.55 s -27.67   KS D max 0.3176
+  R    1  L 2  dg1 +0.0000 dg3 -0.085  z cos_n  -5.38 mu  +5.15 phi -22.28 s  +1.90   KS D max 0.2401
+  R    1  L 3  dg1 +0.0001 dg4 -0.047  z cos_n  +0.68 mu  +1.62 phi -14.57 s  +0.30   KS D max 0.1701
+  R    1  L 5  dg1 +0.0003 dg6 -0.028  z cos_n  +0.29 mu  -0.03 phi  -9.52 s  -0.91   KS D max 0.0992
+  R    1  L 8  dg1 +0.0008 dg9 -0.013  z cos_n  +0.74 mu  +0.48 phi  -5.23 s  -1.41   KS D max 0.0481
+  R    3  same law      z cos_n  +0.73 mu  -1.44 phi  -0.30 s  -0.98   KS D max 0.0053
+  R    3  L 1  dg1 -0.0000 dg2 -0.077  z cos_n +26.76 mu -46.63 phi -35.53 s -31.87   KS D max 0.2734
+  R    3  L 2  dg1 +0.0000 dg3 -0.085  z cos_n  -2.95 mu  +1.13 phi -35.11 s  +0.03   KS D max 0.1916
+  R    3  L 3  dg1 +0.0001 dg4 -0.047  z cos_n  +0.54 mu  +1.93 phi -21.12 s  +0.11   KS D max 0.1254
+  R    3  L 5  dg1 +0.0003 dg6 -0.028  z cos_n  +0.95 mu  -1.02 phi -12.56 s  -1.47   KS D max 0.0643
+  R    3  L 8  dg1 +0.0008 dg9 -0.013  z cos_n  +1.55 mu  -0.22 phi  -6.02 s  -1.91   KS D max 0.0270
+  R   10  same law      z cos_n  +0.10 mu  +0.51 phi  +0.49 s  +0.59   KS D max 0.0038
+  R   10  L 1  dg1 -0.0000 dg2 -0.077  z cos_n +12.12 mu -50.41 phi -25.17 s -19.59   KS D max 0.1765
+  R   10  L 2  dg1 +0.0000 dg3 -0.085  z cos_n  +1.38 mu  -7.13 phi -20.02 s  -1.90   KS D max 0.0929
+  R   10  L 3  dg1 +0.0001 dg4 -0.047  z cos_n  +0.30 mu  +3.31 phi  -8.44 s  +1.18   KS D max 0.0402
+  R   10  L 5  dg1 +0.0003 dg6 -0.028  z cos_n  +0.34 mu  +0.96 phi  -2.50 s  +0.06   KS D max 0.0117
+  R   10  L 8  dg1 +0.0008 dg9 -0.013  z cos_n  +1.44 mu  +2.00 phi  +0.16 s  -0.94   KS D max 0.0065
+  R   30  same law      z cos_n  +0.68 mu  +1.11 phi  +0.89 s  -0.66   KS D max 0.0048
+  R   30  L 1  dg1 -0.0000 dg2 -0.077  z cos_n  +0.39 mu -12.63 phi  -8.91 s  -3.75   KS D max 0.0542
+  R   30  L 2  dg1 +0.0000 dg3 -0.085  z cos_n  +0.94 mu  -0.68 phi  -1.01 s  -1.19   KS D max 0.0136
+  R   30  L 3  dg1 +0.0001 dg4 -0.047  z cos_n  +0.80 mu  +1.55 phi  -0.72 s  -0.33   KS D max 0.0049
+  R   30  L 5  dg1 +0.0003 dg6 -0.028  z cos_n  +0.89 mu  +1.62 phi  +0.20 s  -1.76   KS D max 0.0052
+  R   30  L 8  dg1 +0.0008 dg9 -0.013  z cos_n  +1.76 mu  +1.74 phi  +1.62 s  -3.44   KS D max 0.0071
+
+== hg2 0.7x0.9+0.3x-0.5: g1..g8 = +0.497 +0.653 +0.489 +0.494 +0.422 +0.394 +0.351 +0.321 +0.289
+  R    1  same law      z cos_n  -0.91 mu  -0.91 phi  +0.02 s  +0.04   KS D max 0.0046
+  R    1  L 1  dg1 -0.0000 dg2 -0.490  z cos_n +31.66 mu -119.27 phi -22.42 s -35.85   KS D max 0.3322
+  R    1  L 2  dg1 +0.0000 dg3 -0.205  z cos_n  -2.79 mu  +0.36 phi -22.44 s  +0.32   KS D max 0.2029
+  R    1  L 3  dg1 +0.0003 dg4 -0.134  z cos_n  -1.12 mu  +3.32 phi -10.54 s  +0.85   KS D max 0.1413
+  R    1  L 5  dg1 +0.0011 dg6 -0.064  z cos_n  -0.61 mu  -1.17 phi  -5.43 s  -0.46   KS D max 0.0773
+  R    1  L 8  dg1 +0.0030 dg9 -0.027  z cos_n  -0.19 mu  -0.17 phi  -2.36 s  -0.80   KS D max 0.0357
+  R    3  same law      z cos_n  -1.54 mu  -0.18 phi  -1.54 s  +2.58   KS D max 0.0052
+  R    3  L 1  dg1 -0.0000 dg2 -0.490  z cos_n  +8.99 mu -108.69 phi -42.82 s -21.33   KS D max 0.2505
+  R    3  L 2  dg1 +0.0000 dg3 -0.205  z cos_n  -0.96 mu  -6.51 phi -23.53 s  +0.98   KS D max 0.1188
+  R    3  L 3  dg1 +0.0003 dg4 -0.134  z cos_n  -1.66 mu  +2.94 phi -14.58 s  +3.30   KS D max 0.0779
+  R    3  L 5  dg1 +0.0011 dg6 -0.064  z cos_n  -1.32 mu  -0.80 phi  -7.13 s  +1.94   KS D max 0.0387
+  R    3  L 8  dg1 +0.0030 dg9 -0.027  z cos_n  -0.96 mu  +0.54 phi  -3.77 s  +1.57   KS D max 0.0167
+  R   10  same law      z cos_n  -0.25 mu  +0.36 phi  -0.67 s  +0.03   KS D max 0.0036
+  R   10  L 1  dg1 -0.0000 dg2 -0.490  z cos_n  -0.97 mu -47.65 phi -16.94 s  -5.85   KS D max 0.0921
+  R   10  L 2  dg1 +0.0000 dg3 -0.205  z cos_n  -0.98 mu  -7.05 phi  -4.73 s  -1.22   KS D max 0.0251
+  R   10  L 3  dg1 +0.0003 dg4 -0.134  z cos_n  -0.07 mu  -0.10 phi  -2.94 s  -0.46   KS D max 0.0096
+  R   10  L 5  dg1 +0.0011 dg6 -0.064  z cos_n  -0.17 mu  -0.04 phi  -0.72 s  -1.20   KS D max 0.0043
+  R   10  L 8  dg1 +0.0030 dg9 -0.027  z cos_n  -0.17 mu  +0.61 phi  -0.34 s  -1.36   KS D max 0.0060
+  R   30  same law      z cos_n  -1.08 mu  -0.27 phi  +1.47 s  -0.18   KS D max 0.0055
+  R   30  L 1  dg1 -0.0000 dg2 -0.490  z cos_n  -0.64 mu -13.35 phi  +1.23 s  +0.00   KS D max 0.0260
+  R   30  L 2  dg1 +0.0000 dg3 -0.205  z cos_n  -1.31 mu  +0.31 phi  +1.94 s  +0.19   KS D max 0.0063
+  R   30  L 3  dg1 +0.0003 dg4 -0.134  z cos_n  -1.53 mu  +0.42 phi  +1.24 s  -0.18   KS D max 0.0051
+  R   30  L 5  dg1 +0.0011 dg6 -0.064  z cos_n  -1.01 mu  +1.21 phi  +2.44 s  -0.70   KS D max 0.0074
+  R   30  L 8  dg1 +0.0030 dg9 -0.027  z cos_n  -0.69 mu  -0.21 phi  +0.80 s  -2.15   KS D max 0.0045
+
+== histogram fwd: g1..g8 = +0.502 +0.161 +0.020 -0.009 -0.015 -0.011 -0.007 -0.006 -0.001
+  R    1  same law      z cos_n  -0.56 mu  -0.60 phi  +0.04 s  +1.10   KS D max 0.0061
+  R    1  L 1  dg1 -0.0000 dg2 +0.006  z cos_n  -1.11 mu  +0.34 phi  +1.08 s  +2.17   KS D max 0.0092
+  R    1  L 2  dg1 -0.0000 dg3 +0.017  z cos_n  -0.67 mu  -0.77 phi  +1.02 s  +1.68   KS D max 0.0077
+  R    1  L 3  dg1 -0.0000 dg4 +0.002  z cos_n  -0.79 mu  -0.93 phi  +0.16 s  +1.64   KS D max 0.0060
+  R    1  L 5  dg1 -0.0000 dg6 +0.002  z cos_n  -0.79 mu  -0.77 phi  -0.09 s  +1.60   KS D max 0.0052
+  R    1  L 8  dg1 -0.0000 dg9 -0.002  z cos_n  -0.79 mu  -0.78 phi  -0.24 s  +1.58   KS D max 0.0049
+  R    3  same law      z cos_n  -1.13 mu  -0.10 phi  -0.66 s  +0.91   KS D max 0.0047
+  R    3  L 1  dg1 -0.0000 dg2 +0.006  z cos_n  -0.97 mu  +0.12 phi  -0.20 s  +0.73   KS D max 0.0055
+  R    3  L 2  dg1 -0.0000 dg3 +0.017  z cos_n  -0.85 mu  -0.71 phi  -0.51 s  +0.53   KS D max 0.0059
+  R    3  L 3  dg1 -0.0000 dg4 +0.002  z cos_n  -0.82 mu  -1.14 phi  -1.05 s  +0.35   KS D max 0.0042
+  R    3  L 5  dg1 -0.0000 dg6 +0.002  z cos_n  -0.79 mu  -1.14 phi  -1.16 s  +0.32   KS D max 0.0040
+  R    3  L 8  dg1 -0.0000 dg9 -0.002  z cos_n  -0.81 mu  -1.19 phi  -1.22 s  +0.32   KS D max 0.0040
+  R   10  same law      z cos_n  -0.11 mu  -0.93 phi  +0.41 s  -1.18   KS D max 0.0039
+  R   10  L 1  dg1 -0.0000 dg2 +0.006  z cos_n  -0.90 mu  +0.29 phi  +1.05 s  -1.29   KS D max 0.0033
+  R   10  L 2  dg1 -0.0000 dg3 +0.017  z cos_n  -0.94 mu  +0.14 phi  +0.63 s  -1.02   KS D max 0.0032
+  R   10  L 3  dg1 -0.0000 dg4 +0.002  z cos_n  -0.93 mu  +0.45 phi  +0.55 s  -0.98   KS D max 0.0038
+  R   10  L 5  dg1 -0.0000 dg6 +0.002  z cos_n  -0.98 mu  +0.38 phi  +0.30 s  -1.04   KS D max 0.0040
+  R   10  L 8  dg1 -0.0000 dg9 -0.002  z cos_n  -0.98 mu  +0.30 phi  +0.69 s  -1.07   KS D max 0.0040
+  R   30  same law      z cos_n  +0.25 mu  -0.70 phi  +0.72 s  -0.91   KS D max 0.0046
+  R   30  L 1  dg1 -0.0000 dg2 +0.006  z cos_n  +0.20 mu  -0.45 phi  +0.75 s  +1.35   KS D max 0.0039
+  R   30  L 2  dg1 -0.0000 dg3 +0.017  z cos_n  +0.32 mu  +0.56 phi  -0.07 s  +1.35   KS D max 0.0036
+  R   30  L 3  dg1 -0.0000 dg4 +0.002  z cos_n  +0.29 mu  -0.42 phi  +1.22 s  +1.46   KS D max 0.0043
+  R   30  L 5  dg1 -0.0000 dg6 +0.002  z cos_n  +0.26 mu  -0.17 phi  +1.71 s  +1.46   KS D max 0.0048
+  R   30  L 8  dg1 -0.0000 dg9 -0.002  z cos_n  +0.17 mu  -0.61 phi  +1.00 s  +1.47   KS D max 0.0044
+
+== clipped P3: g1..g8 = +0.453 +0.252 -0.143 -0.029 -0.045 +0.038 +0.000 -0.011 +0.002
+  R    1  same law      z cos_n  +0.06 mu  -0.84 phi  -0.59 s  +0.27   KS D max 0.0064
+  R    1  L 1  dg1 -0.0000 dg2 -0.119  z cos_n  +8.69 mu -18.92 phi  +7.86 s  -6.22   KS D max 0.0648
+  R    1  L 2  dg1 +0.0000 dg3 +0.240  z cos_n  +0.88 mu  +4.44 phi  +9.64 s  +2.13   KS D max 0.0601
+  R    1  L 3  dg1 -0.0001 dg4 -0.043  z cos_n  -0.10 mu  +0.48 phi  -1.96 s  +0.48   KS D max 0.0136
+  R    1  L 5  dg1 -0.0001 dg6 +0.033  z cos_n  -0.01 mu  -0.50 phi  -0.32 s  +0.36   KS D max 0.0086
+  R    1  L 8  dg1 +0.0000 dg9 +0.006  z cos_n  +0.03 mu  -0.82 phi  -0.46 s  +0.22   KS D max 0.0066
+  R    3  same law      z cos_n  -0.66 mu  -1.79 phi  -0.98 s  +1.03   KS D max 0.0049
+  R    3  L 1  dg1 -0.0000 dg2 -0.119  z cos_n  +0.44 mu  -9.56 phi  +0.40 s  -0.86   KS D max 0.0467
+  R    3  L 2  dg1 +0.0000 dg3 +0.240  z cos_n  -1.12 mu  +5.63 phi  +5.55 s  +3.12   KS D max 0.0320
+  R    3  L 3  dg1 -0.0001 dg4 -0.043  z cos_n  -0.86 mu  -1.26 phi  -2.02 s  +1.21   KS D max 0.0087
+  R    3  L 5  dg1 -0.0001 dg6 +0.033  z cos_n  -0.84 mu  -1.76 phi  -0.39 s  +1.23   KS D max 0.0064
+  R    3  L 8  dg1 +0.0000 dg9 +0.006  z cos_n  -0.67 mu  -1.74 phi  -0.93 s  +1.06   KS D max 0.0048
+  R   10  same law      z cos_n  +0.15 mu  +0.24 phi  +0.44 s  +1.13   KS D max 0.0049
+  R   10  L 1  dg1 -0.0000 dg2 -0.119  z cos_n  +0.49 mu  -4.43 phi  -0.27 s  +0.02   KS D max 0.0094
+  R   10  L 2  dg1 +0.0000 dg3 +0.240  z cos_n  +0.52 mu  +0.88 phi  +1.24 s  +0.98   KS D max 0.0055
+  R   10  L 3  dg1 -0.0001 dg4 -0.043  z cos_n  +0.03 mu  -0.08 phi  +0.67 s  +1.09   KS D max 0.0048
+  R   10  L 5  dg1 -0.0001 dg6 +0.033  z cos_n  +0.09 mu  -0.45 phi  +0.05 s  +1.50   KS D max 0.0048
+  R   10  L 8  dg1 +0.0000 dg9 +0.006  z cos_n  +0.16 mu  +0.27 phi  +0.38 s  +1.14   KS D max 0.0050
+  R   30  same law      z cos_n  -0.23 mu  +0.94 phi  -1.02 s  +1.42   KS D max 0.0051
+  R   30  L 1  dg1 -0.0000 dg2 -0.119  z cos_n  +0.14 mu  -1.54 phi  -0.58 s  +1.08   KS D max 0.0042
+  R   30  L 2  dg1 +0.0000 dg3 +0.240  z cos_n  -0.31 mu  -0.35 phi  -0.70 s  +1.99   KS D max 0.0057
+  R   30  L 3  dg1 -0.0001 dg4 -0.043  z cos_n  +0.01 mu  +1.37 phi  -1.56 s  +2.07   KS D max 0.0054
+  R   30  L 5  dg1 -0.0001 dg6 +0.033  z cos_n  -0.43 mu  +2.18 phi  -1.75 s  +1.79   KS D max 0.0065
+  R   30  L 8  dg1 +0.0000 dg9 +0.006  z cos_n  -0.29 mu  +0.86 phi  -0.86 s  +1.70   KS D max 0.0054
+
+100,000 walks per law and radius; 100 s

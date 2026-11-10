@@ -7,6 +7,33 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v2.1.1 (10 Nov 2026): interface v2, the anisotropic ball model spec
+
+Agreed with Development on 10 Nov (Phani: "discuss with development for
+network related stuff"). It adds a second spec and leaves v1 as it is.
+Balls in isotropic materials keep the v1 call and model; balls in
+anisotropic materials will call a v2 model.
+
+- **`ball/interface.py`**, `ANISO_*`, `ANISO_INTERFACE_VERSION = 2`:
+  - in: R in [1, 30], and the law's Legendre moments g1..g12 of the
+    density OpenMC samples;
+  - out: cos_n, mu, phi, s (as walk_aniso);
+  - `check_aniso_outputs`.
+  - `INTERFACE_VERSION` stays 1, so v1 models load as before.
+- **`ball/laws.py`** (new): the training family, with mean cosine -0.5 to
+  0.95. It mixes Henyey-Greenstein, two-lobe HG, Legendre P1-P5 through
+  OpenMC's conversion, and histograms of 4-16 bins. The held-out set is
+  the test problems' laws.
+- **`ball/data.py`**: `make_aniso` and `dataset_aniso` (one law per row
+  from a pool of 20,000) and `data_hash`. The 1M-row reference set has
+  sha256 e9969835...82dcbbc31.
+- **`checks/aniso_truncation.py`**: how many moments the exit depends on
+  (`runs/2026-11-10/interface-v2/README.md`). It takes 3-5 for moderate
+  laws. Peaked ones (HG 0.9) in balls of 1-3 mfp still differ at 8 (KS
+  0.048) and mostly not at 12 (0.018), hence 12 moments, not the 8 first
+  proposed.
+- Tests: `tests/test_interface_v2.py` (4).
+
 ## v2.1.0 (10 Nov 2026): balls in anisotropic materials, exact walk
 
 Phani's go (10 Nov): v2.1 before the benchmarks; network matters with
