@@ -69,6 +69,9 @@ DATA = HERE / "data"
 TABLE_FILE = DATA / "ball" / "table.npz"
 DEFAULT_MODEL = ("nflow", 0)           # what `network` means; changes only
                                        # when Innovation accepts a model
+DEFAULT_ANISO_MODEL = ("cvae", 0)      # `network`'s anisotropic balls
+                                       # (interface v2, m2.1; accepted
+                                       # v2.1.6, 11 Nov 2026)
 
 
 def backend(name, device="cpu"):
@@ -81,14 +84,23 @@ def backend(name, device="cpu"):
             print("building the table (python run.py table) ...")
             table.Table.build().save(TABLE_FILE)
         return table.Table.load(TABLE_FILE)
-    family, seed = DEFAULT_MODEL if name == "network" else _family(name)
+    if name == "network":
+        # the accepted models: v1 for isotropic balls, v2 for anisotropic
+        # ones (isotropic balls go to v1 unchanged, so isotropic problems
+        # give the same numbers as with v1 alone)
+        try:
+            return models.load(*DEFAULT_ANISO_MODEL, device=device,
+                               name="network", interface=2,
+                               iso=_v1_default(device))
+        except (FileNotFoundError, model_store.NotSupported) as e:
+            sys.exit(str(e))
+    family, seed = _family(name)
     if family is not None and "_v2" in name:
         # interface v2 (anisotropic balls): the v2 model, with isotropic
         # balls going to the accepted v1 model (DEFAULT_MODEL)
         try:
             return models.load(family, seed, device=device, name=name,
-                               interface=2,
-                               iso=backend("network", device))
+                               interface=2, iso=_v1_default(device))
         except (FileNotFoundError, model_store.NotSupported) as e:
             sys.exit(str(e))
     if family is None:
@@ -96,6 +108,14 @@ def backend(name, device="cpu"):
                  f"a model family ({', '.join(models.names())})")
     try:
         return models.load(family, seed, device=device, name=name)
+    except (FileNotFoundError, model_store.NotSupported) as e:
+        sys.exit(str(e))
+
+
+def _v1_default(device="cpu"):
+    """The accepted interface v1 model (DEFAULT_MODEL), named `network`."""
+    try:
+        return models.load(*DEFAULT_MODEL, device=device, name="network")
     except (FileNotFoundError, model_store.NotSupported) as e:
         sys.exit(str(e))
 

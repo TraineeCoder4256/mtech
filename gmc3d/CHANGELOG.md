@@ -7,6 +7,40 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v2.1.6 (11 Nov 2026): model m2.1 accepted (cvae seed 0 for anisotropic balls)
+
+**Model m2.1 accepted**: cvae_v2_seed0 (Development's m2.1, code fb89e55,
+weights /mnt/project-files/models/cvae_v2_seed0/) is `network`'s model
+for anisotropic balls. The accepted v1 flow (nflow seed 0) still walks
+the isotropic balls.
+
+Phani, 11 Nov 2026: "accept it for now, we will look at whether the
+difference matters later".
+
+- **`checks/gate_v2.py`, the final weight rule**: a weight factor fails
+  only if |z| > 3.29 AND the absorbed share is off by more than 2%. The
+  gate still reports the pure-z count and the counts at 0.5% and 1%.
+  Under this rule all six m2.1 models pass, since none is off by more
+  than 1.8% (v2.1.5 table).
+- **`run.py`**:
+  - New `DEFAULT_ANISO_MODEL = ("cvae", 0)`.
+  - `network` now loads it, with `DEFAULT_MODEL` (nflow seed 0, v1)
+    behind it for isotropic balls.
+  - Isotropic problems give bit-identical tallies with `network` before
+    and after (sphere, cask: same hash and ball count).
+- **Checked with `network`** (`runs/2026-11-11/accept-m2.1/`):
+  - gate2 on cvae_v2_seed0: PASS, 0 of 343. 21 weight checks would fail
+    on |z| alone, 15 at 0.5%, 1 at 1%.
+  - Cost per ball: 1.75 us, against 1.35 us for the exact walk.
+  - anisocheck --backend network: 20 of 20 against OpenMC.
+  - Tests: 252 passed.
+- **Still true** (GAPS.md):
+  - On this CPU the model is slower per ball than the exact walk it
+    replaces. It is accepted for accuracy and for the GPU case, not for
+    speed today.
+  - The 2% tolerance is open for review if a problem shows the
+    difference matters.
+
 ## v2.1.5 (10 Nov 2026): the m2.1 models judged; weight rule to Phani
 
 Development's m2.1 (code fb89e55, results 850156a) walks each ball
