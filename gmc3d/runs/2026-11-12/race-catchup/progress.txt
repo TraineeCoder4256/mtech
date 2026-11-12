@@ -1,0 +1,7 @@
+anisocheck nflow_v2_seed1: anisocheck: 20 of 20 cases pass
+anisocheck cfm_v2_seed0: anisocheck: 20 of 20 cases pass
+anisocheck cfm_v2_seed1: anisocheck: 20 of 20 cases pass
+anisocheck cvae_v2_seed1: anisocheck: 20 of 20 cases pass
+anisocheck cgan_v2_seed0: anisocheck: 18 of 20 cases pass
+race seed 11 done
+stopped after seed 11 (Phani: 1 seed)

@@ -1,0 +1,11 @@
+contender                        worst z vs OpenMC analog             sphere     cask   curved   tilted
+OpenMC analog                      +0.0 (                         )     18.7     37.4     95.3     47.6
+OpenMC implicit                    +1.6 (cask leakage             )     30.8     69.6    142.7     67.6
+ours, plain MC                     +1.4 (slab leakage             )     72.4    129.5    393.7    165.0
+ours + exact walk (R* = 2)         +2.0 (cask total flux          )     35.9    115.7    352.6    176.9
+ours + nflow (R* = 3)              +1.5 (cask leakage             )     54.9    145.7    398.2    211.0
+ours + cvae (R* = 3)               +2.5 (cask leakage             )     42.5    115.8    375.1    186.3
+ours + nflow seed 1 (R* = 3)       +3.5 (curved total flux        )     54.6    135.1    387.7    190.4
+ours + cfm seed 1 (R* = 3)         -2.6 (sphere leakage           )    159.0    321.8    558.8    288.2
+ours + cgan (R* = 3)              -11.0 (sphere leakage           )     40.4    130.3    361.5    186.6
+ours + cgan seed 1 (R* = 3)       -12.1 (sphere leakage           )     41.0    126.7    361.5    200.6

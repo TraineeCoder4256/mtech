@@ -7,6 +7,60 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v2.1.8 (12 Nov 2026): catch-up checks for every model not yet run end to end
+
+Phani asked Development and Innovation to run the checks still missing
+for earlier models. Development ran the 5 missing gate2s (a5eb9ee, all
+PASS under the final rule). These are Innovation's runs.
+
+- **anisocheck with each v2 model walking the balls**
+  (`runs/2026-11-12/aniso-catchup/`):
+  - nflow_v2_seed1, cfm_v2_seed0, cfm_v2_seed1 and cvae_v2_seed1: 20 of
+    20 each.
+  - cgan_v2_seed0: 18 of 20. sphere_p3_balls fails with leakage z +6.0
+    and absorption z -4.0. curved_backward_balls fails with total flux
+    z -3.4. This is the first time an in-ball error shows at the
+    problem level. It matches its gate: the cGAN absorbs 2.1-4.5% too
+    little in large balls, so too many particles leak.
+- **v1 race against OpenMC, seed 11 only** (Phani chose 1 seed;
+  `runs/2026-11-12/race-catchup/`, `summary.log`):
+  - Same settings as 5 Nov: 9 problems, 4M histories, R* = 3.
+  - The 4 models the 5 Nov race left out (nflow_seed1, cfm_seed1,
+    cgan, cgan_seed1) ran next to anchors: plain MC, the exact walk,
+    nflow and cvae seed 0.
+  - Worst |z| against OpenMC analog:
+
+    | contender | worst z |
+    |---|---|
+    | plain MC | 1.4 |
+    | exact walk | 2.0 |
+    | nflow | 1.5 |
+    | cvae | 2.5 |
+    | nflow seed 1 | 3.5 (curved total flux) |
+    | cfm seed 1 | 2.6 |
+    | cgan | 11.0 (sphere leakage 4% low) |
+    | cgan seed 1 | 12.1 (sphere leakage 4% low) |
+
+  - The v1 cGANs bias leakage clearly. That matches their ball-level
+    worst |z| of 23-25 (Development, `runs/2026-11-12/cgan/compare_v1.log`).
+  - nflow seed 1's 3.5 is one seed, so it is borderline, not proven.
+  - Speed in seconds for sphere / cask / curved / tilted:
+
+    | contender | sphere | cask | curved | tilted |
+    |---|---|---|---|---|
+    | exact walk | 35.9 | 115.7 | 352.6 | 176.9 |
+    | cvae | 42.5 | 115.8 | 375.1 | 186.3 |
+    | cgan | 40.4 | 130.3 | 361.5 | 186.6 |
+    | nflow | 54.9 | 145.7 | 398.2 | 211.0 |
+    | cfm seed 1 | 159.0 | 321.8 | 558.8 | 288.2 |
+    | OpenMC analog | 18.7 | 37.4 | 95.3 | 47.6 |
+
+  - Every one of ours is slower than in the 5 Nov race (plain MC sphere
+    72.4 s against 37.9 s). The cause is this session's machine and
+    the code since v1.6.5, which is why the anchors were re-run here.
+    Compare within this table, not across dates.
+- No default changes.
+
 ## v2.1.7 (12 Nov 2026): the cGAN (m2.2) judged, not accepted
 
 These are independent runs of Development's cGAN at interface v2 (code
