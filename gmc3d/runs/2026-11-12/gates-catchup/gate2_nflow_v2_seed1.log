@@ -1,0 +1,13 @@
+model nflow_v2_seed1: manifest interface 2 (OK)
+
+== p1: g1 +0.300
+  R    1  cos_n z  +1.86 KS 0.005  mu z  +3.31 KS 0.008  phi z  +1.01 KS 0.005  s z  +0.82 KS 0.008  weight z -0.81 -0.76 -0.40
+  R  1.5  cos_n z  -0.81 KS 0.003  mu z  +2.81 KS 0.007  phi z  +0.16 KS 0.002  s z  +0.84 KS 0.003  weight z -0.83 -0.76 -0.58
+  R    3  cos_n z  +0.19 KS 0.004  mu z  -0.34 KS 0.003  phi z  +1.06 KS 0.004  s z  +1.02 KS 0.003  weight z -0.88 -0.51 -0.50
+  R    5  cos_n z  +1.02 KS 0.005  mu z  +0.36 KS 0.003  phi z  +0.46 KS 0.004  s z  +0.92 KS 0.002  weight z -0.43 +0.26 +0.23
+  R   10  cos_n z  -0.43 KS 0.003  mu z  +0.50 KS 0.002  phi z  -1.76 KS 0.005  s z  +0.87 KS 0.004  weight z +0.75 +0.83 -0.36
+  R   20  cos_n z  -0.04 KS 0.003  mu z  +0.60 KS 0.003  phi z  +0.00 KS 0.002  s z  +0.68 KS 0.003  weight z +0.44 +0.60 +0.67
+  R   29  cos_n z  +1.57 KS 0.006  mu z  +1.11 KS 0.004  phi z  +0.38 KS 0.004  s z  +1.51 KS 0.003  weight z -0.18 +0.27 +1.22
+
+== p3: g1 +0.600
+  R    1  cos_n z  +2.06 KS 0.004  mu z  -0.29 KS 0.003  phi z  +0.37 KS 0.003  s z  -2.72 KS 0.006  weight z +2.72 +2.74 +2.85
