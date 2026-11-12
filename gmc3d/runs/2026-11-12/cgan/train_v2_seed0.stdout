@@ -1,0 +1,2 @@
+data   40,500,000 anisotropic + 1,012,500 isotropic walks (interface v2), of which 37,024,760 + 462,904 with k >= 2 kept, mean 62.6 scatters, 73 s  (hash e7a34544f0048944; parts f444267faffffddd, db43737b8f757c12)
+model  cgan (interface v2, 1 network pass(es) per draw), seed 0, {'width': 64, 'g_depth': 4, 'd_depth': 3, 'emb': 32, 'noise': 8, 'x_dim': 4, 'c_dim': 13}
