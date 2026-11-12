@@ -47,7 +47,7 @@ machine and code since v1.6.5), so compare within this table only.
 | cgan seed 1 | **12.1** (sphere leakage 4.5% low) | 41.0 | 126.7 | 361.5 | 200.6 |
 
 From the 5 Nov race (3 seeds, runs/2026-11-05/race-models/): cfm seed 0
-worst 3.9 (sphere leakage), cvae seed 1 within 2.5.  nflow seed 1's 3.5
+3.3 and 3.9 on two of three seeds (sphere leakage, a real bias), cvae seed 1 at most 2.3.  nflow seed 1's 3.5
 is one seed on one tally, borderline rather than a clear fail.
 
 ## Reading
