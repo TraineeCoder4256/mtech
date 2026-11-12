@@ -109,3 +109,15 @@ The single-scatter fix, agreed with Innovation (its v2.1.3 2278ce3 gives
   is per whole ball, streams made outside the timer.
 - Tests: the first-scatter balls equal the walk's k = 1 walks on the same
   streams, outputs identical, phi = pi; k_min filter.
+
+## m2.2 (interfaces v1 and v2) - 12 Nov 2026
+
+- Family 4, `cgan` (`cgan.py`, one registry line), approved by Phani 12 Nov
+  and agreed with Innovation. Generator + discriminator (FiLM blocks of
+  width 64, 4 + 3, noise 8), non-saturating loss with R1 penalty, its own
+  loop copying fit_loop's conventions (EMA of the generator, same steps,
+  batch, warm-up and cosine, validation, time cap). 149,955 weights at v1
+  (generator 85,666, the draw cost), 150,981 at v2 (generator 86,180).
+  Settings and the 3 short tuning trials are listed in its docstring.
+- At v2 it gets the exact first scatter through AnisoBackend and trains on
+  k >= 2 rows, like the others.
