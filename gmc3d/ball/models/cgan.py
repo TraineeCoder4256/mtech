@@ -45,7 +45,7 @@ SETTINGS that are the family's own (the tuning budget, fairness.py):
 Adam with betas (0.0, 0.99); generator learning rate 2.5e-4,
 discriminator 1e-3 (four times faster), 2 discriminator steps per
 generator step, R1 gamma 0.1, noise size 8.  The shared lr of 2e-3 is far
-too large for a GAN.  Tuning trials used (3 of 4, each 1,500 steps on the
+too large for a GAN.  Tuning trials used (all 4, each 1,500 steps on the
 v1 data, scored by ball_metrics at R = 1.5, 5, 20 with 100k draws):
 
   1. lr 2e-4 both, gamma 1, 1 D step:     discriminator loss stuck at
@@ -56,6 +56,17 @@ v1 data, scored by ball_metrics at R = 1.5, 5, 20 with 100k draws):
      the conditional means within about 0.1 standard deviation, with
      the discriminator's signal small but alive, so the full step budget
      with its decaying learning rate is the fair test.
+  4. as 3 but R1 gamma 0 (is the penalty silencing the discriminator?):
+     no; discriminator loss still log 4, s +19% / 0% / -36%.  Trial 3's
+     settings are the ones scored.
+
+RESULT at v1 (runs/2026-11-12/cgan/README.md): the discriminator ends
+almost constant (output spread 0.004 on validation rows), because the
+generator's remaining errors (1-2% in mean s, about 0.02 standard
+deviation in the encoded space) are as small as the noise of a 4,096-row
+batch, so it can no longer see them.  The errors stay: worst |z| 23-25
+against 3-5 for the other families, and the absorbed weight low in large
+balls.
 
 SHAPE.  Shared idea with the others: a condition embedding and FiLM
 blocks of width 64.  Generator 4 blocks, discriminator 3 (each with its

@@ -1,0 +1,20 @@
+data   4,000,000 + 500,000 walks, R in [1, 30], mean 72.6 scatters each, 0.8 s  (hash 472ebbedcf7d4093)
+model  cgan (interface v1, 1 network pass(es) per draw), seed 1, {'width': 64, 'g_depth': 4, 'd_depth': 3, 'emb': 32, 'noise': 8}
+step    500  train D loss 1.3842  G loss 0.6814  val D loss (EMA G) 1.3312  59 s
+step   1000  train D loss 1.3860  G loss 0.6917  val D loss (EMA G) 1.3722  119 s
+step   1500  train D loss 1.3862  G loss 0.6914  val D loss (EMA G) 1.3834  179 s
+step   2000  train D loss 1.3862  G loss 0.6932  val D loss (EMA G) 1.3858  238 s
+step   2500  train D loss 1.3863  G loss 0.6926  val D loss (EMA G) 1.3861  298 s
+step   3000  train D loss 1.3863  G loss 0.6931  val D loss (EMA G) 1.3862  359 s
+step   3500  train D loss 1.3863  G loss 0.6926  val D loss (EMA G) 1.3863  420 s
+step   4000  train D loss 1.3863  G loss 0.6931  val D loss (EMA G) 1.3863  483 s
+step   4500  train D loss 1.3863  G loss 0.6928  val D loss (EMA G) 1.3863  545 s
+step   5000  train D loss 1.3863  G loss 0.6921  val D loss (EMA G) 1.3863  605 s
+step   5500  train D loss 1.3863  G loss 0.6926  val D loss (EMA G) 1.3863  665 s
+step   6000  train D loss 1.3863  G loss 0.6929  val D loss (EMA G) 1.3863  726 s
+step   6500  train D loss 1.3863  G loss 0.6931  val D loss (EMA G) 1.3863  785 s
+step   7000  train D loss 1.3863  G loss 0.6931  val D loss (EMA G) 1.3863  842 s
+step   7500  train D loss 1.3863  G loss 0.6932  val D loss (EMA G) 1.3863  903 s
+step   8000  train D loss 1.3863  G loss 0.6931  val D loss (EMA G) 1.3863  959 s
+       149,955 weights, 8,000 steps in 959 s
+saved to data/models/cgan_seed1 (and the shared copy); {'name': 'cgan', 'family': 'cgan', 'nfe': 1, 'steps': 8000, 'steps_done': 8000, 'seed': 1, 'params': 149955, 'train_seconds': 959.0993552207947, 'loss_name': 'D loss', 'gan': {'lr_g': 0.00025, 'lr_d': 0.001, 'betas': [0.0, 0.99], 'r1_gamma': 0.1, 'n_critic': 2}, 'r_min': 1.0, 'r_max': 30.0, 'n_train': 4000000, 'width': 64, 'g_depth': 4, 'd_depth': 3, 'emb': 32, 'noise': 8}
