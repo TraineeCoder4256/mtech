@@ -7,6 +7,28 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v2.1.7 (12 Nov 2026): the cGAN (m2.2) judged, not accepted
+
+These are independent runs of Development's cGAN at interface v2 (code
+c5c869d, weights 150,981 in all, 86,180 in the generator), in
+`runs/2026-11-12/cgan-innovation/`.
+
+- **gate2** reproduces Development's counts:
+  - seed 0 FAILS 10 of 343: 9 weight checks, with the absorbed share
+    2.1% to 4.5% low (clipped, p5_order2 and tabular laws, R >= 10,
+    mostly kappa 0.001), plus a KS on s of 0.032 for clipped at R = 29.
+  - seed 1 FAILS 4 of 343, all weight checks, 2.4% to 2.8% low (p3,
+    clipped and histogram laws, R >= 10).
+  - On |z| alone they fail 75 and 45 weight checks, against 21 for the
+    accepted cVAE. Its worst absorbed-share error is 1.13%.
+  - Cost per ball: 2.87 / 2.49 us, against the exact walk's 2.11 / 1.95
+    us in the same runs.
+- **anisocheck --backend cgan_v2_seed1**: 20 of 20 against OpenMC. So an
+  error of 2-3% inside large balls still does not show at the problem
+  level on these problems.
+- The defaults are unchanged: `network` stays nflow seed 0 (isotropic)
+  plus cvae_v2_seed0 (anisotropic).
+
 ## v2.1.6 (11 Nov 2026): model m2.1 accepted (cvae seed 0 for anisotropic balls)
 
 **Model m2.1 accepted**: cvae_v2_seed0 (Development's m2.1, code fb89e55,
