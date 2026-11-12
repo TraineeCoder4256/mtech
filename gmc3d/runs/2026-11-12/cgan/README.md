@@ -76,7 +76,7 @@ R = 1, 3, 5, 10, 30, 100,000 draws each, same session):
 Innovation's gate2 (whole balls, final rule: |z| > 3.29 AND absorbed
 share off by > 2%):
 
-| model | failing checks of 343 | weight |z| alone | at 0.5% / 1% | model / exact walk us per ball |
+| model | failing checks of 343 | weight \|z\| alone | at 0.5% / 1% | model / exact walk us per ball |
 |---|---|---|---|---|
 | cgan_v2_seed0 | **10** (9 weight + 1 KS s 0.032) | 75 | 62 / 34 | 1.82 / 1.81 |
 | cgan_v2_seed1 | **4** (all weight) | 45 | 30 / 16 | 1.97 / 1.95 |
