@@ -11,6 +11,7 @@ agreed with the Innovation thread first.
 | v1 seeds 0 and 1, 8,000 steps each | `v1.sh` (`run.py train --family cgan --seed s`) | `train_cgan_seed{0,1}.log` |
 | v1 comparison of all four families | `run.py compare` (same command as m1.x) | `compare_v1.log`, `compare.json` |
 | v2 seeds 0 and 1, 24,000 steps each | `train_v2.py <seed>` | `train_cgan_v2_seed{0,1}.log` |
+| v2 comparison (beside cvae_v2_seed0, nflow_v2_seed0) and gate2 on each cGAN seed | `judge_v2.py` | `compare_v2.log`, `compare_v2.json`, `gate/` |
 
 Settings scored: trial 3 (generator lr 2.5e-4, discriminator 1e-3, Adam
 betas (0, 0.99), 2 discriminator steps per generator step, R1 gamma 0.1,
@@ -55,6 +56,38 @@ families (flow, cVAE) are scored on every single walk instead, so they
 keep improving below that level.  This is a property of the method, not
 a tuning gap: trial 4 (no R1 penalty) gave the same picture, and the
 4-trial tuning budget is spent.
+
+## v2 results (anisotropic balls, exact first scatter, k >= 2 rows)
+
+Same data as m2.1 (hash e7a34544f0048944), 24,000 steps, 150,981 weights
+(generator alone 86,180).  Training took 2,664 s and 2,937 s; the
+discriminator loss sat at log 4 from about step 6,000 on both seeds.
+
+Model-side comparison (`compare_v2.log`, 7 held-out laws + isotropic,
+R = 1, 3, 5, 10, 30, 100,000 draws each, same session):
+
+| backend | held-out laws worst \|z\| | KS excess | isotropic worst \|z\| | us/draw @10k |
+|---|---|---|---|---|
+| cgan_v2_seed0 | 21.2 | +0.030 | 6.4 | 1.20 |
+| cgan_v2_seed1 | 12.7 | +0.022 | 8.7 | 1.01 |
+| cvae_v2_seed0 (accepted) | 7.9 | +0.014 | 6.0 | 1.41 |
+| nflow_v2_seed0 | 5.3 | +0.006 | 2.6 | 3.62 |
+
+Innovation's gate2 (whole balls, final rule: |z| > 3.29 AND absorbed
+share off by > 2%):
+
+| model | failing checks of 343 | weight |z| alone | at 0.5% / 1% | model / exact walk us per ball |
+|---|---|---|---|---|
+| cgan_v2_seed0 | **10** (9 weight + 1 KS s 0.032) | 75 | 62 / 34 | 1.82 / 1.81 |
+| cgan_v2_seed1 | **4** (all weight) | 45 | 30 / 16 | 1.97 / 1.95 |
+| cvae_v2_seed0 (m2.1, accepted) | 0 | | | 1.75 / 1.35 |
+
+Every failing weight check has the model absorbing 2.1-4.5% too little
+in big balls (R >= 10) at the weakest absorption (kappa = 0.001): the
+same short-path-length bias as at v1 (s z down to -7 in gate2).  At v2
+the gap to the other families is smaller than at v1 because the exact
+walk to the second collision takes the hardest part (the single-scatter
+walks) off every model.
 
 ## Limit
 
