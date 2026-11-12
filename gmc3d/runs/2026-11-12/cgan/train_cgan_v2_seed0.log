@@ -1,2 +1,28 @@
 data   40,500,000 anisotropic + 1,012,500 isotropic walks (interface v2), of which 37,024,760 + 462,904 with k >= 2 kept, mean 62.6 scatters, 73 s  (hash e7a34544f0048944; parts f444267faffffddd, db43737b8f757c12)
 model  cgan (interface v2, 1 network pass(es) per draw), seed 0, {'width': 64, 'g_depth': 4, 'd_depth': 3, 'emb': 32, 'noise': 8, 'x_dim': 4, 'c_dim': 13}
+step   1000  train D loss 1.3797  G loss 0.6898  val D loss (EMA G) 1.3484  111 s
+step   2000  train D loss 1.3851  G loss 0.6901  val D loss (EMA G) 1.3813  221 s
+step   3000  train D loss 1.3856  G loss 0.6914  val D loss (EMA G) 1.3848  330 s
+step   4000  train D loss 1.3858  G loss 0.6915  val D loss (EMA G) 1.3853  447 s
+step   5000  train D loss 1.3859  G loss 0.6899  val D loss (EMA G) 1.3856  556 s
+step   6000  train D loss 1.3860  G loss 0.6937  val D loss (EMA G) 1.3858  667 s
+step   7000  train D loss 1.3860  G loss 0.6932  val D loss (EMA G) 1.3860  783 s
+step   8000  train D loss 1.3861  G loss 0.6935  val D loss (EMA G) 1.3860  895 s
+step   9000  train D loss 1.3861  G loss 0.6929  val D loss (EMA G) 1.3860  1008 s
+step  10000  train D loss 1.3862  G loss 0.6931  val D loss (EMA G) 1.3861  1126 s
+step  11000  train D loss 1.3862  G loss 0.6930  val D loss (EMA G) 1.3861  1238 s
+step  12000  train D loss 1.3862  G loss 0.6933  val D loss (EMA G) 1.3861  1354 s
+step  13000  train D loss 1.3862  G loss 0.6929  val D loss (EMA G) 1.3861  1470 s
+step  14000  train D loss 1.3862  G loss 0.6930  val D loss (EMA G) 1.3861  1573 s
+step  15000  train D loss 1.3862  G loss 0.6936  val D loss (EMA G) 1.3861  1684 s
+step  16000  train D loss 1.3862  G loss 0.6930  val D loss (EMA G) 1.3861  1788 s
+step  17000  train D loss 1.3862  G loss 0.6929  val D loss (EMA G) 1.3861  1899 s
+step  18000  train D loss 1.3861  G loss 0.6933  val D loss (EMA G) 1.3861  2008 s
+step  19000  train D loss 1.3862  G loss 0.6933  val D loss (EMA G) 1.3861  2115 s
+step  20000  train D loss 1.3862  G loss 0.6932  val D loss (EMA G) 1.3861  2224 s
+step  21000  train D loss 1.3861  G loss 0.6934  val D loss (EMA G) 1.3861  2337 s
+step  22000  train D loss 1.3862  G loss 0.6931  val D loss (EMA G) 1.3860  2452 s
+step  23000  train D loss 1.3861  G loss 0.6934  val D loss (EMA G) 1.3862  2559 s
+step  24000  train D loss 1.3862  G loss 0.6932  val D loss (EMA G) 1.3862  2664 s
+       150,981 weights, 24,000 steps in 2664 s
+FINISHED
