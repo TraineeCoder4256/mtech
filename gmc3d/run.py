@@ -23,6 +23,8 @@
                                                    (v2.0): every OpenMC law
                                                    vs OpenMC, exact beam
                                                    displacement, detectors
+    python run.py gpubench --device cuda           everything a GPU changes,
+                                                   measured (checks/gpubench)
     python run.py gate2 cvae_v2                    the acceptance gate for an
                                                    interface v2 model (v2.1.2)
     python run.py score                            one number out of 10 from
@@ -74,7 +76,15 @@ DEFAULT_ANISO_MODEL = ("cvae", 0)      # `network`'s anisotropic balls
                                        # v2.1.6, 11 Nov 2026)
 
 
-def backend(name, device="cpu"):
+# how a model runs, from --precision / --compile / --graphs (m2.4): fp32
+# with no compile unless asked, so CPU runs stay bit-identical
+MODEL_OPTS = {}
+
+
+def backend(name, device="cpu", **opts):
+    """A ball backend by name; opts (precision, compile, graphs) go to every
+    network it loads, on top of MODEL_OPTS."""
+    o = {**MODEL_OPTS, **opts}
     if name == "mc":
         return None
     if name == "oracle":
@@ -88,36 +98,39 @@ def backend(name, device="cpu"):
         # the accepted models: v1 for isotropic balls, v2 for anisotropic
         # ones (isotropic balls go to v1 unchanged, so isotropic problems
         # give the same numbers as with v1 alone)
-        try:
-            return models.load(*DEFAULT_ANISO_MODEL, device=device,
-                               name="network", interface=2,
-                               iso=_v1_default(device))
-        except (FileNotFoundError, model_store.NotSupported) as e:
-            sys.exit(str(e))
+        return _warm(_load(*DEFAULT_ANISO_MODEL, device=device,
+                           name="network", interface=2,
+                           iso=_v1_default(device, **o), **o), o)
     family, seed = _family(name)
     if family is not None and "_v2" in name:
         # interface v2 (anisotropic balls): the v2 model, with isotropic
         # balls going to the accepted v1 model (DEFAULT_MODEL)
-        try:
-            return models.load(family, seed, device=device, name=name,
-                               interface=2, iso=_v1_default(device))
-        except (FileNotFoundError, model_store.NotSupported) as e:
-            sys.exit(str(e))
+        return _warm(_load(family, seed, device=device, name=name,
+                           interface=2, iso=_v1_default(device, **o), **o),
+                     o)
     if family is None:
         sys.exit(f"unknown backend {name!r}: mc, oracle, table, network or "
                  f"a model family ({', '.join(models.names())})")
+    return _warm(_load(family, seed, device=device, name=name, **o), o)
+
+
+def _load(*a, **kw):
     try:
-        return models.load(family, seed, device=device, name=name)
-    except (FileNotFoundError, model_store.NotSupported) as e:
+        return models.load(*a, **kw)
+    except (FileNotFoundError, model_store.NotSupported, ValueError) as e:
         sys.exit(str(e))
 
 
-def _v1_default(device="cpu"):
+def _warm(be, o):
+    """Compile / record CUDA graphs now, not inside the first timed call."""
+    if (o.get("compile") or o.get("graphs")) and hasattr(be, "warmup"):
+        be.warmup()
+    return be
+
+
+def _v1_default(device="cpu", **o):
     """The accepted interface v1 model (DEFAULT_MODEL), named `network`."""
-    try:
-        return models.load(*DEFAULT_MODEL, device=device, name="network")
-    except (FileNotFoundError, model_store.NotSupported) as e:
-        sys.exit(str(e))
+    return _load(*DEFAULT_MODEL, device=device, name="network", **o)
 
 
 def _family(name):
@@ -351,6 +364,17 @@ def cmd_gate2(args, log):
     return f"gate2_{args.model}"
 
 
+def cmd_gpubench(args, log):
+    from checks import gpubench
+    gpubench.run(out_dir(args), device=args.device,
+                 problems=args.problems or gpubench.PROBLEMS,
+                 seeds=args.seeds, particles=args.particles,
+                 batches=args.batches, parts=args.parts,
+                 load=lambda name, device, **o: backend(name, device, **o),
+                 log=log)
+    return "gpubench"
+
+
 def cmd_score(args, log):
     from checks import score
     parts, total = score.score(out_dir(args))
@@ -366,7 +390,7 @@ def main():
                                 formatter_class=argparse.RawTextHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    def common(sp, particles=100_000, batches=20):
+    def common(sp, particles=100_000, batches=20, inference=True):
         sp.add_argument("--particles", type=int, default=particles)
         sp.add_argument("--batches", type=int, default=batches)
         sp.add_argument("--seed", type=int, default=1)
@@ -379,6 +403,14 @@ def main():
         sp.add_argument("--overlap", action="store_true",
                         help="the CPU tracks while the GPU draws (needs a "
                              "backend with submit/collect)")
+        if inference:
+            sp.add_argument("--precision", default="fp32",
+                            choices=["fp32", "tf32", "fp16"],
+                            help="the network's arithmetic (fp16: GPU)")
+            sp.add_argument("--compile", action="store_true",
+                            help="torch.compile the network")
+            sp.add_argument("--graphs", action="store_true",
+                            help="CUDA graphs (GPU; implies --compile)")
 
     s = sub.add_parser("solve")
     s.add_argument("problem", choices=sorted(PROBLEMS))
@@ -411,7 +443,7 @@ def main():
                    help="fp16: mixed precision on a GPU (not cgan)")
     s.add_argument("--compile", action="store_true",
                    help="torch.compile the training step")
-    common(s)
+    common(s, inference=False)
     s.set_defaults(seed=0)
 
     s = sub.add_parser("compare")
@@ -476,6 +508,15 @@ def main():
     s.add_argument("model", help="a v2 model, e.g. cvae_v2 or nflow_v2_seed1")
     common(s, particles=100_000)
 
+    s = sub.add_parser("gpubench")
+    s.add_argument("problems", nargs="*")
+    s.add_argument("--seeds", type=int, nargs="+", default=[11, 12, 13])
+    s.add_argument("--parts", type=int, nargs="+", default=[1, 2, 3, 4, 5],
+                   help="1 machine, 2 GPU tests, 3 model bench, 4 gate2, "
+                        "5 race")
+    common(s, batches=40)
+    s.set_defaults(device="cuda")
+
     s = sub.add_parser("score")
     common(s)
 
@@ -486,6 +527,12 @@ def main():
     args = p.parse_args()
     transport.DEFAULTS.update(in_flight=getattr(args, "in_flight", 1),
                               overlap=getattr(args, "overlap", False))
+    if args.cmd != "train":
+        MODEL_OPTS.update({k: v for k, v in (
+            ("precision", getattr(args, "precision", "fp32")),
+            ("compile", getattr(args, "compile", False)),
+            ("graphs", getattr(args, "graphs", False))) if v not in
+            ("fp32", False)})
     log = Log()
     stem = globals()[f"cmd_{args.cmd}"](args, log)
     if stem:

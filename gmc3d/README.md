@@ -55,6 +55,9 @@ Numba and PyTorch):
                                                 # ... bigger GPU calls, and
                                                 # the CPU tracks meanwhile
     python -m checks.gpu_bench --device cuda    # GPU cost per draw only
+    python run.py gpubench --device cuda        # everything a GPU changes:
+                                                # tests, model bench, gate,
+                                                # race vs OpenMC (3 seeds)
     python -m pytest -q tests                   # unit tests
     python run.py check my_model.py             # what gmc3d will use, refuse
                                                 # and warn about (no run)

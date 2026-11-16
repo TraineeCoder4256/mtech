@@ -7,6 +7,32 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v2.2.1 (16 Nov 2026): one GPU bench command, model options everywhere, walk fix
+
+- `python run.py gpubench --device cuda` (checks/gpubench.py) measures
+  everything the GPU changes in one go, into one folder: the machine; the
+  CUDA-only unit tests (tests/test_models_m23.py, m24); Development's
+  model bench (every family, v1 and v2, every option, 1k-1M draws per
+  call); gate2 for cvae_v2_seed0 in fp32 and in graphs + fp16; and a race
+  against OpenMC (same session, 3 seeds, median FOM) on sphere, slab,
+  cask, curved and tilted with the network on the GPU four ways: fp32;
+  fp32 with 8 batches in flight; + overlap; graphs + fp16 + 8 in flight +
+  overlap. `--parts` picks parts, `--seeds`, `--particles`, `--batches`.
+  Smoke-tested on the CPU (parts 1 and 5, tiny sizes); never on a GPU.
+- Every run.py command that loads a model takes `--precision
+  fp32|tf32|fp16`, `--compile` and `--graphs` (m2.4's models.load
+  options; only non-default ones are passed) and warms the backend up
+  (compile / CUDA graph capture) before anything is timed. race also
+  warms up any backend with warmup(), and takes per-contender run options.
+- `--overlap` now works with the trained models (m2.4's submit/collect).
+  CPU check: cask with an anisotropic P1 law, network, 20k x 4: 130 calls
+  -> 70 with 4 in flight + overlap, leakage 0.005924 +- 0.000199 against
+  0.005862 +- 0.000208.
+- **Fix** (found by Development): `core/scattering.sample_mu` had no branch
+  for an isotropic law row, so the exact anisotropic walk asked about one
+  looped for ever. It now returns a uniform cosine. No production effect:
+  the driver never sends such rows to the walk. tests/test_iso_row_v221.py.
+
 ## v2.2.0 (16 Nov 2026): GPU-ready transport and training command
 
 Phani (16 Nov): make the code GPU-compatible wherever possible, ML side

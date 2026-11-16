@@ -186,9 +186,15 @@ def mean_cosine(kind, v):
 # ---------------------------------------------------------------- sampling
 @njit(cache=True)
 def sample_mu(ang, m, state, i):
-    """A scattering cosine from material m's law (not for kind ISO)."""
+    """A scattering cosine from material m's law.  Kind ISO (which the
+    transport handles itself) gets a uniform cosine: before v2.2.1 it fell
+    into the Legendre rejection loop with a zero bound and never returned
+    (found by Development, 16 Nov 2026, calling the exact walk on an ISO
+    row)."""
     kind = int(ang[m, 0])
     n = int(ang[m, 1])
+    if kind == ISO:
+        return 2.0 * rng.rand(state, i) - 1.0
     if kind == TAB:
         xi = rng.rand(state, i)
         cdf0 = HEAD + n

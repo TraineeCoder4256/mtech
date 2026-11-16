@@ -117,14 +117,18 @@ def race(names, backends, particles=100_000, batches=40, seed=11,
         transport.run(pr, 1000, 1, seed=seed)             # compile (numba)
         compile_s = time.perf_counter() - t
         for be in backends.values():                      # warm up draws
+            if hasattr(be, "warmup"):
+                be.warmup()             # compile / record CUDA graphs (m2.4)
             be.sample(np.full(16, 5.0), rng.streams(np.uint64(9), 0, 16),
                       np.arange(16))
-        for label, b, rs in contenders:
+        for label, b, rs, *opt in contenders:
+            # opt: run options, e.g. {"in_flight": 8, "overlap": True}
             if b is not None and b not in backends:
                 continue
             be = backends.get(b) if b else None
             r = transport.run(pr, particles, batches, seed=seed, backend=be,
-                              r_star=rs or 3.0, mesh_rule="profile")
+                              r_star=rs or 3.0, mesh_rule="profile",
+                              **(opt[0] if opt else {}))
             sec = r.timing["transport_s"] + r.timing["backend_s"]
             lab = label + (f" (R* = {rs:g})" if rs else "")
             rows.append(_row(lab, name, r, sec,

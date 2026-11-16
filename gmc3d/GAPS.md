@@ -75,8 +75,7 @@ list (`CHANGELOG.md`); every one is checked against OpenMC by
 | `cap` rule near a curved mesh: room measured to the nearest edge surface, which may be an extension that bounds no bin there | slower: balls smaller than they need be, never wrong | S | no | later |
 | Mesh points cost about 0.1 us each, up to 16 per ball | slower | S | no: adapt the point count to the mesh | later |
 | Network on GPU only for the draws; transport on CPU | by design | L | no | later |
-| GPU paths (training on cuda, fp16, compile, --in-flight on a GPU, --overlap with a real GPU backend) never run here: no GPU in the containers; CPU paths checked bit for bit | GPU speed and GPU-trained models unmeasured | M | no | Phani's GPU node |
-| --overlap needs backend.submit/collect (Development's m2.4); until then it falls back to plain calls | no overlap yet | S | no | m2.4 |
+| GPU paths (training on cuda, fp16, compile, CUDA graphs, --in-flight and --overlap on a GPU) never run here: no GPU in the containers; CPU paths checked bit for bit | GPU speed and GPU-trained models unmeasured; which options may become defaults | M | no | Phani: `run.py gpubench --device cuda` |
 
 ### 1d. Exact on average, noise differs (by design)
 
