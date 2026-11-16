@@ -75,6 +75,7 @@ list (`CHANGELOG.md`); every one is checked against OpenMC by
 | `cap` rule near a curved mesh: room measured to the nearest edge surface, which may be an extension that bounds no bin there | slower: balls smaller than they need be, never wrong | S | no | later |
 | Mesh points cost about 0.1 us each, up to 16 per ball | slower | S | no: adapt the point count to the mesh | later |
 | Network on GPU only for the draws; transport on CPU | by design | L | no | later |
+| Training has no device switch in ball/models/training.py; GPU training only through runs/2026-11-16/gpu-train/train_gpu.py (nflow, cfm, cvae; not cGAN) | GPU training needs the script | S | no: a `device` argument in fit_loop (Development's) | Phani |
 
 ### 1d. Exact on average, noise differs (by design)
 

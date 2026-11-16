@@ -7,6 +7,21 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v2.1.10 (16 Nov 2026): train the v2 models on a GPU
+
+`ball/models/training.fit_loop` trains on the CPU only, while inference
+already takes `--device cuda`. `runs/2026-11-16/gpu-train/train_gpu.py`
+runs a copy of the loop with the network and the training rows on
+`--device` (default cuda), for nflow, cfm and cvae at interface v2:
+
+    python runs/2026-11-16/gpu-train/train_gpu.py --seeds 0 1
+
+No file in ball/models/ changed (Development's). Checked on the CPU: 40
+steps of each family give the same train and validation losses, to the
+last digit, as fit_loop. Not run on a GPU here (none in this container);
+GPU weights will differ slightly from m2.1 (other kernels). cGAN has its
+own loop and is not covered.
+
 ## v2.1.9 (16 Nov 2026): `--device` reaches anisocheck and gate2
 
 `run.py anisocheck --backend <model> --device cuda` and
