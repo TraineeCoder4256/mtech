@@ -208,7 +208,5 @@ class NFlow(Family):
         return -net.log_prob(y, c).mean()
 
     @classmethod
-    def draw(cls, net, c, generator):
-        z = torch.randn(c.shape[0], net.x_dim, generator=generator,
-                        device=c.device)
+    def draw_from(cls, net, c, z):
         return net.sample(z, c)

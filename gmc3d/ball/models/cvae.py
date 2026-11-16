@@ -131,9 +131,13 @@ class CVAE(Family):
         return net.neg_elbo(y, c).mean()
 
     @classmethod
-    def draw(cls, net, c, generator):
-        n = c.shape[0]
-        z = torch.randn(n, net.latent, generator=generator, device=c.device)
+    def noise(cls, net, n, generator, device):
+        # z first, then eps: the order draw() has always used
+        z = torch.randn(n, net.latent, generator=generator, device=device)
+        eps = torch.randn(n, net.x_dim, generator=generator, device=device)
+        return z, eps
+
+    @classmethod
+    def draw_from(cls, net, c, z, eps):
         mean, logvar = net.decode(z, net.embed(c))
-        eps = torch.randn(n, net.x_dim, generator=generator, device=c.device)
         return mean + torch.exp(0.5 * logvar) * eps

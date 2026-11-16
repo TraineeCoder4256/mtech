@@ -79,9 +79,13 @@ def train(family, seed=0, steps=None, out_dir=None, log=print, shared=True,
 
 
 def load(family, seed=0, device="cpu", out_dir=None, name=None,
-         interface=1, iso=None):
+         interface=1, iso=None, precision="fp32", compile=False,
+         graphs=False):
     """A trained family as a transport backend (see backend.py).
     interface=2: AnisoBackend, isotropic balls going to `iso` (a v1
-    backend; default the flow, seed 0)."""
+    backend; default the flow, seed 0).  Speed options (fast.py, m2.4):
+    precision "fp32" / "tf32" / "fp16" (fp16 GPU only), compile=True
+    (torch.compile), graphs=True (CUDA graphs, GPU only)."""
     from .pipeline import load as _load
-    return _load(family, seed, device, out_dir, name, interface, iso)
+    return _load(family, seed, device, out_dir, name, interface, iso,
+                 precision, compile, graphs)

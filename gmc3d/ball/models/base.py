@@ -38,6 +38,8 @@ train by one loss per batch (a GAN) overrides fit() and copies the shared
 loop's conventions by hand.  The fairness rules are in fairness.py.
 """
 
+import torch
+
 from .encoding import C_DIM, X_DIM, C_DIM_ANISO, X_DIM_ANISO
 from . import fairness
 from .training import fit_loop
@@ -62,6 +64,23 @@ class Family:
 
     @classmethod
     def draw(cls, net, c, generator):
+        """Encoded samples for encoded conditions c.  Every family draws
+        its random numbers first (noise) and then runs a function with no
+        randomness in it (draw_from); fast.py compiles and graph-captures
+        draw_from on its own, so the split keeps the random numbers the
+        same whether or not the network is compiled."""
+        return cls.draw_from(net, c, *cls.noise(net, c.shape[0], generator,
+                                                c.device))
+
+    @classmethod
+    def noise(cls, net, n, generator, device):
+        """The random inputs of one draw of n rows, as a tuple, drawn from
+        generator in the order the family has always drawn them."""
+        return (torch.randn(n, net.x_dim, generator=generator,
+                            device=device),)
+
+    @classmethod
+    def draw_from(cls, net, c, *noise):
         raise NotImplementedError
 
     @classmethod

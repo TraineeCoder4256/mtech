@@ -147,9 +147,12 @@ class CGAN(Family):
         return _d_loss(net, y, c, net.generate(z, c))
 
     @classmethod
-    def draw(cls, net, c, generator):
-        z = torch.randn(c.shape[0], net.noise, generator=generator,
-                        device=c.device)
+    def noise(cls, net, n, generator, device):
+        return (torch.randn(n, net.noise, generator=generator,
+                            device=device),)
+
+    @classmethod
+    def draw_from(cls, net, c, z):
         return net.generate(z, c)
 
     @classmethod

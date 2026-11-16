@@ -134,7 +134,5 @@ class CFM(Family):
         return torch.mean((net((1 - t) * z + t * y, t, c) - (y - z)) ** 2)
 
     @classmethod
-    def draw(cls, net, c, generator):
-        z = torch.randn(c.shape[0], net.x_dim, generator=generator,
-                        device=c.device)
+    def draw_from(cls, net, c, z):
         return integrate(net, z, c, ODE_STEPS, SOLVER)

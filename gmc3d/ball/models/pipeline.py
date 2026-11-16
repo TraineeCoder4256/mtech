@@ -50,12 +50,16 @@ def train(family, seed=0, steps=None, out_dir=None, log=print, shared=True,
 
 
 def load(family, seed=0, device="cpu", out_dir=None, name=None,
-         interface=1, iso=None):
+         interface=1, iso=None, precision="fp32", compile=False,
+         graphs=False):
     """A trained family as a backend.  interface=2 gives the anisotropic
     backend (AnisoBackend); its isotropic balls go to `iso`, a v1 backend
-    (default: the flow, seed 0, the model gmc3d accepted)."""
+    (default: the flow, seed 0, the model gmc3d accepted, loaded with the
+    same device and speed options).  precision / compile / graphs: the
+    speed options of fast.Engine (m2.4)."""
+    fast = {"precision": precision, "compile": compile, "graphs": graphs}
     if interface == I.ANISO_INTERFACE_VERSION:
-        return _load_aniso(family, seed, device, out_dir, name, iso)
+        return _load_aniso(family, seed, device, out_dir, name, iso, fast)
     path = out_dir or store.locate(family, seed)
     if path is None:
         raise FileNotFoundError(
@@ -68,7 +72,7 @@ def load(family, seed=0, device="cpu", out_dir=None, name=None,
     net = fam.build(cfg)
     net.load_state_dict(state)
     return ModelBackend(fam, net, cnorm, ynorm, info, device=device,
-                        name=name)
+                        name=name, **fast)
 
 
 def count_params(family):
@@ -160,7 +164,7 @@ def _train_aniso(family, seed, steps, out_dir, log, shared, run):
     return load(family, seed, out_dir=out_dir, interface=v)
 
 
-def _load_aniso(family, seed, device, out_dir, name, iso):
+def _load_aniso(family, seed, device, out_dir, name, iso, fast):
     v = I.ANISO_INTERFACE_VERSION
     path = out_dir or store.locate(family, seed, v)
     if path is None:
@@ -174,6 +178,6 @@ def _load_aniso(family, seed, device, out_dir, name, iso):
     net = fam.build(cfg)
     net.load_state_dict(state)
     if iso is None:
-        iso = load("nflow", 0, device=device, name="network")
+        iso = load("nflow", 0, device=device, name="network", **fast)
     return AnisoBackend(fam, net, cnorm, ynorm, info, iso, device=device,
-                        name=name)
+                        name=name, **fast)

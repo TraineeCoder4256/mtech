@@ -152,3 +152,45 @@ item D1).
   CPU (compiled random numbers differ, so weights differ by ~1e-4 after
   40 steps).  CUDA itself is untested here (no GPU in this container);
   `tests/test_models_m23.py` has CUDA tests that run on a GPU machine.
+
+## m2.4 (interfaces v1 and v2) - 16 Nov 2026
+
+Drawing at speed on a GPU (item D2) and a model-side benchmark (D3).
+
+- `ball/models/fast.py`, `Engine`: every backend now draws through it.
+  Defaults (fp32, no compile, no graphs, CPU) are the old draw, bit for
+  bit (all 16 trained models checked, v1 `sample` and v2 `draw`).
+  Options, each separate so the benchmark and gate2 can judge each:
+  `precision="fp16"` (autocast mixed precision, GPU), `compile=True`
+  (`torch.compile`, kernels compiled once for any batch size),
+  `graphs=True` (CUDA graphs: batches padded to a sqrt(2) ladder from
+  256, one graph recorded per size, GPU).  Conditions and results go
+  through pinned host buffers with non-blocking copies; decode stays
+  float64 on the host.
+- Families draw in two parts: `noise()` (all random numbers, from the
+  backend's generator, eagerly) and `draw_from()` (no randomness), so
+  compiling never changes which random numbers are used.  `draw()` is
+  unchanged in result.
+- `models.load(..., precision=, compile=, graphs=)`; the v2 backend's
+  default isotropic model gets the same options.  `backend.warmup(sizes)`
+  compiles / records ahead of timing.
+- `python -m ball.models.bench [--device cuda] [--out DIR]`: microseconds
+  per draw for every family, v1 and v2, every option the device allows,
+  at 1k / 10k / 100k (/ 1M on a GPU), with the largest difference from
+  the fp32 draw on the same noise.
+- On this CPU: compile keeps draws within float32 rounding of the
+  original (relative 1e-6 at v1; up to 1e-2 absolute in s at v2) but is
+  no faster.  GPU numbers and gate2 per option need a GPU machine.
+- Tests: `tests/test_models_m24.py` (CUDA tests skip without a GPU).
+- Overlap hooks for Innovation's transport (v2.2.0 `--overlap`):
+  `backend.submit(R, seeds, idx)` / `submit_aniso(R, mats, ang, seeds,
+  idx)` start a draw and return a ticket at once; `collect(ticket)` waits
+  and returns exactly what `sample()` / `sample_aniso()` would for the same
+  calls in the same order (the random numbers are taken at submit).  Two
+  pinned slots per engine, so two tickets may be in flight; a third
+  submit before a collect raises.  `submit_aniso` runs the exact
+  first-scatter walk at once (CPU) and starts only the k >= 2 draw.
+- `sample_aniso` now refuses (ValueError) a ball whose material law is
+  isotropic: `walk.first_scatter_many_aniso` never returns on an ISO row
+  (found while testing; the driver never sends one, isotropic balls go to
+  `sample()`).
