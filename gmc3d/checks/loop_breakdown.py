@@ -134,12 +134,13 @@ def run_split(problem, particles, batches, seed, backend, r_star,
 
         t = time.perf_counter()
         st = problem.source.sample(particles, TR.source_rng(seed, b))
-        TR._birth(st.xyz, st.uvw, st.wgt, st.iso, P, cnt, nchunk)
+        lo = TR._bounds(particles, nchunk, 1)
+        TR._birth(st.xyz, st.uvw, st.wgt, st.iso, P, cnt, lo)
         ph_t["birth"] += time.perf_counter() - t
 
         while True:
             t = time.perf_counter()
-            TR._advance(g, ph, L, X, D, P, acc, cnt, nchunk, E, XS)
+            TR._advance(g, ph, L, X, D, P, acc, cnt, lo, 0, nchunk, E, XS)
             ph_t["advance"] += time.perf_counter() - t
 
             t = time.perf_counter()

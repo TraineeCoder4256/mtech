@@ -7,6 +7,41 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v2.2.0 (16 Nov 2026): GPU-ready transport and training command
+
+Phani (16 Nov): make the code GPU-compatible wherever possible, ML side
+first, and use the GPU at full speed; transport may stay on the CPU.
+Split agreed with Development: training and inference speed in
+ball/models/ (m2.3 training on a device, m2.4 fast inference), the
+driver side here.
+
+- **Several batches in flight** (`transport.run(in_flight=k)`,
+  `run.py ... --in-flight k`): k statistical batches run as one, each
+  with its own particles, streams, source sites and chunks, so the answer
+  is unchanged; the backend gets calls k times bigger. A GPU costs 5x more
+  per draw at the slab's ~2.4k requests per call than at 100k (6 Oct).
+  Slab, network on CPU, 8 x 100k: 374 calls -> 52, transport 17.1 ->
+  14.5 s.
+- **Overlap** (`overlap=True`, `--overlap`): the particles are split in
+  two halves; while the backend draws for one (submit), the CPU tracks
+  the other, then collects. Used only with a backend that has
+  submit/collect (Development's m2.4); otherwise plain calls as before.
+- Bit for bit: with the exact walk, in_flight 1, 3, 4 and 4 + overlap give
+  identical tallies, error bars and counters to v2.1.10 on sphere, cask,
+  slab, tilted, an anisotropic sphere and a point-detector problem, 3,000
+  particles x 6 batches (uneven chunk split, a short last group):
+  `runs/2026-11-16/in-flight/regress.py`. 257 tests passed before the
+  merge with m2.3, plus tests/test_in_flight_v220.py.
+- `run.py train`: `--interface 2`, `--family all` (at v2 all but cGAN),
+  `--seeds 0 1`, and `--device`, `--precision fp32|tf32|fp16`,
+  `--compile` (m2.3). runs/2026-11-16/gpu-train/train_gpu.py now calls
+  models.train(device=) instead of patching fit_loop.
+- Internals: `_advance`/`_birth`/`_birth_detectors` take chunk bounds
+  (`_bounds`) instead of `nchunk`; `transport.DEFAULTS` holds
+  in_flight/overlap so every check follows the command line.
+
+Not run on a GPU (none here). Next: one GPU bench command once m2.4 lands.
+
 ## v2.1.10 (16 Nov 2026): train the v2 models on a GPU
 
 `ball/models/training.fit_loop` trains on the CPU only, while inference

@@ -1,5 +1,7 @@
-"""Check: train_gpu.fit_loop_device on the CPU gives the same losses as
-training.fit_loop (40 steps per family).  Run from gmc3d/ with PYTHONPATH=."""
+"""v2.1.10 record: train_gpu.fit_loop_device (that version of the script)
+on the CPU gave the same losses as training.fit_loop (40 steps per family;
+check_cpu_equal.log).  Since v2.2.0 the script calls models.train(device=)
+from m2.3 instead, so this no longer runs as is."""
 import sys, importlib.util
 sys.path.insert(0, ".")
 spec = importlib.util.spec_from_file_location("tg", "runs/2026-11-16/gpu-train/train_gpu.py")

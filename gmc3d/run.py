@@ -210,11 +210,25 @@ def cmd_table(args, log):
 
 
 def cmd_train(args, log):
-    be = models.train(args.family, seed=args.seed, steps=args.steps, log=log)
-    d = {k: v for k, v in be.describe().items() if k != "train"}
-    log(f"saved to data/models/{model_store.folder(args.family, args.seed)}"
-        f" (and the shared copy); {d}")
-    return f"train_{args.family}_seed{args.seed}"
+    fams = models.names() if args.family == "all" else [args.family]
+    seeds = args.seeds or [args.seed]
+    if args.interface == 2 and "cgan" in fams and args.family == "all":
+        fams = [f for f in fams if f != "cgan"]     # not accepted (v2.1.7)
+    if args.interface == 2:
+        from ball.models import pipeline
+        pipeline.aniso_data(log)                    # built once, CPU
+    for s in seeds:
+        for fam in fams:
+            be = models.train(fam, seed=s, steps=args.steps, log=log,
+                              interface=args.interface, device=args.device,
+                              precision=args.precision,
+                              compile=args.compile)
+            d = {k: v for k, v in be.describe().items() if k != "train"}
+            log(f"saved to data/models/"
+                f"{model_store.folder(fam, s, args.interface)}"
+                f" (and the shared copy if there is one); {d}")
+    tag = args.family + ("_v2" if args.interface == 2 else "")
+    return f"train_{tag}_seed{'-'.join(map(str, seeds))}"
 
 
 def cmd_compare(args, log):
@@ -359,6 +373,12 @@ def main():
         sp.add_argument("--out", default=None, help="output folder")
         sp.add_argument("--device", default="cpu",
                         help="where the network runs: cpu or cuda")
+        sp.add_argument("--in-flight", type=int, default=1,
+                        help="statistical batches run at once (same "
+                             "answer; bigger network calls, for a GPU)")
+        sp.add_argument("--overlap", action="store_true",
+                        help="the CPU tracks while the GPU draws (needs a "
+                             "backend with submit/collect)")
 
     s = sub.add_parser("solve")
     s.add_argument("problem", choices=sorted(PROBLEMS))
@@ -377,9 +397,20 @@ def main():
     common(s)
 
     s = sub.add_parser("train")
-    s.add_argument("--family", default="nflow", choices=models.names())
+    s.add_argument("--family", default="nflow",
+                   choices=models.names() + ["all"],
+                   help="all: every family (at --interface 2, all but cgan)")
+    s.add_argument("--interface", type=int, default=1, choices=[1, 2],
+                   help="1: isotropic balls (R -> mu, s); 2: anisotropic")
+    s.add_argument("--seeds", type=int, nargs="+", default=None,
+                   help="several seeds in one go (default: --seed)")
     s.add_argument("--steps", type=int, default=None,
                    help="default: the shared step budget (fairness.py)")
+    s.add_argument("--precision", default="fp32",
+                   choices=["fp32", "tf32", "fp16"],
+                   help="fp16: mixed precision on a GPU (not cgan)")
+    s.add_argument("--compile", action="store_true",
+                   help="torch.compile the training step")
     common(s)
     s.set_defaults(seed=0)
 
@@ -453,6 +484,8 @@ def main():
                    "folder of OpenMC xml files")
 
     args = p.parse_args()
+    transport.DEFAULTS.update(in_flight=getattr(args, "in_flight", 1),
+                              overlap=getattr(args, "overlap", False))
     log = Log()
     stem = globals()[f"cmd_{args.cmd}"](args, log)
     if stem:

@@ -88,6 +88,7 @@ random stream (bit-for-bit reproducible runs).
 """
 
 from collections import namedtuple
+import dataclasses
 import time
 
 import numpy as np
@@ -302,12 +303,11 @@ def _crossing_sign(g, k, x, y, z, u, v, w):
 
 # ----------------------------------------------------------------- source
 @njit(cache=True, parallel=True)
-def _birth(xyz, uvw, wgt, iso, P, cnt, nchunk):
-    """Start every particle from its source site (sources.py drew them)."""
-    n = P.x.size
-    per = (n + nchunk - 1) // nchunk
-    for c in prange(nchunk):
-        for i in range(c * per, min(n, (c + 1) * per)):
+def _birth(xyz, uvw, wgt, iso, P, cnt, lo):
+    """Start every particle from its source site (sources.py drew them).
+    Chunk c takes particles [lo[c], lo[c + 1]) (_bounds)."""
+    for c in prange(lo.size - 1):
+        for i in range(lo[c], lo[c + 1]):
             cnt[c, C_HIST] += 1
             _start(P, i, xyz, uvw, wgt, iso)   # a call, not inlined: a
             # parallel loop that writes a namedtuple's arrays directly loses
@@ -756,15 +756,14 @@ def _white_detectors(g, k, D, row, wgt, x, y, z, dpth):
 
 
 @njit(cache=True, parallel=True)
-def _birth_detectors(g, D, xyz, wimg, lo, acc, n, nchunk):
+def _birth_detectors(g, D, xyz, wimg, lo, acc, bounds):
     """Every source site lo .. lo + len(xyz) - 1 scored at the point
     detectors (detectors.score_birth), into its own chunk's row."""
-    per = (n + nchunk - 1) // nchunk
     m = xyz.shape[0]
-    for c in prange(nchunk):
+    for c in prange(bounds.size - 1):
         dpth = np.full(G.MAX_LEVELS, -1, np.int64)
-        a = max(c * per, lo) - lo
-        b = min(min(n, (c + 1) * per), lo + m) - lo
+        a = max(bounds[c], lo) - lo
+        b = min(bounds[c + 1], lo + m) - lo
         for q in range(a, b):
             DT.score_birth(acc[c], D, g, D.sig_t, wimg[q], xyz[q, 0],
                            xyz[q, 1], xyz[q, 2], dpth)
@@ -778,17 +777,17 @@ def _set_mu(mu_last, i, carry):
 
 
 @njit(cache=True, parallel=True)
-def _advance(g, ph, L, X, D, P, acc, cnt, nchunk, E, XS):
-    """Run every live particle until it dies or waits for a ball.
+def _advance(g, ph, L, X, D, P, acc, cnt, lo, c0, c1, E, XS):
+    """Run every live particle of chunks c0 .. c1 - 1 until it dies or
+    waits for a ball.
 
-    Chunk c takes particles [c*per, min(n, (c+1)*per)).  Each chunk is a
+    Chunk c takes particles [lo[c], lo[c + 1]) (_bounds).  Each chunk is a
     disjoint set of histories with independent random streams, which is why
     tallies.py can use the chunks as the groups its error bar comes from;
-    tallies.chunk_sizes must keep matching the split below.
+    _bounds must keep matching tallies.chunk_sizes.
     """
-    n = P.x.size
-    per = (n + nchunk - 1) // nchunk
-    for c in prange(nchunk):
+    for j in prange(c1 - c0):
+        c = c0 + j
         pth = np.full(G.MAX_LEVELS, -1, np.int64)
         last = np.full(G.MAX_LEVELS, -1, np.int64)
         to = np.full(G.MAX_LEVELS, -1, np.int64)
@@ -797,7 +796,7 @@ def _advance(g, ph, L, X, D, P, acc, cnt, nchunk, E, XS):
         dpth = np.full(G.MAX_LEVELS, -1, np.int64)
         ws = EX.workspace()
         carry, have = 0.0, False
-        for i in range(c * per, min(n, (c + 1) * per)):
+        for i in range(lo[c], lo[c + 1]):
             st = P.status[i]
             if st == MOVING or st == READY:
                 if E.n and st == MOVING and have:
@@ -923,9 +922,68 @@ def _particles(n):
                      np.full((n, G.MAX_LEVELS), -1, np.int64), f(), f())
 
 
+# what run() uses when the caller does not say (run.py sets these from
+# --in-flight and --overlap, so every check follows the command line)
+DEFAULTS = {"in_flight": 1, "overlap": False}
+
+
+def _bounds(n, nchunk, k):
+    """First particle of each of the k * nchunk chunks, and the end: batch q
+    of k is split exactly as tallies.chunk_sizes splits a batch of n."""
+    one = np.concatenate(([0], np.cumsum(T.chunk_sizes(n, nchunk))))[:-1]
+    lo = (np.arange(k)[:, None] * n + one[None, :]).ravel()
+    return np.append(lo, k * n).astype(np.int64)
+
+
+def _concat_sites(parts):
+    """Several batches' source sites as one (sources.Sites)."""
+    if len(parts) == 1:
+        return parts[0]
+    kw = {}
+    for f in dataclasses.fields(parts[0]):
+        v = [getattr(p, f.name) for p in parts]
+        if f.name == "redrawn":
+            kw[f.name] = sum(v)
+        elif v[0] is None:
+            kw[f.name] = None
+        else:
+            kw[f.name] = np.concatenate(v)
+    return type(parts[0])(**kw)
+
+
+def _submit(backend, idx, P, ph, aniso_balls, overlap):
+    """Ask the backend for the balls of the waiting particles idx: drawn at
+    once (sample), or launched (submit) and fetched later by _collect.
+    Anisotropic balls first, as before v2.2 (a network's draw order)."""
+    jobs = []
+    if aniso_balls:
+        an = ph.ang[P.mat[idx], 0] != SC.ISO
+        ia, idx = idx[an], idx[~an]
+        if ia.size:
+            f = backend.submit_aniso if overlap else backend.sample_aniso
+            jobs.append((True, ia, f(P.ball_R[ia], P.mat[ia], ph.ang,
+                                     P.seed, ia)))
+    if idx.size:
+        f = backend.submit if overlap else backend.sample
+        jobs.append((False, idx, f(P.ball_R[idx], P.seed, idx)))
+    return jobs
+
+
+def _collect(backend, jobs, P, overlap):
+    for aniso, ii, out in jobs:
+        if overlap:
+            out = backend.collect(out)
+        if aniso:
+            P.cos_n[ii], P.mu[ii], P.phi[ii], P.s[ii] = out
+        else:
+            P.mu[ii], P.s[ii] = out
+        P.status[ii] = READY
+
+
 def run(problem, particles=100_000, batches=20, seed=1, backend=None,
         r_star=3.0, r_max=None, mesh_rule="profile", w_cut=0.25, w_surv=1.0,
-        nchunk=32, verbose=False, k_max=None, k_det=K_DET, triggers=True):
+        nchunk=32, verbose=False, k_max=None, k_det=K_DET, triggers=True,
+        in_flight=None, overlap=None):
     """Solve a Problem (from openmc_import.load).
 
     backend      None for plain Monte Carlo, or a ball backend from ball/
@@ -939,6 +997,15 @@ def run(problem, particles=100_000, batches=20, seed=1, backend=None,
                  on): run more batches, up to trigger_max_batches, until
                  every trigger is met, as OpenMC does; `batches` is then
                  the least.  settings['batches'] says how many ran.
+    in_flight    statistical batches run at once (v2.2; default
+                 DEFAULTS).  Each keeps its
+                 own particles, random streams, source sites and chunks,
+                 so the answer is the same as one at a time (bit for bit
+                 with the exact walk); only the backend sees calls
+                 in_flight times bigger, which is what a GPU needs.
+    overlap      with a backend that has submit/collect (a GPU network):
+                 the CPU tracks one half of the particles while the
+                 backend draws for the other (v2.2).  Ignored otherwise.
 
     Returns tallies.Results: per-source-particle means and standard errors.
     """
@@ -976,79 +1043,116 @@ def run(problem, particles=100_000, batches=20, seed=1, backend=None,
     else:
         D = _no_detectors(L.n_entries, len(m.ids))
     accum = T.Accumulator(L, len(dets))
-    cnt = np.zeros((nchunk, len(COUNTERS)), np.int64)
     t_track = t_backend = 0.0
     calls = 0
     redrawn = 0
 
     trig = getattr(problem, "trigger_settings", None) if triggers else None
     b, n_batches, trig_met = 0, batches, None
+    if in_flight is None:
+        in_flight = DEFAULTS["in_flight"]
+    if overlap is None:
+        overlap = DEFAULTS["overlap"]
+    k_fly = max(1, int(in_flight))
+    cnt = np.zeros((nchunk * k_fly, len(COUNTERS)), np.int64)
+    overlap = bool(overlap) and backend is not None and \
+        hasattr(backend, "submit")
+    next_check = batches
     while b < n_batches:
-        P = _particles(particles)
-        P.seed[:] = rng.streams(np.uint64(seed), b * particles, particles)
-        acc = np.zeros((nchunk, L.n_entries + len(dets)))
+        # k batches in flight at once: particles k*N, chunks k*nchunk; batch
+        # q owns chunks q*nchunk .. (q+1)*nchunk - 1 and the same particles,
+        # random streams and source sites as when run on its own
+        k = min(k_fly, n_batches - b)
+        n, nc = k * particles, k * nchunk
+        lo = _bounds(particles, nchunk, k)
+        P = _particles(n)
+        P.seed[:] = rng.streams(np.uint64(seed), b * particles, n)
+        acc = np.zeros((nc, L.n_entries + len(dets)))
         t0 = time.perf_counter()
-        sites = problem.source.sample(particles, source_rng(seed, b))
+        sites = _concat_sites([problem.source.sample(
+            particles, source_rng(seed, b + q)) for q in range(k)])
         redrawn += sites.redrawn
-        _birth(sites.xyz, sites.uvw, sites.wgt, sites.iso, P, cnt, nchunk)
-        XS = _ext_state(particles, n_born, E.n > 0, mu_carry)
+        _birth(sites.xyz, sites.uvw, sites.wgt, sites.iso, P, cnt, lo)
+        XS = _ext_state(n, n_born, E.n > 0, mu_carry)
         if E.n:
             # the first history of each chunk: a scatter cosine drawn
             # uniformly (the rest carry the previous history's, _advance)
             XS.time[:] = sites.t
             XS.w_analog[:] = sites.wgt
-            XS.mu_last[:] = np.random.default_rng(
-                [int(seed), int(b), 0xE77]).uniform(-1.0, 1.0, particles)
+            XS.mu_last[:] = np.concatenate([np.random.default_rng(
+                [int(seed), int(b + q), 0xE77]).uniform(-1.0, 1.0, particles)
+                for q in range(k)])
             cells, _, _ = G.paths_many(g, sites.xyz)
             XS.prev[:] = cells
             if n_born:
-                deep = cells[np.arange(particles),
+                deep = cells[np.arange(n),
                              np.maximum((cells >= 0).sum(axis=1) - 1, 0)]
                 EX.born_bins(E, L, X, sites.xyz, deep, cols_mesh, cols_cell,
                              XS.born)
         if dets:
-            for lo in range(0, particles, BIRTH_SLICE):
-                hi = min(particles, lo + BIRTH_SLICE)
-                wimg = problem.source.detector_weights(sites, D.img, lo, hi)
-                _birth_detectors(g, D, sites.xyz[lo:hi], wimg, lo, acc,
-                                 particles, nchunk)
-        while True:
-            _advance(g, ph, L, X, D, P, acc, cnt, nchunk, E, XS)
-            t1 = time.perf_counter()
-            t_track += t1 - t0
-            idx = np.flatnonzero(P.status == WAITING)
-            if idx.size == 0:
-                break
-            if aniso_balls:
-                an = ph.ang[P.mat[idx], 0] != SC.ISO
-                ia, idx = idx[an], idx[~an]
-                if ia.size:
-                    cn, mu, phi, s_mfp = backend.sample_aniso(
-                        P.ball_R[ia], P.mat[ia], ph.ang, P.seed, ia)
-                    P.cos_n[ia], P.mu[ia], P.phi[ia], P.s[ia] = \
-                        cn, mu, phi, s_mfp
-                    P.status[ia] = READY
-            if idx.size:
-                mu, s_mfp = backend.sample(P.ball_R[idx], P.seed, idx)
-                P.mu[idx], P.s[idx] = mu, s_mfp
-            P.status[idx] = READY
-            calls += 1
-            t0 = time.perf_counter()
-            t_backend += t0 - t1
-        # OpenMC's leakage is per unit of source weight, its tallies per
-        # source particle (sources.py); the same here
-        acc[:, T.LEAKAGE] *= particles / sites.wgt.sum()
-        accum.add_batch(acc, particles)
-        if verbose:
-            mean, se = accum.mean_se()
-            print(f"batch {b + 1}/{n_batches}  leakage {mean[0]:.5f} "
-                  f"+- {se[0]:.5f}", flush=True)
-        b += 1
-        if trig is not None and b >= batches and \
-                (b - batches) % trig["interval"] == 0:
+            for s0 in range(0, n, BIRTH_SLICE):
+                s1 = min(n, s0 + BIRTH_SLICE)
+                wimg = problem.source.detector_weights(sites, D.img, s0, s1)
+                _birth_detectors(g, D, sites.xyz[s0:s1], wimg, s0, acc, lo)
+        if overlap and nc >= 2:
+            # two halves: the backend (a GPU) draws for one half while the
+            # CPU tracks the other; each half waits only on its own draws
+            h = nc // 2
+            halves = ((0, h), (h, nc))
+            pend, done = [None, None], [False, False]
+            while not (done[0] and done[1]):
+                for j, (c0, c1) in enumerate(halves):
+                    if done[j]:
+                        continue
+                    if pend[j] is not None:
+                        t1 = time.perf_counter()
+                        _collect(backend, pend[j], P, True)
+                        pend[j] = None
+                        t0 = time.perf_counter()
+                        t_backend += t0 - t1
+                    _advance(g, ph, L, X, D, P, acc, cnt, lo, c0, c1, E, XS)
+                    t1 = time.perf_counter()
+                    t_track += t1 - t0
+                    idx = lo[c0] + np.flatnonzero(
+                        P.status[lo[c0]:lo[c1]] == WAITING)
+                    if idx.size == 0:
+                        done[j] = True
+                    else:
+                        pend[j] = _submit(backend, idx, P, ph, aniso_balls,
+                                          True)
+                        calls += 1
+                    t0 = time.perf_counter()
+                    t_backend += t0 - t1
+        else:
+            while True:
+                _advance(g, ph, L, X, D, P, acc, cnt, lo, 0, nc, E, XS)
+                t1 = time.perf_counter()
+                t_track += t1 - t0
+                idx = np.flatnonzero(P.status == WAITING)
+                if idx.size == 0:
+                    break
+                _collect(backend, _submit(backend, idx, P, ph, aniso_balls,
+                                          False), P, False)
+                calls += 1
+                t0 = time.perf_counter()
+                t_backend += t0 - t1
+        for q in range(k):
+            a_q = acc[q * nchunk:(q + 1) * nchunk]
+            # OpenMC's leakage is per unit of source weight, its tallies per
+            # source particle (sources.py); the same here
+            a_q[:, T.LEAKAGE] *= particles / \
+                sites.wgt[q * particles:(q + 1) * particles].sum()
+            accum.add_batch(a_q, particles)
+            if verbose:
+                mean, se = accum.mean_se()
+                print(f"batch {b + 1}/{n_batches}  leakage {mean[0]:.5f} "
+                      f"+- {se[0]:.5f}", flush=True)
+            b += 1
+        if trig is not None and b >= next_check:
             trig_met = _triggers_met(problem, accum)
             n_batches = b if trig_met else min(
                 trig["max_batches"], b + trig["interval"])
+            next_check = b + trig["interval"]
 
     counters = dict(zip(COUNTERS, cnt.sum(axis=0).tolist()))
     counters["backend_calls"] = calls
@@ -1058,7 +1162,8 @@ def run(problem, particles=100_000, batches=20, seed=1, backend=None,
                     backend=getattr(backend, "name", None), r_star=r_star,
                     r_max=r_max, mesh_rule=mesh_rule,
                     k_max=ph.k_max if ph.mesh_profile else None, w_cut=w_cut,
-                    w_surv=w_surv, nchunk=nchunk,
+                    w_surv=w_surv, nchunk=nchunk, in_flight=k_fly,
+                    overlap=overlap,
                     k_det=int(k_det) if dets else None,
                     triggers_met=trig_met)
     return accum.results(problem.tallies, counters, timing, settings, dets)

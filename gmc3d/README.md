@@ -43,12 +43,17 @@ Numba and PyTorch):
     python run.py validate                      # Stage 1 suite vs OpenMC
     python run.py table                         # build the lookup table
     python run.py train                         # train the network
+    python run.py train --interface 2 --family all --seeds 0 1 --device cuda
+                                                # the v2 models on a GPU
     python run.py ballcheck                     # backends vs the exact walk
     python run.py meshcheck                     # mesh profile vs exact walks
     python run.py maps                          # flux maps vs OpenMC (PNG)
     python run.py measure                       # speed study
     python run.py race                          # OpenMC vs ours, head to head
     python run.py race --device cuda            # ... with the network on a GPU
+    python run.py race --device cuda --in-flight 8 --overlap
+                                                # ... bigger GPU calls, and
+                                                # the CPU tracks meanwhile
     python -m checks.gpu_bench --device cuda    # GPU cost per draw only
     python -m pytest -q tests                   # unit tests
     python run.py check my_model.py             # what gmc3d will use, refuse
