@@ -317,7 +317,8 @@ def cmd_gapcheck(args, log):
 
 def cmd_anisocheck(args, log):
     from checks import aniso
-    be = None if args.backend == "oracle" else backend(args.backend)
+    be = None if args.backend == "oracle" else backend(args.backend,
+                                                         args.device)
     if be is not None:
         log(f"balls walked by {args.backend}: {be.describe()}")
     res = aniso.suite(DATA / "openmc", args.particles, args.batches,
@@ -330,7 +331,7 @@ def cmd_anisocheck(args, log):
 
 def cmd_gate2(args, log):
     from checks import gate_v2
-    be = backend(args.model)
+    be = backend(args.model, args.device)
     res = gate_v2.run(be, n=args.particles, log=log)
     gate_v2.save(res, out_dir(args))
     return f"gate2_{args.model}"

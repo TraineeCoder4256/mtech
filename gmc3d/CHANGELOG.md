@@ -7,6 +7,15 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v2.1.9 (16 Nov 2026): `--device` reaches anisocheck and gate2
+
+`run.py anisocheck --backend <model> --device cuda` and
+`run.py gate2 <model> --device cuda` used to ignore `--device` and ran
+the network on the CPU. Now they pass it to the backend, as solve, race
+and compare already did, so Phani can run the v2 models on a GPU. Not
+tested on a GPU here, since this container has none. The CPU path is
+unchanged.
+
 ## v2.1.8 (12 Nov 2026): catch-up checks for every model not yet run end to end
 
 Phani asked Development and Innovation to run the checks still missing
