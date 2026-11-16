@@ -68,11 +68,14 @@ def get(name):
 
 
 def train(family, seed=0, steps=None, out_dir=None, log=print, shared=True,
-          interface=1):
+          interface=1, device="cpu", precision="fp32", compile=False):
     """Train one family on the shared data, save it, return the backend.
-    interface=2: the anisotropic version (m2.0)."""
+    interface=2: the anisotropic version (m2.0).  device="cuda" trains on
+    the GPU; precision ("fp32", "tf32", "fp16") and compile are speed
+    options (training.py, m2.3)."""
     from .pipeline import train as _train
-    return _train(family, seed, steps, out_dir, log, shared, interface)
+    return _train(family, seed, steps, out_dir, log, shared, interface,
+                  device, precision, compile)
 
 
 def load(family, seed=0, device="cpu", out_dir=None, name=None,

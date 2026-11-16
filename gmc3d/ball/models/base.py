@@ -76,16 +76,18 @@ class Family:
 
     @classmethod
     def fit(cls, data, *, seed, steps=None, time_cap=fairness.TIME_CAP,
-            log=print, interface=1):
+            log=print, interface=1, device="cpu", precision="fp32",
+            compile=False):
         """Train on encoding.prepare() (or prepare_aniso()) output.
-        Returns (net, config, facts)."""
+        Returns (net, config, facts); net is on the CPU."""
         cfg = cls.config_for(interface)
         tr = dict(cls.TRAIN if interface == 1 else fairness.TRAIN_ANISO)
         if steps:
             tr["steps"] = steps
         net, facts = fit_loop(lambda: cls.build(cfg), cls.loss, data,
                               seed=seed, time_cap=time_cap, log=log,
-                              loss_name=cls.loss_name, **tr)
+                              loss_name=cls.loss_name, device=device,
+                              precision=precision, compile=compile, **tr)
         facts["train"] = tr
         return net, cfg, facts
 

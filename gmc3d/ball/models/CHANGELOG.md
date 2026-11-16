@@ -121,3 +121,34 @@ The single-scatter fix, agreed with Innovation (its v2.1.3 2278ce3 gives
   Settings and the 3 short tuning trials are listed in its docstring.
 - At v2 it gets the exact first scatter through AnisoBackend and trains on
   k >= 2 rows, like the others.
+
+## m2.3 (interfaces v1 and v2) - 16 Nov 2026
+
+Training on a GPU (Phani, 16 Nov: "make the whole code base gpu compatible
+... take full advantage of the gpu"; split agreed with Innovation, this is
+item D1).
+
+- `models.train(..., device="cuda", precision="fp32"|"tf32"|"fp16",
+  compile=False)`, passed through `pipeline.train` and `Family.fit` to
+  `training.fit_loop`; the cGAN's own loop takes the same arguments.
+- `training.Device`: rows copied to the GPU once (pinned host memory if
+  they do not fit with 2 GB to spare), batch and validation indices drawn
+  there by a generator seeded with the run's seed, `AdamW(fused=True)`,
+  a multi-tensor EMA update, and no host read-back of the loss except at
+  validation.  `fp16` = autocast + GradScaler (mixed precision); `tf32`
+  only matters on A100-class GPUs (a T4 has neither TF32 nor bf16);
+  `compile` = `torch.compile` of the loss.  The cGAN trains in fp32/tf32
+  only (its R1 penalty differentiates through a gradient).
+- The trained network comes back on the CPU, so `model.pt` loads anywhere;
+  the device, precision, compile flag and GPU name go into the model's
+  info and manifest.
+- Same recipe on every device (batch 4096, steps, optimiser, schedule,
+  EMA), so the fairness rules hold.  A GPU run is a new model, not a copy
+  of the CPU run (other random numbers and kernels).
+- Checked: CPU training is bit-identical to m2.2 for all 4 families at
+  both interfaces (40 steps, every weight equal); the GPU code path run
+  on the CPU gives the same weights to the last bit (only the logged
+  smoothed loss differs, float32 vs float64); `compile=True` runs on the
+  CPU (compiled random numbers differ, so weights differ by ~1e-4 after
+  40 steps).  CUDA itself is untested here (no GPU in this container);
+  `tests/test_models_m23.py` has CUDA tests that run on a GPU machine.

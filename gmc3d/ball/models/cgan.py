@@ -76,7 +76,6 @@ it counts the cVAE's encoder; a draw uses the generator only).
 
 import time
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -85,7 +84,7 @@ from . import fairness
 from .base import Family
 from .cvae import _Net
 from .encoding import C_DIM, X_DIM
-from .training import EMA, VAL_ROWS
+from .training import EMA, VAL_ROWS, Device, schedule
 
 WIDTH, G_DEPTH, D_DEPTH, EMB, NOISE = 64, 4, 3, 32, 8
 LR_G, LR_D, BETAS, R1_GAMMA, N_CRITIC = 2.5e-4, 1e-3, (0.0, 0.99), 0.1, 2
@@ -155,35 +154,45 @@ class CGAN(Family):
 
     @classmethod
     def fit(cls, data, *, seed, steps=None, time_cap=fairness.TIME_CAP,
-            log=print, interface=1):
+            log=print, interface=1, device="cpu", precision="fp32",
+            compile=False):
+        """Own loop (module docstring).  On a GPU the rows, batches and
+        noise live there (training.Device); fp16 and compile are not
+        offered for the GAN (its R1 penalty differentiates through the
+        discriminator's gradient, which half precision handles badly), so
+        it trains in fp32 (or tf32) on any device."""
+        if precision == "fp16" or compile:
+            log("cGAN: fp16 / compile not offered, training in fp32 "
+                "without compile")
+            precision = "fp32" if precision == "fp16" else precision
+        dv = Device(device, precision, False, log)
         cfg = cls.config_for(interface)
         tr = dict(cls.TRAIN if interface == 1 else fairness.TRAIN_ANISO)
         if steps:
             tr["steps"] = steps
         steps, batch, warmup = tr["steps"], tr["batch"], tr["warmup"]
         torch.manual_seed(seed)
-        y = torch.from_numpy(data["y_train"])
-        c = torch.from_numpy(data["c_train"])
-        yv, cv = torch.from_numpy(data["y_val"]), torch.from_numpy(data["c_val"])
-        net = cls.build(cfg)
+        y, c, yv, cv = dv.rows(data["y_train"], data["c_train"],
+                               data["y_val"], data["c_val"])
+        net = cls.build(cfg).to(dv.dev)
         n_params = sum(p.numel() for p in net.parameters())
         ema = EMA(net, tr["ema_decay"])
-        opt_g = torch.optim.Adam(net.generator_params(), lr=LR_G,
-                                 betas=BETAS)
-        opt_d = torch.optim.Adam(net.discriminator_params(), lr=LR_D,
-                                 betas=BETAS)
-        sched = lambda s: min(1.0, (s + 1) / warmup) * \
-            0.5 * (1 + np.cos(np.pi * min(1.0, s / steps)))
+        opt_g = dv.optimizer(net.generator_params(), cls=torch.optim.Adam,
+                             lr=LR_G, betas=BETAS)
+        opt_d = dv.optimizer(net.discriminator_params(),
+                             cls=torch.optim.Adam, lr=LR_D, betas=BETAS)
+        sched = schedule(warmup, steps)
         sch_g = torch.optim.lr_scheduler.LambdaLR(opt_g, sched)
         sch_d = torch.optim.lr_scheduler.LambdaLR(opt_d, sched)
-        gen = torch.Generator().manual_seed(seed)
+        gen = dv.generator(seed)
+        if not dv.plain:
+            log(f"device {dv.describe()}")
         hist, smooth, t1, done = [], None, time.time(), 0
         for step in range(1, steps + 1):
             for _ in range(N_CRITIC):
                 # discriminator step(s), each on its own batch, R1 on reals
-                idx = torch.randint(0, y.shape[0], (batch,), generator=gen)
-                yb, cb = y[idx], c[idx]
-                z = torch.randn(batch, net.noise)
+                yb, cb = dv.batch(y.shape[0], batch, gen, y, c)
+                z = torch.randn(batch, net.noise, device=dv.dev)
                 with torch.no_grad():
                     fake = net.generate(z, cb)
                 yr = yb.clone().requires_grad_(True)
@@ -199,7 +208,7 @@ class CGAN(Family):
                                                1.0)
                 opt_d.step()
             # generator step (non-saturating)
-            z = torch.randn(batch, net.noise)
+            z = torch.randn(batch, net.noise, device=dv.dev)
             g_loss = F.softplus(-net.critic(net.generate(z, cb), cb)).mean()
             opt_g.zero_grad(set_to_none=True)
             g_loss.backward()
@@ -207,18 +216,23 @@ class CGAN(Family):
             opt_g.step()
             sch_g.step()
             sch_d.step()
-            ema.update(net)
-            smooth = d_loss.item() if smooth is None else \
-                0.98 * smooth + 0.02 * d_loss.item()
+            if dv.cuda:
+                ema.update_fused(net)
+                ld = d_loss.detach()
+                smooth = ld if smooth is None else 0.98 * smooth + 0.02 * ld
+            else:
+                ema.update(net)
+                smooth = d_loss.item() if smooth is None else \
+                    0.98 * smooth + 0.02 * d_loss.item()
             done = step
             capped = time.time() - t1 > time_cap
             if step % tr["val_every"] == 0 or step == steps or capped:
                 with torch.no_grad():
-                    v = torch.randint(0, yv.shape[0], (VAL_ROWS,),
-                                      generator=gen)
-                    vloss = cls.loss(ema.shadow, yv[v], cv[v]).item()
-                hist.append((step, smooth, vloss))
-                log(f"step {step:6d}  train D loss {smooth:.4f}  G loss "
+                    vy, vc = dv.batch(yv.shape[0], VAL_ROWS, gen, yv, cv)
+                    vloss = cls.loss(ema.shadow, vy, vc).item()
+                sm = float(smooth)
+                hist.append((step, sm, vloss))
+                log(f"step {step:6d}  train D loss {sm:.4f}  G loss "
                     f"{g_loss.item():.4f}  val D loss (EMA G) {vloss:.4f}  "
                     f"{time.time() - t1:.0f} s")
             if capped:
@@ -229,4 +243,6 @@ class CGAN(Family):
                  "history": hist, "loss_name": cls.loss_name, "train": tr,
                  "gan": {"lr_g": LR_G, "lr_d": LR_D, "betas": list(BETAS),
                          "r1_gamma": R1_GAMMA, "n_critic": N_CRITIC}}
-        return ema.shadow.eval(), cfg, facts
+        if not dv.plain:
+            facts.update(dv.describe())
+        return ema.shadow.cpu().eval(), cfg, facts

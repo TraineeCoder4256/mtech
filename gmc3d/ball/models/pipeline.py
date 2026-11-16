@@ -21,9 +21,13 @@ from . import encoding as E
 
 
 def train(family, seed=0, steps=None, out_dir=None, log=print, shared=True,
-          interface=1):
+          interface=1, device="cpu", precision="fp32", compile=False):
+    """Train, save, return the backend (on the CPU).  device / precision /
+    compile choose where training runs (training.py); the saved model
+    loads anywhere."""
+    run = {"device": device, "precision": precision, "compile": compile}
     if interface == I.ANISO_INTERFACE_VERSION:
-        return _train_aniso(family, seed, steps, out_dir, log, shared)
+        return _train_aniso(family, seed, steps, out_dir, log, shared, run)
     fam = get(family)
     out_dir = out_dir or store.MODEL_DIR / store.folder(family, seed)
     t0 = time.time()
@@ -35,7 +39,7 @@ def train(family, seed=0, steps=None, out_dir=None, log=print, shared=True,
         f"scatters each, {time.time() - t0:.1f} s  (hash {data['sha256']})")
     log(f"model  {fam.name} (interface v{I.INTERFACE_VERSION}, {fam.nfe} "
         f"network pass(es) per draw), seed {seed}, {fam.CONFIG}")
-    net, cfg, facts = fam.fit(data, seed=seed, steps=steps, log=log)
+    net, cfg, facts = fam.fit(data, seed=seed, steps=steps, log=log, **run)
     log(f"       {facts['params']:,} weights, {facts['steps_done']:,} steps"
         f" in {facts['train_seconds']:.0f} s")
     warn = fairness.check_size(facts["params"])
@@ -136,7 +140,7 @@ def aniso_data(log=print):
     return data
 
 
-def _train_aniso(family, seed, steps, out_dir, log, shared):
+def _train_aniso(family, seed, steps, out_dir, log, shared, run):
     v = I.ANISO_INTERFACE_VERSION
     fam = get(family)
     out_dir = out_dir or store.MODEL_DIR / store.folder(family, seed, v)
@@ -145,7 +149,7 @@ def _train_aniso(family, seed, steps, out_dir, log, shared):
     log(f"model  {fam.name} (interface v{v}, {fam.nfe} network pass(es) "
         f"per draw), seed {seed}, {cfg}")
     net, cfg, facts = fam.fit(data, seed=seed, steps=steps, log=log,
-                              interface=v)
+                              interface=v, **run)
     log(f"       {facts['params']:,} weights, {facts['steps_done']:,} steps"
         f" in {facts['train_seconds']:.0f} s")
     warn = fairness.check_size(facts["params"], v)
