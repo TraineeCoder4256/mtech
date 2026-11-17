@@ -7,6 +7,14 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v2.2.2 (17 Nov 2026): gpubench compares the network on CPU and GPU directly
+
+Phani asked for a CPU against GPU timing. gpubench's race (part 5) now
+also runs the same default network on the CPU (fp32, and fp32 with 8
+batches in flight) next to the GPU rows, in the same session and on the
+same problems, so seconds and FOM compare directly. Smoke-tested on the
+CPU (sphere, 5k x 8, one seed).
+
 ## v2.2.1 (16 Nov 2026): one GPU bench command, model options everywhere, walk fix
 
 - `python run.py gpubench --device cuda` (checks/gpubench.py) measures

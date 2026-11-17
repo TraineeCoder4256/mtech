@@ -21,6 +21,8 @@ Five parts, each written to its own file in the output folder:
                     seeds, median FOM.  Contenders:
                       OpenMC analog, OpenMC implicit
                       ours plain MC, ours + exact walk (CPU)
+                      network on the CPU: fp32, and fp32 with 8 in flight
+                        (the same model, so the GPU rows compare directly)
                       network on the GPU:
                         fp32                      (what v2.1.9 did)
                         fp32, 8 batches in flight (bigger calls)
@@ -132,6 +134,7 @@ def run(out, device="cuda", problems=PROBLEMS, seeds=(11, 12, 13),
         log(f"5. race, {len(seeds)} seeds, {particles:,} x {batches} "
             f"histories, problems {', '.join(problems)}")
         backends = {"gpu fp32": load("network", device),
+                    "cpu fp32": load("network", "cpu"),
                     "oracle": load("oracle", device)}
         if device != "cpu":             # fp16 and graphs need a GPU
             backends["gpu graphs+fp16"] = load("network", device,
@@ -141,6 +144,9 @@ def run(out, device="cuda", problems=PROBLEMS, seeds=(11, 12, 13),
         contenders = (
             ("ours, plain MC", None, None),
             ("ours + exact walk (CPU)", "oracle", 2.0),
+            ("network on CPU, fp32", "cpu fp32", 2.0, {"in_flight": 1}),
+            (f"network on CPU, fp32, {FLY} in flight", "cpu fp32", 2.0,
+             fly),
             ("GPU fp32", "gpu fp32", 2.0, {"in_flight": 1}),
             (f"GPU fp32, {FLY} in flight", "gpu fp32", 2.0, fly),
             (f"GPU fp32, {FLY} in flight, overlap", "gpu fp32", 2.0, both),
