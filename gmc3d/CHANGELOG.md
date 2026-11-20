@@ -7,6 +7,15 @@ tallies and the easy tally items, 1.2 sources, 1.3 multi-filter tallies,
 1.4 geometry, 1.5 the medium tally items; renumbered 29 Oct 2026); the
 last counts pushes within it.
 
+## v2.2.3 (20 Nov 2026): handover notes
+
+No code change. The project is moving to another AI, so `handover/` now
+holds what a newcomer needs without Claude's memory: `HANDOVER.md` (the
+method, the stages, every version with its commit, results, what waits on
+Phani, the working rules and gotchas) and plain-markdown copies of the
+5-stage SRS, the Version 1 SRS and the v3 multigroup plan. GAPS.md is
+unchanged (nothing implemented).
+
 ## v2.2.2 (17 Nov 2026): gpubench compares the network on CPU and GPU directly
 
 Phani asked for a CPU against GPU timing. gpubench's race (part 5) now
